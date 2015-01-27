@@ -1,55 +1,13 @@
 #!/usr/bin/env python
 
-
-#############################################################################
-##
-## Copyright (C) 2010 Riverbank Computing Limited.
-## Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
-## All rights reserved.
-##
-## This file is part of the examples of PyQt.
-##
-## $QT_BEGIN_LICENSE:BSD$
-## You may use this file under the terms of the BSD license as follows:
-##
-## "Redistribution and use in source and binary forms, with or without
-## modification, are permitted provided that the following conditions are
-## met:
-##   * Redistributions of source code must retain the above copyright
-##     notice, this list of conditions and the following disclaimer.
-##   * Redistributions in binary form must reproduce the above copyright
-##     notice, this list of conditions and the following disclaimer in
-##     the documentation and/or other materials provided with the
-##     distribution.
-##   * Neither the name of Nokia Corporation and its Subsidiary(-ies) nor
-##     the names of its contributors may be used to endorse or promote
-##     products derived from this software without specific prior written
-##     permission.
-##
-## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-## "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-## LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-## A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-## OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-## SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-## LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-## DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-## THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-## (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-## OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
-## $QT_END_LICENSE$
-##
-#############################################################################
-
-
-# This is only needed for Python v2 but is harmless for Python v3.
 import sip
 sip.setapi('QVariant', 2)
 
 from PyQt4 import QtCore, QtGui, uic
 
-
 import pyqtgraph as pg
+import pyqtgraph.exporters
+import matplotlib.pyplot as plt
 
 # %load_ext autoreload
 # %autoreload 2
@@ -57,7 +15,7 @@ import pyqtgraph as pg
 # import sys
 # import os
 # import time
-import operator
+# import operator
 # import dxfgrabber
 # from collections import Counter
 import matplotlib.pyplot as plt
@@ -67,24 +25,53 @@ import numpy as np
 from source.helpers import *
 from source.dxf2shape import *
 filename = './dxfTest.dxf'
+afmfile = '/Users/Merlin/Dropbox/data.npz'
 
-
-
-
-import editabletreemodel_rc
-from ui_mainwindow import Ui_MainWindow
-
+# mkPen for selected
+orangePen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
+bluePen = pg.mkPen(color='0000FF')  #, style=QtCore.Qt.DotLine
+greenPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine
 
 class TreeItem(object):
-    def __init__(self, data, parent=None):
+    def __init__(self, data, parent=None, model=None):
+        self.model = model
         self.parentItem = parent
         self.itemData = data
         self.childItems = []
-        self.ss = 'ss'
         self.dxfData = None
+        self.pltData = None
+        self.entity = None
+        self.pltHandle = []
+        self.checkState = QtCore.Qt.Unchecked
+        self.fillAngle = 0
+        self.fillStep = 0.01
+        self.volt = 10
+        self.speed = 1
+#     shape.type = None # [VirtualElectrode, line, area]
+
+    def redraw(self):
+        self.setDxfData(dxf2shape(self.entity, fill_step = self.fillStep, fill_angle=self.fillAngle))
+
+    def setCheckState(self, value):
+        if value == 2:
+            self.checkState = QtCore.Qt.Checked
+        elif value == 1:
+            self.checkState = QtCore.Qt.PartiallyChecked
+        else:
+            self.checkState = QtCore.Qt.Unchecked
+        return self.checkState
+
+    def setEntity(self, entity):
+        self.entity = entity
+        self.redraw()
 
     def setDxfData(self, data):
         self.dxfData = data
+        if len(self.dxfData)>0:
+            self.pltData = []
+            for k in self.dxfData:
+                pt = k.flatten()
+                self.pltData.append([pt[::2],pt[1::2]])
 
     def child(self, row):
         return self.childItems[row]
@@ -109,7 +96,7 @@ class TreeItem(object):
 
         for row in range(count):
             data = [None for v in range(columns)]
-            item = TreeItem(data, self)
+            item = TreeItem(data, self, self.model)
             self.childItems.insert(position, item)
 
         return True
@@ -153,9 +140,14 @@ class TreeItem(object):
     def setData(self, column, value):
         if column < 0 or column >= len(self.itemData):
             return False
+        if self.model.rootData[column] == 'Angle':
+            self.fillAngle = value
+            self.redraw()
+        elif self.model.rootData[column] == 'Step':
+            self.fillStep = value
+            self.redraw()
 
         self.itemData[column] = value
-
         return True
 
 
@@ -164,9 +156,11 @@ class TreeModel(QtCore.QAbstractItemModel):
         super(TreeModel, self).__init__(parent)
         self.checks = {}
 
-        rootData = [header for header in headers] # Header Names
-        self.rootItem = TreeItem(rootData)
+        self.rootData = [header for header in headers] # Header Names
+        self.rootItem = TreeItem(self.rootData, model=self)
         self.setupModelData(data, self.rootItem)
+
+        self._checked=[[False for i in xrange(self.columnCount())] for j in xrange(self.rowCount())]
 
     def columnCount(self, parent=QtCore.QModelIndex()):
         return self.rootItem.columnCount()
@@ -195,15 +189,10 @@ class TreeModel(QtCore.QAbstractItemModel):
             item = index.internalPointer()
             if item:
                 return item
-
         return self.rootItem
 
     def checkState(self, index):
-        while index.isValid():
-            if index in self.checks:
-                return self.checks[index]
-            index = index.parent()
-        return QtCore.Qt.Unchecked
+        return self.getItem(index).checkState
 
     def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
         if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
@@ -274,6 +263,9 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         return parentItem.childCount()
 
+    def childCount(self, parent=QtCore.QModelIndex()):
+        return self.rowCount(parent)
+
     def are_parent_and_child(self, parent, child):
         while child.isValid():
             if child == parent:
@@ -282,23 +274,37 @@ class TreeModel(QtCore.QAbstractItemModel):
         return False
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
-        if (role == QtCore.Qt.CheckStateRole and index.column() == 0):
-            # self.checks[index] = value
-            # item = self.getItem(index).items()
-            # print index
-            # print value
-            self.layoutAboutToBeChanged.emit()
-            for i, v in self.checks.items():
-                if self.are_parent_and_child(index, i):
-                    self.checks.pop(i)
-            self.checks[index] = value
-            self.layoutChanged.emit()
 
-            self.emit(QtCore.SIGNAL("dataChanged(QModelIndex,QModelIndex)"), index, index)
-                # self.setData( self.getItem(index).child(i), value, role)
-                # print self.getItem(i)
-                # child = self.index(i,0, index)
-                # print child
+        if (role == QtCore.Qt.CheckStateRole and index.column() == 0):
+            self.layoutAboutToBeChanged.emit()
+            item = self.getItem(index)
+
+            item.setCheckState(value)
+            self.emit(QtCore.SIGNAL('checkChanged(QModelIndex)'), index)
+
+            cc = item.childCount()
+            if cc > 0:
+                for i in range(cc):
+                    chindex =  self.createIndex(i, 0, item.child(i))
+                    self.setData(chindex,value,role)
+
+
+            item = self.getItem(index.parent())
+            cc = item.childCount()
+            no_checked = 0
+            if cc > 0:
+                for i in range(cc):
+                    if item.child(i).checkState == 2:
+                        no_checked+=1
+                if no_checked == cc:
+                    item.setCheckState(2)
+                elif no_checked > 0:
+                    item.setCheckState(1)
+                else:
+                    item.setCheckState(0)
+                # self.emit(QtCore.SIGNAL('checkChanged(QModelIndex)'), index.parent())
+
+            self.layoutChanged.emit()
             return True
 
         if role != QtCore.Qt.EditRole:
@@ -308,7 +314,12 @@ class TreeModel(QtCore.QAbstractItemModel):
         result = item.setData(index.column(), value)
 
         if result:
-            self.dataChanged.emit(index, index)
+            # if self.rootData[index.column()] == 'Angle':
+            #     item.redraw()
+
+            self.emit(QtCore.SIGNAL('redraw(QModelIndex)'), index)
+            self.emit(QtCore.SIGNAL('dataChanged(QModelIndex)'), index)
+                # , value
 
         return result
 
@@ -368,10 +379,10 @@ class TreeModel(QtCore.QAbstractItemModel):
                                 self.rootItem.columnCount())
 
             thisChild = parent.child(parent.childCount() -1)
-            print thisChild
+            # print thisChild
 
             entity.is_closed = True
-            thisChild.setDxfData(dxf2shape(entity, fill_step = 0.01, fill_angle=np.random.random()*360))
+            thisChild.setEntity(entity)
 
             # print self.headerData(0,QtCore.Qt.Horizontal)
 
@@ -379,7 +390,12 @@ class TreeModel(QtCore.QAbstractItemModel):
             # print str(np.shape(thisChild.dxfData[0]))
 
             # print str(entity.is_closed)
-            item_data = {'Name': 'Name', 'Type': entity.dxftype, 'Closed': entity.is_closed, 'Voltage': '0'}
+            item_data = {'Name': 'Name', 'Type': entity.dxftype,
+                         'Closed': entity.is_closed,
+                         'Voltage': thisChild.volt,
+                         'Angle': thisChild.fillAngle,
+                         'Speed': thisChild.speed,
+                         'Step': thisChild.fillStep}
             # print columnData
             for column in range(len(columns)):
                 key = columns[column]
@@ -389,131 +405,185 @@ class TreeModel(QtCore.QAbstractItemModel):
             number += 1
 
 
-
-# class dxf(object): # (this could be a tree or list view class
-#     dxf.add_shape(entity, volt=None, speed=None, parent=Layer)  # None takes parameters from global
-#     dxf.layer(id=None) # None returns all layers, else the ID is a list with the layer ids, returns list with layers
-#     dxf.shape(id=None) # None returns all shapes, else the ID is a list with the shape ids, returns list with shapes
-
-# class shape(object):
-#     shape.volt = None
-#     shape.speed = None
-#     shape.type = None # [VirtualElectrode, line, area]
-
-
-# class sketch(object): # this could be a list view, that could make a schedule list :) with drag and drop and stuff
-#                       # Maybe there could be a drag and drop from the dxf tree to the schedule
-#     sketch.add( shape, volt, speed )
-#     sketch.remove( que_id )
-#     sketch.queue()
-#     sketch.run()
-#     sketch.abort()
-#     sketch.status()
-#     sketch.save_queue()
-
-
-
-# dxf = dxfgrabber.readfile(filename)
-# shapes = []
-# for i in dxf.entities:
-#     if i.dxftype not in ['POLYLINE']:
-#         continue
-# #     print i.layer
-#     i.is_closed = True
-
-#     shapes.append( shape(i) )
-#     collection = dxf2shape(i, fill_step = 0.01, fill_angle=np.random.random()*360)
-
-# colors = plt.cm.rainbow(np.linspace(0, 1, len(shapes)))
-# for y, c in zip(ys, colors):
-#     plt.scatter(x, y, color=c)
-
-
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
-        uic.loadUi('mainwindow.ui', self)
+        uic.loadUi('mainwindow2.ui', self)
+        self.actionExit.triggered.connect(QtGui.qApp.quit)
+        self.outDir = './'
+        self.inFile = ''
+        self.fileOut.setText(self.outDir)
 
-        # self.setupUi(self)
+        self.dxffileName = filename
 
-        headers = ('Name', 'Voltage', 'Speed', 'Closed', 'Type')
+        self.headers = ('Name', 'Voltage', 'Speed', 'Angle', 'Step', 'Closed', 'Type')
 
-        # file = QtCore.QFile(':/default.txt')
-        # file.open(QtCore.QIODevice.ReadOnly)
-        dxf = dxfgrabber.readfile(filename)
-        model = TreeModel(headers, dxf)
+        QtCore.QObject.connect(self.loadFile, QtCore.SIGNAL('clicked()'), self.pickFile)
+        QtCore.QObject.connect(self.saveDirectory, QtCore.SIGNAL('clicked()'), self.pickDirectory)
+        QtCore.QObject.connect(self.sketchThis, QtCore.SIGNAL('clicked()'), self.sketchNow)
+        QtCore.QObject.connect(self.fileOut, QtCore.SIGNAL('returnPressed()'), self.updateDirText)
+        QtCore.QObject.connect(self.fileIn, QtCore.SIGNAL('returnPressed()'), self.updateFileText)
 
-        # file.close()
-
-        self.view.setModel(model)
-        self.view.expandAll()
-        for column in range(model.columnCount()):
-            self.view.resizeColumnToContents(column)
-
-        self.exitAction.triggered.connect(QtGui.qApp.quit)
-
-        self.view.selectionModel().selectionChanged.connect(self.updateActions)
-
-        self.actionsMenu.aboutToShow.connect(self.updateActions)
-        self.insertRowAction.triggered.connect(self.insertRow)
-        self.insertColumnAction.triggered.connect(self.insertColumn)
-        self.removeRowAction.triggered.connect(self.removeRow)
-        self.removeColumnAction.triggered.connect(self.removeColumn)
-        self.insertChildAction.triggered.connect(self.insertChild)
+        self.readFile()
+        print ''
+        print ''
 
 
-        self.pi = self.plotView.getPlotItem()
+        # self.tree_file.selectionModel().selectionChanged.connect(self.updateActions)
+        # self.tree_file.model().dataChanged.connect(self.clicked)
+
+        # self.actionsMenu.aboutToShow.connect(self.updateActions)
+        # self.insertRowAction.triggered.connect(self.insertRow)
+        # self.insertColumnAction.triggered.connect(self.insertColumn)
+        # self.removeRowAction.triggered.connect(self.removeRow)
+        # self.removeColumnAction.triggered.connect(self.removeColumn)
+        # self.insertChildAction.triggered.connect(self.insertChild)
+
+
+    def sketchNow(self):
+        print "here I will sketch the file"
+
+    def pickFile(self):
+        # http://stackoverflow.com/questions/20928023/how-to-use-qfiledialog-options-and-retreive-savefilename
+        filename = QtGui.QFileDialog.getOpenFileName(self, 'Select design file', self.inFile, selectedFilter='*.dxf')
+        if filename:
+            self.dxffileName = str(filename)
+            self.readFile()
+
+    def pickDirectory(self):
+        outDir = QtGui.QFileDialog.getExistingDirectory(self, 'Select output Directory', self.outDir)
+        if outDir:
+            self.outDir = outDir
+            self.fileOut.setText(self.outDir)
+
+    def updateDirText(self):
+        self.outDir = str(self.fileOut.text())
+        self.fileOut.setText(self.outDir)
+
+    def updateFileText(self):
+        self.inFile = str(self.fileIn.text())
+        self.fileIn.setText(self.inFile)
+
+
+    def readFile(self):
+        self.fileIn.setText(self.dxffileName)
+        self.dxf = dxfgrabber.readfile(self.dxffileName)
+
+        self.model = TreeModel(self.headers, self.dxf)
+
+        self.tree_file.setModel(self.model)
+        self.tree_file.expandAll()
+        self.tree_schedule.setModel(self.model)
+        self.tree_schedule.expandAll()
+
+        for column in range(self.model.columnCount()):
+            self.tree_file.resizeColumnToContents(column)
+            self.tree_schedule.resizeColumnToContents(column)
+
+
+
+        self.pi = self.plot1.getPlotItem()
+        self.pi.clear()
         self.pi.enableAutoRange('x', True)
         self.pi.enableAutoRange('y', True)
-        self.plot = self.pi.plot()
+        self.pi.setAspectLocked(lock=True, ratio=1)
 
-        QtCore.QObject.connect(self.view.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
+        afmdata = np.load(afmfile)
+        afmRect = np.array(afmdata[afmdata.keys()[0]], copy=True)
+        afmImg = np.array(afmdata[afmdata.keys()[1]], copy=True)
+        afmdata.close()
+
+        img = pg.ImageItem(afmImg)
+        img.setZValue(-100)  # make sure image is behind other data
+        img.setRect(pg.QtCore.QRectF(0, 0, afmRect[1], afmRect[3]))
+
+        self.pi.addItem(img)
+        # exporter = pg.exporters.ImageExporter(self.img)
+
+        # set export parameters if needed
+        # exporter.parameters()['width'] = 50   # (note this also affects height parameter)
+        # exporter.parameters()['height'] = 50   # (note this also affects height parameter)
+
+        # save to file
+        # exporter.export('afmplot.png')
+
+        QtCore.QObject.connect(self.tree_file.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
+        QtCore.QObject.connect(self.tree_schedule.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
+        QtCore.QObject.connect(self.model, QtCore.SIGNAL('checkChanged(QModelIndex)'), self.checked)
+        QtCore.QObject.connect(self.model, QtCore.SIGNAL('redraw(QModelIndex)'), self.redraw)
+
         self.updateActions()
+
+
+    @QtCore.pyqtSlot("QModelIndex")
+    def redraw(self, index):
+        model = self.model
+        item = model.getItem(index)
+        checked = item.checkState
+        if not checked == 0:
+            # clear plot from item
+            for i in item.pltHandle:
+                self.pi.removeItem(i)
+            item.pltHandle = []
+
+            data = model.getItem(index).pltData
+            if data:
+                for i in data:
+                    pdi = self.pi.plot(i[0],i[1], pen = greenPen)
+                    item.pltHandle.append(pdi)
+
+            self.updateActions()
+
+
+    @QtCore.pyqtSlot("QModelIndex")
+    def checked(self, index):
+        model = self.model
+        item = model.getItem(index)
+        checked = item.checkState
+
+        # clear plot from item
+        for i in item.pltHandle:
+            self.pi.removeItem(i)
+        item.pltHandle = []
+
+        if checked == 0:
+            # hide item if unchecked
+            self.tree_schedule.setRowHidden(index.row(),index.parent(), True)
+        else:
+            self.tree_schedule.setRowHidden(index.row(),index.parent(), False)
+            data = model.getItem(index).pltData
+            if data:
+                for i in data:
+                    pdi = self.pi.plot(i[0],i[1], pen = greenPen)
+                    item.pltHandle.append(pdi)
+
+        self.updateActions()
+
 
     @QtCore.pyqtSlot("QItemSelection, QItemSelection")
     def update_plot(self, selected, deselected):
         index = selected.indexes()
-        print index
-        model = self.view.model()
-        # child = index.ss
+        self.tree_file.setCurrentIndex(index[0])
+        self.tree_schedule.setCurrentIndex(index[0])
+        deindex = deselected.indexes()
+        model = self.tree_file.model()
+        # print 'bb', index[0], model.getItem(index[0])
         for idx in index:
-            # print idx.row()
-            # parent = idx.parent()
-            data = model.getItem(idx).dxfData
+            item = model.getItem(idx)
+            for i in item.pltHandle:
+                i.setPen(orangePen)
+        for idx in deindex:
+            item = model.getItem(idx)
+            for i in item.pltHandle:
+                i.setPen(greenPen)
 
-            # thisChild = parent.child(parent.childCount() -1)
 
-            # print(deselected)
-
-            # self.plotlist = []
-            # for i in self.settings['channels']:
-                # self.plotlist.append({'plot': pi.plot(), 'channel': i})
-            # pl = pi.plot()
-            x = []
-            y = []
-            for i in data:
-            # print data
-                pt = i.flatten()
-                x.append(pt[::2])
-                y.append(pt[1::2])
-                # self.pi = self.plotView.getPlotItem()
-                # self.pi.enableAutoRange('x', True)
-                # self.pi.enableAutoRange('y', True)
-                # self.plot = self.pi.plot()
-                    # CS = plt.plot(pt[::2],pt[1::2],'-',color=c)
-            x=np.array(x).flatten()
-            y=np.array(y).flatten()
-            # print x
-            self.plot.setData(x=np.array(x),y=np.array(y))
-            # print np.shape(data)
-            # self.plot.setData(y=data[:,1])
-            # self.plot1 = pi.plot()
-            # pi.setRange(xRange=(0,self.settings['buffer_size']/10),yRange=(-1.2,1.2))
+        self.updateActions()
 
 
     def insertChild(self):
-        index = self.view.selectionModel().currentIndex()
-        model = self.view.model()
+        index = self.tree_file.selectionModel().currentIndex()
+        model = self.tree_file.model()
 
         if model.columnCount(index) == 0:
             if not model.insertColumn(0, index):
@@ -529,13 +599,13 @@ class MainWindow(QtGui.QMainWindow):
                 model.setHeaderData(column, QtCore.Qt.Horizontal,
                         "[No header]", QtCore.Qt.EditRole)
 
-        self.view.selectionModel().setCurrentIndex(model.index(0, 0, index),
+        self.tree_file.selectionModel().setCurrentIndex(model.index(0, 0, index),
                 QtGui.QItemSelectionModel.ClearAndSelect)
         self.updateActions()
 
     def insertColumn(self):
-        model = self.view.model()
-        column = self.view.selectionModel().currentIndex().column()
+        model = self.tree_file.model()
+        column = self.tree_file.selectionModel().currentIndex().column()
 
         changed = model.insertColumn(column + 1)
         if changed:
@@ -547,8 +617,8 @@ class MainWindow(QtGui.QMainWindow):
         return changed
 
     def insertRow(self):
-        index = self.view.selectionModel().currentIndex()
-        model = self.view.model()
+        index = self.tree_file.selectionModel().currentIndex()
+        model = self.tree_file.model()
 
         if not model.insertRow(index.row()+1, index.parent()):
             return
@@ -560,8 +630,8 @@ class MainWindow(QtGui.QMainWindow):
             model.setData(child, "[No data]", QtCore.Qt.EditRole)
 
     def removeColumn(self):
-        model = self.view.model()
-        column = self.view.selectionModel().currentIndex().column()
+        model = self.tree_file.model()
+        column = self.tree_file.selectionModel().currentIndex().column()
 
         changed = model.removeColumn(column)
         if changed:
@@ -570,27 +640,27 @@ class MainWindow(QtGui.QMainWindow):
         return changed
 
     def removeRow(self):
-        index = self.view.selectionModel().currentIndex()
-        model = self.view.model()
+        index = self.tree_file.selectionModel().currentIndex()
+        model = self.tree_file.model()
 
         if (model.removeRow(index.row(), index.parent())):
             self.updateActions()
 
     def updateActions(self):
-        hasSelection = not self.view.selectionModel().selection().isEmpty()
+        hasSelection = not self.tree_file.selectionModel().selection().isEmpty()
         self.removeRowAction.setEnabled(hasSelection)
         self.removeColumnAction.setEnabled(hasSelection)
 
-        hasCurrent = self.view.selectionModel().currentIndex().isValid()
+        hasCurrent = self.tree_file.selectionModel().currentIndex().isValid()
         self.insertRowAction.setEnabled(hasCurrent)
         self.insertColumnAction.setEnabled(hasCurrent)
 
         if hasCurrent:
-            self.view.closePersistentEditor(self.view.selectionModel().currentIndex())
+            self.tree_file.closePersistentEditor(self.tree_file.selectionModel().currentIndex())
 
-            row = self.view.selectionModel().currentIndex().row()
-            column = self.view.selectionModel().currentIndex().column()
-            if self.view.selectionModel().currentIndex().parent().isValid():
+            row = self.tree_file.selectionModel().currentIndex().row()
+            column = self.tree_file.selectionModel().currentIndex().column()
+            if self.tree_file.selectionModel().currentIndex().parent().isValid():
                 self.statusBar().showMessage("Position: (%d,%d)" % (row, column))
             else:
                 self.statusBar().showMessage("Position: (%d,%d) in top level" % (row, column))

@@ -170,36 +170,37 @@ class TreeModel( QtCore.QAbstractItemModel ):
             return QtCore.QModelIndex()
         return self.createIndex( parent.row(), 0, parent )
 
-    def insertRows( self, row, count, parentIndex ):
-        '''Add a number of rows to the model at the given row and parent.'''
-        self.beginInsertRows( parentIndex, row, row+count-1 )
-        self.endInsertRows()
-        return True
-
-    def insertColumns(self, col, count, parentIndex):
-        self.beginInsertColumns(parentIndex, col, col+count-1)
-        # success = self.rootItem.insertColumns(col, count)
-        self.endInsertColumns()
-        return True
-
-    def removeRows( self, row, count, parentIndex ):
-        '''Remove a number of rows from the model at the given row and parent.'''
-        self.beginRemoveRows( parentIndex, row, row+count-1 )
-        parent = self.itemFromIndex( parentIndex )
-        for x in range( count ):
-            parent.removeChildAtRow( row )
-        self.endRemoveRows()
-        return True
-
-    def removeColumns(self, col, count, parentIndex):
+    def removeColumns(self, position, columns, parent=QtCore.QModelIndex()):
         '''Remove a number of columns from the model at the given column and parent.'''
-        self.beginRemoveColumns(parentIndex, col, col+count-1)
-        # success = self.rootItem.removeColumns(col, count)
+        self.beginRemoveColumns(parent, position, position + columns - 1)
+        success = self.rootItem.removeColumns(position, columns)
         self.endRemoveColumns()
 
         if self.rootItem.columnCount() == 0:
             self.removeRows(0, self.rowCount())
-        return True
+        return success
+
+    def removeRows(self, position, rows, parent=QtCore.QModelIndex()):
+        parentItem = self.getItem(parent)
+
+        self.beginRemoveRows(parent, position, position + rows - 1)
+        success = parentItem.removeChildren(position, rows)
+        self.endRemoveRows()
+        return success
+
+    def insertColumns(self, position, columns, parent=QtCore.QModelIndex()):
+        self.beginInsertColumns(parent, position, position + columns - 1)
+        success = self.rootItem.insertColumns(position, columns)
+        self.endInsertColumns()
+        return success
+
+    def insertRows(self, position, rows, parent=QtCore.QModelIndex()):
+        parentItem = self.getItem(parent)
+        self.beginInsertRows(parent, position, position + rows - 1)
+        success = parentItem.insertChildren(position, rows,
+                self.rootItem.columnCount())
+        self.endInsertRows()
+        return success
 
     def getItem(self, index):
         if index.isValid():
