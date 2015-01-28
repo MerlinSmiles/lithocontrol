@@ -200,7 +200,7 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         return None
 
-    def index(self, row, column, parent=QtCore.QModelIndex()):
+    def index(self, row, column=0, parent=QtCore.QModelIndex()):
         if parent.isValid() and parent.column() != 0:
             return QtCore.QModelIndex()
 
@@ -412,6 +412,7 @@ class MainWindow(QtGui.QMainWindow):
         self.actionExit.triggered.connect(QtGui.qApp.quit)
         self.outDir = './'
         self.inFile = ''
+        self.sketchFile = ''
         self.fileOut.setText(self.outDir)
 
         self.dxffileName = filename
@@ -440,8 +441,36 @@ class MainWindow(QtGui.QMainWindow):
         # self.insertChildAction.triggered.connect(self.insertChild)
 
 
-    def sketchNow(self):
+    def sketchNow(self, index=None):
+        if index == None:
+            index = self.model
         print "here I will sketch the file"
+        for i in range(index.rowCount()):
+            print type(index.index(i))
+            # print '- ', i
+            item = index.getItem(index.index(i))
+            chitems = item.childItems
+            print '- ' , item.data(0)
+            if len(chitems) != 0:
+                for i in item.childItems:
+                    if i.checkState == 2:
+                        print i.pltData
+
+
+    def writeFile(self, data):
+        # while open(self.outDir + 'out.txt', 'w'):
+        # self.outDir
+        for i in data:
+            pass
+
+
+
+
+
+        # print index.rowCount()
+        # print index.columnCount()
+        # print index.getItem(0)
+        # print index.index(0)
 
     def pickFile(self):
         # http://stackoverflow.com/questions/20928023/how-to-use-qfiledialog-options-and-retreive-savefilename
