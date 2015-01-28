@@ -14,7 +14,9 @@ import matplotlib.pyplot as plt
 
 # import sys
 # import os
-# import time
+import time
+from watchdog.observers import Observer
+from watchdog.events import PatternMatchingEventHandler
 # import operator
 # import dxfgrabber
 # from collections import Counter
@@ -24,13 +26,71 @@ import numpy as np
 # from scipy.interpolate import interp1d
 from source.helpers import *
 from source.dxf2shape import *
+from convertAFM import convertAFM
 filename = './dxfTest.dxf'
-afmfile = '/Users/Merlin/Dropbox/data.npz'
+# afmfile = './data.npz'
+afmFile = './stomilling.002'
+afmImageFolder = 'D:/lithography/AFMimages/'
 
 # mkPen for selected
 orangePen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
 bluePen = pg.mkPen(color='0000FF')  #, style=QtCore.Qt.DotLine
 greenPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine
+class MyHandler(PatternMatchingEventHandler):
+    def __init__(self, parent = None):
+        super( MyHandler, self ).__init__()
+        self.parent = parent
+        patterns = ["*.*"]
+
+    def process(self, event):
+        """
+        event.event_type
+            'modified' | 'created' | 'moved' | 'deleted'
+        event.is_directory
+            True | False
+        event.src_path
+            path/to/observed/file
+        """
+        # the file will be processed there
+        # print event.src_path, event.event_type  # print now only for degug
+
+        self.parent.emit(QtCore.SIGNAL("AFMimage(QString)"), event.src_path)
+
+    # def on_modified(self, event):
+    #     self.process(event)
+
+    def on_created(self, event):
+        self.process(event)
+
+class AFMWorker(QtCore.QThread):
+
+    def __init__(self, parent = None):
+
+        QtCore.QThread.__init__(self, parent)
+        self.exiting = False
+        self.foldername = None
+
+    def __del__(self):
+        self.exiting = True
+        self.wait()
+
+    def monitor(self, foldername):
+        self.exiting = False
+        self.foldername = foldername
+        self.start()
+
+    def stop(self):
+        self.exiting = True
+        self.wait()
+
+    def run(self):
+        observer = Observer()
+        observer.schedule(MyHandler(self), path=self.foldername)
+        observer.start()
+        while True and not self.exiting:
+            time.sleep(3)
+        observer.stop()
+        observer.join()
 
 class TreeItem(object):
     def __init__(self, data, parent=None, model=None):
@@ -44,7 +104,7 @@ class TreeItem(object):
         self.pltHandle = []
         self.checkState = QtCore.Qt.Unchecked
         self.fillAngle = 0
-        self.fillStep = 0.01
+        self.fillStep = 0.05
         self.volt = 10
         self.speed = 1
 #     shape.type = None # [VirtualElectrode, line, area]
@@ -413,6 +473,7 @@ class MainWindow(QtGui.QMainWindow):
         self.outDir = './'
         self.inFile = ''
         self.sketchFile = ''
+        self.afminfo = {}
         self.fileOut.setText(self.outDir)
 
         self.dxffileName = filename
@@ -429,6 +490,12 @@ class MainWindow(QtGui.QMainWindow):
         print ''
         print ''
 
+        self.AFMthread = AFMWorker()
+        QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("finished()"), self.updateAFM)
+        QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("terminated()"), self.updateAFM)
+        QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("AFMimage(QString)"), self.AFMimage)
+
+        self.AFMthread.monitor(afmImageFolder)
 
         # self.tree_file.selectionModel().selectionChanged.connect(self.updateActions)
         # self.tree_file.model().dataChanged.connect(self.clicked)
@@ -440,6 +507,11 @@ class MainWindow(QtGui.QMainWindow):
         # self.removeColumnAction.triggered.connect(self.removeColumn)
         # self.insertChildAction.triggered.connect(self.insertChild)
 
+    def AFMimage(self, filename=None):
+        print filename
+
+    def updateAFM(self):
+        print 'updateAFM'
 
     def sketchNow(self, index=None):
         if index == None:
@@ -516,25 +588,16 @@ class MainWindow(QtGui.QMainWindow):
         self.pi.enableAutoRange('x', True)
         self.pi.enableAutoRange('y', True)
         self.pi.setAspectLocked(lock=True, ratio=1)
+        self.pi.showGrid(x=1, y=1, alpha=0.8)
 
-        afmdata = np.load(afmfile)
-        afmRect = np.array(afmdata[afmdata.keys()[0]], copy=True)
-        afmImg = np.array(afmdata[afmdata.keys()[1]], copy=True)
-        afmdata.close()
+        afmData, self.afminfo = convertAFM(afmFile)
 
-        img = pg.ImageItem(afmImg)
-        img.setZValue(-100)  # make sure image is behind other data
-        img.setRect(pg.QtCore.QRectF(0, 0, afmRect[1], afmRect[3]))
+
+        img = pg.ImageItem(afmData)
+        img.setZValue(-1000)  # make sure image is behind other data
+        img.setRect(pg.QtCore.QRectF(0, 0, self.afminfo['xreal'], self.afminfo['yreal']))
 
         self.pi.addItem(img)
-        # exporter = pg.exporters.ImageExporter(self.img)
-
-        # set export parameters if needed
-        # exporter.parameters()['width'] = 50   # (note this also affects height parameter)
-        # exporter.parameters()['height'] = 50   # (note this also affects height parameter)
-
-        # save to file
-        # exporter.export('afmplot.png')
 
         QtCore.QObject.connect(self.tree_file.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
         QtCore.QObject.connect(self.tree_schedule.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
