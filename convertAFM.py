@@ -2,15 +2,22 @@ import sys
 sys.path.append("C:/Program Files (x86)/Gwyddion/bin")
 import gwy, gwyutils, os, re
 import numpy as np
+import time
 
 import cv2
 
 # Set options in settings...
 
 def convertAFM(filename, saveImg = True):
+    print filename
     filename = os.path.abspath(filename)
-    c = gwy.gwy_file_load(filename, gwy.RUN_NONINTERACTIVE)
-    gwy.gwy_app_data_browser_add(c)
+    print filename
+    time.sleep(0.2)
+    try:
+        c = gwy.gwy_file_load(filename, gwy.RUN_NONINTERACTIVE)
+        gwy.gwy_app_data_browser_add(c)
+    except:
+        return False, False
     for key in c.keys_by_name():
         if re.match(r'^/0/data$', key):
             field = c[key]
@@ -32,11 +39,11 @@ def convertAFM(filename, saveImg = True):
 
             imfilename = False
             if saveImg:
-                imfilename = str(filename)+".png"
+                imfilename = '../' + str(filename)+".png"
                 saveAFMimg(data, imfilename )
     info = {'xreal':xreal, 'yreal':yreal, 'imname': imfilename}
     gwy.gwy_app_data_browser_remove(c)
-    return data, info
+    return np.array(data), info
 
 def saveAFMimg(data, filename):
         mn = np.min(data)
@@ -51,6 +58,6 @@ def saveAFMimg(data, filename):
 if __name__ == '__main__':
     afmFile = './stomilling.002'
     afmData, afmimage = convertAFM(afmFile)
-
+    print afmData
 
     sys.exit()

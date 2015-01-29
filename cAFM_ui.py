@@ -16,13 +16,14 @@ import sys
 if sys.platform.startswith('darwin'):
     parentos = 'OSX'
     afmImageFolder = './AFMimages/'
-
+    afmFile = ''
 elif sys.platform.startswith('win32'):
     parentos = 'WIN'
     from convertAFM import convertAFM
     # afmfile = './data.npz'
     afmFile = './stomilling.002'
     afmImageFolder = 'D:/lithography/AFMimages/'
+
 
 
 filename = './dxfTest.dxf'
@@ -482,7 +483,7 @@ class MainWindow(QtGui.QMainWindow):
         super(MainWindow, self).__init__(parent)
         uic.loadUi('mainwindow2.ui', self)
         self.actionExit.triggered.connect(QtGui.qApp.quit)
-        self.outDir = './'
+        self.outDir = 'U:/'
         self.inFile = ''
         self.sketchFile = ''
         self.freerate = 2.0
@@ -497,6 +498,7 @@ class MainWindow(QtGui.QMainWindow):
         QtCore.QObject.connect(self.loadFile, QtCore.SIGNAL('clicked()'), self.pickFile)
         QtCore.QObject.connect(self.saveDirectory, QtCore.SIGNAL('clicked()'), self.pickDirectory)
         QtCore.QObject.connect(self.sketchThis, QtCore.SIGNAL('clicked()'), self.sketchNow)
+        QtCore.QObject.connect(self.abortLitho, QtCore.SIGNAL('clicked()'), self.abortNow)
         QtCore.QObject.connect(self.fileOut, QtCore.SIGNAL('returnPressed()'), self.updateDirText)
         QtCore.QObject.connect(self.fileIn, QtCore.SIGNAL('returnPressed()'), self.updateFileText)
 
@@ -507,7 +509,7 @@ class MainWindow(QtGui.QMainWindow):
         self.AFMthread = AFMWorker()
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("finished()"), self.updateAFM)
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("terminated()"), self.updateAFM)
-        QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("AFMimage(QString)"), self.AFMimage)
+        QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("AFMimage(QString)"), self.newAFMimage)
 
         self.AFMthread.monitor(afmImageFolder)
 
@@ -522,8 +524,20 @@ class MainWindow(QtGui.QMainWindow):
         # self.insertChildAction.triggered.connect(self.insertChild)
 
     @QtCore.pyqtSlot("QString")
-    def AFMimage(self, filename=None):
-        print filename
+    def newAFMimage(self, filename):
+        filename = str(filename)
+        if parentos == 'WIN':
+            print filename
+            self.afmData, self.afminfo = convertAFM(filename)
+            if self.afmData.any() == False:
+                return
+            img = pg.ImageItem(self.afmData)
+            img.setZValue(-1000)  # make sure image is behind other data
+            img.setRect(pg.QtCore.QRectF(0, 0, self.afminfo['xreal'], self.afminfo['yreal']))
+
+            self.centerCoord = np.array([self.afminfo['xreal'], self.afminfo['yreal']])/2.0
+
+            self.pi.addItem(img)
 
     def updateAFM(self):
         print 'updateAFM'
@@ -582,13 +596,24 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def writeFile(self, data):
+        self.outDir = str(self.outDir)
         fname = self.outDir + 'out.tmp'
         f = open(fname, 'w')
         f.write(data)
         f.close()
+        try:
+            os.remove(fname[:-3] + 'txt')
+        except:
+            pass
         os.rename(fname, fname[:-3] + 'txt')
         print  fname[:-3] + 'txt'
 
+    def abortNow(self):
+        self.outDir = str(self.outDir)
+        fname = self.outDir + 'abort.txt'
+        f = open(fname, 'w')
+        # f.write(data)
+        f.close()
 
     def pickFile(self):
         # http://stackoverflow.com/questions/20928023/how-to-use-qfiledialog-options-and-retreive-savefilename
@@ -636,17 +661,9 @@ class MainWindow(QtGui.QMainWindow):
         self.pi.setAspectLocked(lock=True, ratio=1)
         self.pi.showGrid(x=1, y=1, alpha=0.8)
 
-        if parentos == 'WIN':
 
-            afmData, self.afminfo = convertAFM(afmFile)
-
-            img = pg.ImageItem(afmData)
-            img.setZValue(-1000)  # make sure image is behind other data
-            img.setRect(pg.QtCore.QRectF(0, 0, self.afminfo['xreal'], self.afminfo['yreal']))
-
-            self.centerCoord = np.array([self.afminfo['xreal'], self.afminfo['yreal']]/2.0)
-
-            self.pi.addItem(img)
+        # afmFile = r'D:\lithography\AFMimages\01291659.001'
+        # self.AFMimage(afmFile)
 
         QtCore.QObject.connect(self.tree_file.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
         QtCore.QObject.connect(self.tree_schedule.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
@@ -654,7 +671,6 @@ class MainWindow(QtGui.QMainWindow):
         QtCore.QObject.connect(self.model, QtCore.SIGNAL('redraw(QModelIndex)'), self.redraw)
 
         self.updateActions()
-
 
     @QtCore.pyqtSlot("QModelIndex")
     def redraw(self, index):
