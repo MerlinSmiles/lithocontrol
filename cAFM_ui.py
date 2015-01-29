@@ -217,6 +217,9 @@ class TreeItem(object):
         elif self.model.rootData[column] == 'Step':
             self.fillStep = value
             self.redraw()
+        elif self.model.rootData[column] == 'Closed':
+            self.entity.is_closed = value
+            self.redraw()
 
         self.itemData[column] = value
         return True
@@ -420,6 +423,7 @@ class TreeModel(QtCore.QAbstractItemModel):
         parent_dict = {}
         while number < len(data.entities):
             entity = data.entities[number]
+            print entity.is_closed
             if entity.dxftype not in ['POLYLINE']:
                 number +=1
                 continue
@@ -452,13 +456,10 @@ class TreeModel(QtCore.QAbstractItemModel):
             thisChild = parent.child(parent.childCount() -1)
             # print thisChild
 
-            entity.is_closed = True
+            # entity.is_closed = True
             thisChild.setEntity(entity)
 
             # print self.headerData(0,QtCore.Qt.Horizontal)
-
-
-            # print str(np.shape(thisChild.dxfData[0]))
 
             # print str(entity.is_closed)
             item_data = {'Name': 'Name', 'Type': entity.dxftype,
@@ -520,6 +521,7 @@ class MainWindow(QtGui.QMainWindow):
         # self.removeColumnAction.triggered.connect(self.removeColumn)
         # self.insertChildAction.triggered.connect(self.insertChild)
 
+    @QtCore.pyqtSlot("QString")
     def AFMimage(self, filename=None):
         print filename
 
@@ -587,15 +589,6 @@ class MainWindow(QtGui.QMainWindow):
         os.rename(fname, fname[:-3] + 'txt')
         print  fname[:-3] + 'txt'
 
-
-
-
-
-
-        # print index.rowCount()
-        # print index.columnCount()
-        # print index.getItem(0)
-        # print index.index(0)
 
     def pickFile(self):
         # http://stackoverflow.com/questions/20928023/how-to-use-qfiledialog-options-and-retreive-savefilename
