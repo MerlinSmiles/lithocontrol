@@ -7,12 +7,26 @@ from PyQt4 import QtCore, QtGui, uic
 
 import pyqtgraph as pg
 import pyqtgraph.exporters
-import matplotlib.pyplot as plt
 
 # %load_ext autoreload
 # %autoreload 2
 
-# import sys
+import sys
+
+if sys.platform.startswith('darwin'):
+    parentos = 'OSX'
+    afmImageFolder = './AFMimages/'
+
+elif sys.platform.startswith('win32'):
+    parentos = 'WIN'
+    from convertAFM import convertAFM
+    # afmfile = './data.npz'
+    afmFile = './stomilling.002'
+    afmImageFolder = 'D:/lithography/AFMimages/'
+
+
+filename = './dxfTest.dxf'
+
 # import os
 import time
 from watchdog.observers import Observer
@@ -20,22 +34,18 @@ from watchdog.events import PatternMatchingEventHandler
 # import operator
 # import dxfgrabber
 # from collections import Counter
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 # %matplotlib inline
 import numpy as np
 # from scipy.interpolate import interp1d
 from source.helpers import *
 from source.dxf2shape import *
-from convertAFM import convertAFM
-filename = './dxfTest.dxf'
-# afmfile = './data.npz'
-afmFile = './stomilling.002'
-afmImageFolder = 'D:/lithography/AFMimages/'
 
 # mkPen for selected
 orangePen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
 bluePen = pg.mkPen(color='0000FF')  #, style=QtCore.Qt.DotLine
 greenPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine
+
 class MyHandler(PatternMatchingEventHandler):
     def __init__(self, parent = None):
         super( MyHandler, self ).__init__()
@@ -130,8 +140,7 @@ class TreeItem(object):
         if len(self.dxfData)>0:
             self.pltData = []
             for k in self.dxfData:
-                pt = k.flatten()
-                self.pltData.append([pt[::2],pt[1::2]])
+                self.pltData.append(k.reshape((-1,2)))
 
     def child(self, row):
         return self.childItems[row]
@@ -147,7 +156,9 @@ class TreeItem(object):
     def columnCount(self):
         return len(self.itemData)
 
-    def data(self, column):
+    def data(self, column=None):
+        if column == None:
+            return self.itemData[:]
         return self.itemData[column]
 
     def insertChildren(self, position, count, columns):
@@ -473,8 +484,10 @@ class MainWindow(QtGui.QMainWindow):
         self.outDir = './'
         self.inFile = ''
         self.sketchFile = ''
+        self.freerate = 2.0
         self.afminfo = {}
         self.fileOut.setText(self.outDir)
+        self.centerCoord = np.array([0,0])
 
         self.dxffileName = filename
 
@@ -514,26 +527,61 @@ class MainWindow(QtGui.QMainWindow):
         print 'updateAFM'
 
     def sketchNow(self, index=None):
+        self.sketchFile = ''
         if index == None:
             index = self.model
         print "here I will sketch the file"
         for i in range(index.rowCount()):
-            print type(index.index(i))
             # print '- ', i
             item = index.getItem(index.index(i))
+            if item.checkState == 0:
+                continue
             chitems = item.childItems
-            print '- ' , item.data(0)
+            # if item.data(6) == 'Layer':
+            self.sAdd('')
+            self.sComment(item.data())
+                # continue
+            # print '- ' ,
             if len(chitems) != 0:
-                for i in item.childItems:
-                    if i.checkState == 2:
-                        print i.pltData
+                for child in item.childItems:
+                    if child.checkState == 0:
+                        continue
+                    self.sAdd('')
+                    self.sComment(child.data())
+                    if child.checkState == 2:
+                        for path in child.pltData:
+                            x,y = np.add(path[0],-self.centerCoord)
+                            self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
+                            self.sAdd('vtip\t%f' %(child.data(1)))
+                            r = child.data(2)
+                            for x,y in np.add(path,-self.centerCoord):
+                            # Maybe go from [1:] but going to the startpoint twice should reduce vtip lag
+                                self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,r))
+
+                            self.sAdd('vtip\t%f' %(0.0))
+
+        self.writeFile(self.sketchFile)
+
+    def sComment(self, stuff):
+        adding = ''
+        adding += '# '
+        for i in stuff:
+            adding += str(i)+ '\t'
+        adding += '\n'
+        self.sketchFile += adding
+        print adding
+
+    def sAdd(self, data):
+        self.sketchFile += data
+        self.sketchFile += '\n'
+        print data
 
 
     def writeFile(self, data):
-        # while open(self.outDir + 'out.txt', 'w'):
-        # self.outDir
-        for i in data:
-            pass
+        f = open(self.outDir + 'out.txt', 'w')
+        f.write(data)
+        f.close()
+
 
 
 
@@ -590,14 +638,17 @@ class MainWindow(QtGui.QMainWindow):
         self.pi.setAspectLocked(lock=True, ratio=1)
         self.pi.showGrid(x=1, y=1, alpha=0.8)
 
-        afmData, self.afminfo = convertAFM(afmFile)
+        if parentos == 'WIN':
 
+            afmData, self.afminfo = convertAFM(afmFile)
 
-        img = pg.ImageItem(afmData)
-        img.setZValue(-1000)  # make sure image is behind other data
-        img.setRect(pg.QtCore.QRectF(0, 0, self.afminfo['xreal'], self.afminfo['yreal']))
+            img = pg.ImageItem(afmData)
+            img.setZValue(-1000)  # make sure image is behind other data
+            img.setRect(pg.QtCore.QRectF(0, 0, self.afminfo['xreal'], self.afminfo['yreal']))
 
-        self.pi.addItem(img)
+            self.centerCoord = np.array([self.afminfo['xreal'], self.afminfo['yreal']]/2.0)
+
+            self.pi.addItem(img)
 
         QtCore.QObject.connect(self.tree_file.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
         QtCore.QObject.connect(self.tree_schedule.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
@@ -621,7 +672,7 @@ class MainWindow(QtGui.QMainWindow):
             data = model.getItem(index).pltData
             if data:
                 for i in data:
-                    pdi = self.pi.plot(i[0],i[1], pen = greenPen)
+                    pdi = self.pi.plot(i, pen = greenPen)
                     item.pltHandle.append(pdi)
 
             self.updateActions()
@@ -646,7 +697,7 @@ class MainWindow(QtGui.QMainWindow):
             data = model.getItem(index).pltData
             if data:
                 for i in data:
-                    pdi = self.pi.plot(i[0],i[1], pen = greenPen)
+                    pdi = self.pi.plot(i, pen = greenPen)
                     item.pltHandle.append(pdi)
 
         self.updateActions()
@@ -759,9 +810,6 @@ class MainWindow(QtGui.QMainWindow):
 
 
 if __name__ == '__main__':
-
-    import sys
-
     app = QtGui.QApplication(sys.argv)
     window = MainWindow()
     window.show()
