@@ -27,7 +27,7 @@ elif sys.platform.startswith('win32'):
 
 filename = './dxfTest.dxf'
 
-# import os
+import os
 import time
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
@@ -530,6 +530,7 @@ class MainWindow(QtGui.QMainWindow):
         self.sketchFile = ''
         if index == None:
             index = self.model
+        nfile = False
         print "here I will sketch the file"
         for i in range(index.rowCount()):
             # print '- ', i
@@ -543,6 +544,7 @@ class MainWindow(QtGui.QMainWindow):
                 # continue
             # print '- ' ,
             if len(chitems) != 0:
+                nfile = True
                 for child in item.childItems:
                     if child.checkState == 0:
                         continue
@@ -559,8 +561,8 @@ class MainWindow(QtGui.QMainWindow):
                                 self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,r))
 
                             self.sAdd('vtip\t%f' %(0.0))
-
-        self.writeFile(self.sketchFile)
+        if nfile:
+            self.writeFile(self.sketchFile)
 
     def sComment(self, stuff):
         adding = ''
@@ -578,9 +580,12 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def writeFile(self, data):
-        f = open(self.outDir + 'out.txt', 'w')
+        fname = self.outDir + 'out.tmp'
+        f = open(fname, 'w')
         f.write(data)
         f.close()
+        os.rename(fname, fname[:-3] + 'txt')
+        print  fname[:-3] + 'txt'
 
 
 
