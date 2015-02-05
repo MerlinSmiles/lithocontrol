@@ -8,9 +8,9 @@ import cv2
 
 # Set options in settings...
 
-def convertAFM(filename, saveImg = True):
-    print filename
-    filename = os.path.abspath(filename)
+def convertAFM(filenamex, saveImg = True):
+    print filenamex
+    filename = os.path.abspath(filenamex)
     print filename
     time.sleep(0.2)
     try:
@@ -36,10 +36,15 @@ def convertAFM(filename, saveImg = True):
             field.subtract_polynom(degrees[0],degrees[1],field.fit_polynom(degrees[0],degrees[1]))
             field.data_changed()
             data = gwyutils.data_field_data_as_array(field)
+            data = np.array(data)
+            # data = data[::-1]
 
             imfilename = False
             if saveImg:
-                imfilename = '../' + str(filename)+".png"
+
+                filename = os.path.abspath('D:/lithography/')
+                imfilename = str(filename)+"/current.png"
+                print imfilename
                 saveAFMimg(data, imfilename )
     info = {'xreal':xreal, 'yreal':yreal, 'imname': imfilename}
     gwy.gwy_app_data_browser_remove(c)
