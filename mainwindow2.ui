@@ -50,7 +50,7 @@
        </property>
        <property name="minimumSize">
         <size>
-         <width>400</width>
+         <width>100</width>
          <height>0</height>
         </size>
        </property>
@@ -88,10 +88,10 @@
          </property>
          <item>
           <layout class="QGridLayout" name="gridLayout">
-           <item row="1" column="2">
-            <widget class="QPushButton" name="sketchThis">
+           <item row="0" column="2">
+            <widget class="QPushButton" name="saveDirectory">
              <property name="text">
-              <string>Sketch This</string>
+              <string>Output Directory</string>
              </property>
             </widget>
            </item>
@@ -111,19 +111,19 @@
              </property>
             </widget>
            </item>
-           <item row="0" column="2">
-            <widget class="QPushButton" name="saveDirectory">
+           <item row="1" column="2">
+            <widget class="QPushButton" name="sketchThis">
              <property name="text">
-              <string>Output Directory</string>
+              <string>Sketch This</string>
              </property>
             </widget>
            </item>
            <item row="1" column="0">
             <layout class="QHBoxLayout" name="horizontalLayout_2">
              <item>
-              <widget class="QPushButton" name="abortLitho">
+              <widget class="QPushButton" name="shutLitho">
                <property name="text">
-                <string>Abort Litho</string>
+                <string>Shutdown</string>
                </property>
               </widget>
              </item>
@@ -140,7 +140,39 @@
                </property>
               </spacer>
              </item>
+             <item>
+              <widget class="QPushButton" name="abortLitho">
+               <property name="text">
+                <string>Abort Litho</string>
+               </property>
+              </widget>
+             </item>
             </layout>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QGridLayout" name="gridLayout_3">
+           <item row="0" column="1">
+            <widget class="QPushButton" name="butUnload">
+             <property name="text">
+              <string>Unload</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QPushButton" name="butLoad">
+             <property name="text">
+              <string>Load</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QPushButton" name="butCapture">
+             <property name="text">
+              <string>Capture</string>
+             </property>
+            </widget>
            </item>
           </layout>
          </item>
@@ -249,7 +281,20 @@
          <bool>false</bool>
         </property>
        </widget>
-       <widget class="PlotWidget" name="plot2"/>
+       <widget class="PlotWidget" name="plot2">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>20</height>
+         </size>
+        </property>
+       </widget>
       </widget>
      </widget>
     </item>

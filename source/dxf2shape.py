@@ -39,7 +39,7 @@ def dxf2shape(i, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_directi
         self.error('Tools diameter must be greater than 0!', 'error')
 
 
-    pts = Rotate2D(pts,fill_angle)
+    pts = Rotate2D(pts,-fill_angle)
     ll = []
     bounds = [min(pts[:,0]), min(pts[:,1]), max(pts[:,0]), max(pts[:,1])]
     line_x = bounds[0]-fill_step/2.0
@@ -111,7 +111,7 @@ def dxf2shape(i, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_directi
     collection = np.array(collection)
 
     for i in range(len(collection)):
-        collection[i] = Rotate2D(collection[i], -fill_angle)
+        collection[i] = Rotate2D(collection[i], fill_angle)
 
     return collection
 

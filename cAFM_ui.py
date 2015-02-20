@@ -8,6 +8,7 @@ from PyQt4 import QtCore, QtGui, uic
 import pyqtgraph as pg
 import pyqtgraph.exporters
 
+
 # %load_ext autoreload
 # %autoreload 2
 
@@ -24,12 +25,19 @@ elif sys.platform.startswith('win32'):
     afmFile = './stomilling.002'
     afmImageFolder = 'D:/lithography/AFMimages/'
 
+sys.path.append("D:\\Projects\\qtlab\\source")
+sys.path.append("D:\\Projects\\qtlab\\instrument_plugins")
+import Keithley_merlin_junk
+keithley = Keithley_merlin_junk.Keithley_2400('Keithley', address='GPIB0::2::INSTR', reset=False)
+keithley.set_output_state(0)
+keithley.set_source_voltage(0)
+keithley.set_output_state(1)
 
-
-filename = './dxfTest.dxf'
+filename = 'D:/lithography/DesignFiles/Untitled-1.dxf'
 
 import os
 import time
+import socket
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 # import operator
@@ -46,6 +54,138 @@ from source.dxf2shape import *
 orangePen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
 bluePen = pg.mkPen(color='0000FF')  #, style=QtCore.Qt.DotLine
 greenPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine
+
+
+class SocketWorker(QtCore.QThread):
+
+    def __init__(self, parent = None):
+
+        QtCore.QThread.__init__(self, parent)
+        self.exiting = False
+
+        self.host = 'nanoman'
+        self.remote_ip = None
+        self.port = 12345
+        self.sock = None
+        self.init = False
+        self.connected = False
+
+        self.initSocket()
+        self.connectSocket()
+
+    def __del__(self):
+        self.stop()
+
+    def initSocket(self):
+        try:
+            #create an AF_INET, STREAM socket (TCP)
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        except socket.error, msg:
+            print 'Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + msg[1]
+            self.init =  False
+
+        try:
+            self.remote_ip = socket.gethostbyname( self.host )
+        except socket.gaierror:
+            #could not resolve
+            print 'Hostname could not be resolved. Exiting'
+            self.init =  False
+        self.init =  True
+
+    def connectSocket(self):
+        #Connect to remote server
+        if not self.init:
+            self.initSocket()
+        if self.connected:
+            self.disconnectSocket()
+        try:
+            self.sock.connect((self.remote_ip , self.port))
+            print 'Socket Connected to ' + self.host + ' on ip ' + self.remote_ip
+            self.connected = True
+        except:
+            self.connected = False
+            pass
+
+    def disconnectSocket(self):
+        try:
+            self.sock.close()
+            print 'Socket disconnected'
+            self.connected = False
+        except:
+            pass
+
+    def send_message(self, message):
+        if not self.connected:
+            self.connectSocket()
+        try :
+            #Set the whole string
+            self.sock.sendall(message)
+            print 'sending message'
+        except socket.error:
+            #Send failed
+            print 'Send failed trying again with reconnect'
+            self.initSocket()
+            self.connectSocket()
+            try :
+                #Set the whole string
+                print 'sending message'
+                self.sock.sendall(message)
+            except socket.error:
+                #Send failed
+                print 'Send failed: Serious error'
+
+    def recv_message(self, timeout =0, buf = 4096):
+        if not self.connected:
+            self.connectSocket()
+        try:
+            self.sock.settimeout(timeout)
+            msg = self.sock.recv(buf)
+            return msg
+        except socket.error, e:
+            return False
+        else:
+            print 'got a message, do something :)'
+            pass
+
+    def monitor(self):
+        self.exiting = False
+        self.start()
+
+    def stop(self):
+        self.exiting = True
+        self.init = False
+        self.connected = False
+        self.disconnectSocket()
+
+    def run(self):
+        self.exiting = False
+        if not self.connected:
+            self.connectSocket()
+
+        while not self.exiting:
+            time.sleep(1)
+            msg = self.recv_message(timeout = 0.05)
+            if msg:
+                lines = msg.splitlines()
+                for line in lines:
+                    if line.startswith('vtip'):
+                        line = line.split( )
+                        volt = float(line[1])
+                        print 'VTIP ' , volt
+                        keithley.set_source_voltage(volt*4)
+                    elif line.startswith('Ready'):
+                        keithley.set_source_voltage(0)
+                        print "\n\nREADY\n\n"
+                    elif line.startswith('xyAbs'):
+                        line = line.split( )
+                        x = float(line[1])
+                        y = float(line[2])
+                        r = float(line[3])
+                        self.emit(QtCore.SIGNAL("AFMpos(float, float, float)"), x,y,r)
+
+
+
+
 
 class MyHandler(PatternMatchingEventHandler):
     def __init__(self, parent = None):
@@ -115,9 +255,9 @@ class TreeItem(object):
         self.pltHandle = []
         self.checkState = QtCore.Qt.Unchecked
         self.fillAngle = 0
-        self.fillStep = 0.05
+        self.fillStep = 0.1
         self.volt = 10
-        self.speed = 1
+        self.rate = 1.0
 #     shape.type = None # [VirtualElectrode, line, area]
 
     def redraw(self):
@@ -217,6 +357,7 @@ class TreeItem(object):
             self.redraw()
         elif self.model.rootData[column] == 'Step':
             self.fillStep = value
+            print value
             self.redraw()
         elif self.model.rootData[column] == 'Closed':
             self.entity.is_closed = value
@@ -424,7 +565,7 @@ class TreeModel(QtCore.QAbstractItemModel):
         parent_dict = {}
         while number < len(data.entities):
             entity = data.entities[number]
-            print entity.is_closed
+            # print entity.is_closed
             if entity.dxftype not in ['POLYLINE']:
                 number +=1
                 continue
@@ -463,11 +604,12 @@ class TreeModel(QtCore.QAbstractItemModel):
             # print self.headerData(0,QtCore.Qt.Horizontal)
 
             # print str(entity.is_closed)
-            item_data = {'Name': 'Name', 'Type': entity.dxftype,
+            item_data = {'Name': 'Id'+str(number),
+                         'Type': entity.dxftype,
                          'Closed': entity.is_closed,
                          'Voltage': thisChild.volt,
                          'Angle': thisChild.fillAngle,
-                         'Speed': thisChild.speed,
+                         'Rate': thisChild.rate,
                          'Step': thisChild.fillStep}
             # print columnData
             for column in range(len(columns)):
@@ -487,31 +629,56 @@ class MainWindow(QtGui.QMainWindow):
         self.inFile = ''
         self.sketchFile = ''
         self.freerate = 2.0
+        self.tip_gain = 4.0
+        self.tip_offset = 0
+
         self.afminfo = {}
         self.fileOut.setText(self.outDir)
         self.centerCoord = np.array([0,0])
 
+        self.afmImage = pg.ImageItem(None)
+        self.afmPosition = pg.ScatterPlotItem(size=5, pen=pg.mkPen(None), brush=pg.mkBrush(180, 180, 255, 255))
+
+        # n = 5
+        # pos = np.random.normal(size=(2,n))
+        # spots = [{'pos': pos[:,i], 'data': 1} for i in range(n)] + [{'pos': [0,0], 'data': 1}]
+        # self.afmPosition.addPoints(spots)
+
+        self.preservePlots = []
+        self.preservePlots.append(self.afmImage)
+        self.preservePlots.append(self.afmPosition)
+
+
         self.dxffileName = filename
 
-        self.headers = ('Name', 'Voltage', 'Speed', 'Angle', 'Step', 'Closed', 'Type')
+        self.headers = ('Name', 'Voltage', 'Rate', 'Angle', 'Step', 'Closed', 'Type')
 
         QtCore.QObject.connect(self.loadFile, QtCore.SIGNAL('clicked()'), self.pickFile)
         QtCore.QObject.connect(self.saveDirectory, QtCore.SIGNAL('clicked()'), self.pickDirectory)
         QtCore.QObject.connect(self.sketchThis, QtCore.SIGNAL('clicked()'), self.sketchNow)
         QtCore.QObject.connect(self.abortLitho, QtCore.SIGNAL('clicked()'), self.abortNow)
+        QtCore.QObject.connect(self.shutLitho, QtCore.SIGNAL('clicked()'), self.shutLithoNow)
+        QtCore.QObject.connect(self.butUnload, QtCore.SIGNAL('clicked()'), self.stageUnload)
+        QtCore.QObject.connect(self.butLoad, QtCore.SIGNAL('clicked()'), self.stageLoad)
+        QtCore.QObject.connect(self.butCapture, QtCore.SIGNAL('clicked()'), self.doCapture)
         QtCore.QObject.connect(self.fileOut, QtCore.SIGNAL('returnPressed()'), self.updateDirText)
-        QtCore.QObject.connect(self.fileIn, QtCore.SIGNAL('returnPressed()'), self.updateFileText)
+        QtCore.QObject.connect(self.fileIn, QtCore.SIGNAL('returnPressed()'), self.updateFileInText)
 
         self.readFile()
         print ''
         print ''
 
+        self.SocketThread = SocketWorker()
         self.AFMthread = AFMWorker()
+
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("finished()"), self.updateAFM)
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("terminated()"), self.updateAFM)
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("AFMimage(QString)"), self.newAFMimage)
 
+        QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("AFMpos(float, float, float)"), self.updateAFMpos)
+
         self.AFMthread.monitor(afmImageFolder)
+        self.SocketThread.monitor()
 
         # self.tree_file.selectionModel().selectionChanged.connect(self.updateActions)
         # self.tree_file.model().dataChanged.connect(self.clicked)
@@ -531,18 +698,41 @@ class MainWindow(QtGui.QMainWindow):
             self.afmData, self.afminfo = convertAFM(filename)
             if self.afmData.any() == False:
                 return
-            img = pg.ImageItem(self.afmData)
-            img.setZValue(-1000)  # make sure image is behind other data
-            img.setRect(pg.QtCore.QRectF(0, 0, self.afminfo['xreal'], self.afminfo['yreal']))
+            self.afmImage = pg.ImageItem(self.afmData)
+            self.afmImage.setZValue(-1000)  # make sure image is behind other data
+            x = self.afminfo['width']
+            y = self.afminfo['height']
+            print x,y
+            self.afmImage.setRect(pg.QtCore.QRectF(-x/2.0, -y/2.0, x, y))
 
-            self.centerCoord = np.array([self.afminfo['xreal'], self.afminfo['yreal']])/2.0
+            # self.centerCoord = np.array([0,0])
 
-            self.pi.addItem(img)
+            self.pi.addItem(self.afmImage)
+
+        # print self.pi.listDataItems()
 
     def updateAFM(self):
         print 'updateAFM'
 
+    def doCapture(self):
+        self.SocketThread.send_message('Capture\n')
+        print 'Capture'
+
+    def stageUnload(self):
+        self.SocketThread.send_message('StageUnload\n')
+        print 'unload Stage'
+
+    def stageLoad(self):
+        self.SocketThread.send_message('StageLoad\n')
+        print 'Load Stage'
+
+    @QtCore.pyqtSlot("float, float, float")
+    def updateAFMpos(self,x,y,rate):
+        print 'afmpos: ', x,y,rate
+        self.afmPosition.addPoints([{'pos': [x,y]}])
+
     def sketchNow(self, index=None):
+        self.afmPosition.clear()
         self.sketchFile = ''
         if index == None:
             index = self.model
@@ -570,7 +760,7 @@ class MainWindow(QtGui.QMainWindow):
                         for path in child.pltData:
                             x,y = np.add(path[0],-self.centerCoord)
                             self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
-                            self.sAdd('vtip\t%f' %(child.data(1)))
+                            self.sAdd('vtip\t%f' %((child.data(1)/self.tip_gain)-self.tip_offset))
                             r = child.data(2)
                             for x,y in np.add(path,-self.centerCoord):
                             # Maybe go from [1:] but going to the startpoint twice should reduce vtip lag
@@ -587,13 +777,12 @@ class MainWindow(QtGui.QMainWindow):
             adding += str(i)+ '\t'
         adding += '\n'
         self.sketchFile += adding
-        print adding
+        # print adding
 
     def sAdd(self, data):
         self.sketchFile += data
         self.sketchFile += '\n'
-        print data
-
+        # print data
 
     def writeFile(self, data):
         self.outDir = str(self.outDir)
@@ -606,14 +795,22 @@ class MainWindow(QtGui.QMainWindow):
         except:
             pass
         os.rename(fname, fname[:-3] + 'txt')
-        print  fname[:-3] + 'txt'
+        # print  fname[:-3] + 'txt'
+
+        self.SocketThread.send_message('sketch out.txt\n')
 
     def abortNow(self):
-        self.outDir = str(self.outDir)
-        fname = self.outDir + 'abort.txt'
-        f = open(fname, 'w')
+        self.SocketThread.disconnectSocket()
+        # self.SocketThread.send_message('shutdown\n')
+        # self.outDir = str(self.outDir)
+        # fname = self.outDir + 'abort.txt'
+        # f = open(fname, 'w')
         # f.write(data)
-        f.close()
+        # f.close()
+    def shutLithoNow(self):
+        self.SocketThread.send_message('shutdown\n')
+        self.SocketThread.stop()
+
 
     def pickFile(self):
         # http://stackoverflow.com/questions/20928023/how-to-use-qfiledialog-options-and-retreive-savefilename
@@ -632,9 +829,11 @@ class MainWindow(QtGui.QMainWindow):
         self.outDir = str(self.fileOut.text())
         self.fileOut.setText(self.outDir)
 
-    def updateFileText(self):
+    def updateFileInText(self):
         self.inFile = str(self.fileIn.text())
         self.fileIn.setText(self.inFile)
+        self.dxffileName = str(self.inFile)
+        self.readFile()
 
 
     def readFile(self):
@@ -656,6 +855,9 @@ class MainWindow(QtGui.QMainWindow):
 
         self.pi = self.plot1.getPlotItem()
         self.pi.clear()
+        self.pi.addItem(self.afmImage)
+        self.pi.addItem(self.afmPosition)
+
         self.pi.enableAutoRange('x', True)
         self.pi.enableAutoRange('y', True)
         self.pi.setAspectLocked(lock=True, ratio=1)
@@ -691,6 +893,7 @@ class MainWindow(QtGui.QMainWindow):
 
             self.updateActions()
 
+        # print self.pi.listDataItems()
 
     @QtCore.pyqtSlot("QModelIndex")
     def checked(self, index):
@@ -713,7 +916,6 @@ class MainWindow(QtGui.QMainWindow):
                 for i in data:
                     pdi = self.pi.plot(i, pen = greenPen)
                     item.pltHandle.append(pdi)
-
         self.updateActions()
 
 
