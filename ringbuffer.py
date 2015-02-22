@@ -8,9 +8,7 @@ class RingBuffer(object):
             self.size_max = (1,size_max)
         else:
             self.size_max = size_max
-        print self._dimensions , self.size_max
         self._data = np.empty(self.size_max, dtype=dtype)
-        print np.shape(self._data)
         self._data.fill(default_value)
         self.size = 0
 
@@ -36,8 +34,19 @@ class RingBuffer(object):
         if self.size == 0:
             return np.ndarray(0)
         if self._dimensions == 1:
-            return(self.get_all()[0][-self.size:])
-        return(self.get_all()[-self.size:])
+            return(self.get_all()[0][:,-self.size:])
+        return(self.get_all()[:,-self.size:])
+
+    def get_partial_clear(self):
+        if self.size == 0:
+            return np.ndarray(0)
+        tsize = self.size
+        if self._dimensions == 1:
+            dat = self.get_all()[0][:,-tsize:]
+        else:
+            dat = self.get_all()[:,-tsize:]
+        self.size = 0
+        return dat
 
     # def set_size_max(self, size_max):
 

@@ -91,9 +91,9 @@ class MeasureTask(Task):
         Task.__init__(self)
         self.running = False
         self.settings = settings
-        self.settings['buffer_size'] = 10000000
-        self.settings['acq_rate'] = 50000          # samples/second
-        self.settings['acq_samples'] = 10000        # every n samples
+        # self.settings['buffer_size'] = 10000000
+        # self.settings['acq_rate'] = 10000          # samples/second
+        # self.settings['acq_samples'] = 5000        # every n samples
 
         self.acq_samples = self.settings['acq_samples']
 
@@ -158,9 +158,20 @@ class MeasureTask(Task):
             meas_data = np.reshape(data[:read.value*self.num_chans],(self.num_chans,-1))
 
         # if self.settings['acq_plot']:
-        self.settings['buff'].append(meas_data)
+        # self.settings['buff'].append(meas_data)
 
+        # print meas_data.shape, self.num_chans
 
+        av_size = 200
+        data_size = av_size * (read.value/(av_size))
+        av_data = meas_data[:,-data_size:].reshape((-1,av_size))
+
+        av_data = np.mean(av_data,1)
+        # print 'b', np.shape(av_data)
+        # print av_data.shape
+        av_data = av_data.reshape((self.num_chans,-1))
+
+        self.settings['buff'].append(av_data)
         # if False:
         #     # av_data = meas_data
         #     av_size = 2000
@@ -415,7 +426,7 @@ class MainWindow(QtGui.QMainWindow):
         # self.settings['li_plot'] = True
         self.update_plotting()
 
-        self.settings['buffer_size'] = 10000000
+        self.settings['buffer_size'] = 1000000
         self.settings['acq_rate'] = 50000          # samples/second
         self.settings['acq_samples'] = 5000        # every n samples
         self.settings['device_input'] = "PCI-6251"
@@ -428,6 +439,7 @@ class MainWindow(QtGui.QMainWindow):
         self.settings['waveform_device'] = "PCI-6251"
         self.settings['waveform_freq'] = 77.0
         self.settings['waveform_phase'] = 0.0
+
 
 
 
@@ -512,12 +524,16 @@ class MainWindow(QtGui.QMainWindow):
         self.freqSpinBox.setValue(self.settings['out'][0]['freq'])
         self.amplSpinBox.setValue(self.settings['out'][0]['ampl'])
         self.cAmpSpinBox.setValue(self.settings['in'][0]['curr_amp'])
-        self.buff = ringbuffer.RingBuffer((len(self.settings['in']), self.settings['buffer_size']))
+        self.buff = ringbuffer.RingBuffer((len(self.settings['in']), self.settings['buffer_size']/1000))
         # (self._gen_meas_amplitude, self._normamplitudes, self._normphases)
         self.li_buff = ringbuffer.RingBuffer((5, self.settings['buffer_size']/1000))
 
         self.settings['buff'] = self.buff
         self.settings['li_buff'] = self.li_buff
+
+
+        self.plotarray=np.zeros((3,0))
+
 
         self.worker = Worker(self.settings)
 
@@ -535,7 +551,8 @@ class MainWindow(QtGui.QMainWindow):
         self.plotlist = []
         self.pi_names = ['input_ampl','phase_diff','R [ohm]','G [S]']
         for i in range(20):
-            self.plotlist.append({'plot': self.pi.plot(), 'channel': i})
+            pllt =  self.pi.plot(clipToView = True, autoDownsample= True)
+            self.plotlist.append({'plot': pllt, 'channel': i})
 
 
         self.pi2 = self.plotView2.getPlotItem()
@@ -548,7 +565,8 @@ class MainWindow(QtGui.QMainWindow):
         # li_data = np.array([[gen_meas_amplitude], [normamplitudes], [normphases], [li_r/1e6], [li_g]])
         self.pi_2names = ['ch0','ch1','ch2','ch3','ch4','ch5','ch6','ch7','ch8','ch9',]
         for i in range(5):
-            self.plotlist2.append({'plot': self.pi2.plot(name=self.pi_2names[i]), 'channel': i})
+            pllt =  self.pi2.plot(clipToView = True, autoDownsample= True)
+            self.plotlist2.append({'plot': pllt, 'channel': i})
 
         self.colors = ['vivid_yellow','strong_purple','vivid_orange','very_light_blue','vivid_red','grayish_yellow','medium_gray','vivid_green','strong_purplish_pink','strong_blue','strong_yellowish_pink','strong_violet','vivid_orange_yellow','strong_purplish_red','vivid_greenish_yellow','strong_reddish_brown','vivid_yellowish_green','deep_yellowish_brown','vivid_reddish_orange','dark_olive_green']
         self.kelly_colors = dict(vivid_yellow=(255, 179, 0),
@@ -675,24 +693,40 @@ class MainWindow(QtGui.QMainWindow):
 
         # if self.settings['acq_plot']:
         if True:
+            self.pi2_legend.items = []
         #     for n in range(len(self.settings['in'].keys())):
         #         if self.settings['in'][n]['lockin']:
         #             if self.settings['in'][n]['fft_arr'].size >0:
         #                 self.plotlist2[n]['plot'].setData(x = self.settings['in'][n]['fft_arr'][0], y = self.settings['in'][n]['fft_arr'][1], name=str(n))
         #                 self.plotlist2[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
 
-            raw_buffer = self.settings['buff'].get_partial()
-            self.pi2_legend.items = []
+            av_data = self.settings['buff'].get_partial_clear()
 
-            num_chans = len(self.settings['in'].keys())
-            av_size = num_chans*1000
 
-            if raw_buffer.size >av_size:
 
-                av_data = raw_buffer[:,-10000*av_size:]
-                av_data = av_data.reshape((-1,av_size))
-                av_data = np.mean(av_data,1)
-                av_data = av_data.reshape((num_chans,-1))
+            # num_chans = len(self.settings['in'].keys())
+            # av_size = num_chans*1000
+
+            av_len = -10
+            if av_data.size > 0:
+
+                current = np.abs(av_data[0]*self.settings['in'][0]['multiplier'])
+                r2pt = np.abs(self.settings['in'][0]['amplitude'] / current)
+                g2pt = 1.0/r2pt
+
+                a_b = av_data[1]*self.settings['in'][1]['multiplier']
+                r4pt = np.abs(a_b / current)
+                g4pt = 1.0/r4pt
+
+                self.plotarray = np.concatenate((self.plotarray, [current, r2pt, r4pt]),1)
+
+
+
+
+                # av_data = raw_buffer #[:,-10000*av_size:]
+                # av_data = av_data.reshape((-1,av_size))
+                # av_data = np.mean(av_data,1)
+                # av_data = av_data.reshape((num_chans,-1))
 
 
         # ch0['curr_amp'] = -6
@@ -700,16 +734,6 @@ class MainWindow(QtGui.QMainWindow):
         # ch0['multiplier'] = (10**ch0['curr_amp']) * 10e-3 / 10.0  # Vpp / 10v output range
 
 
-
-
-                current = np.abs(av_data[0]*self.settings['in'][0]['multiplier'])
-                r2pt = np.abs(self.settings['in'][0]['amplitude'] / current)
-                g2pt = 1.0/r2pt
-
-
-                a_b = av_data[1]*self.settings['in'][1]['multiplier']
-                r4pt = np.abs(a_b / current)
-                g4pt = 1.0/r4pt
 
                 n=0
                 # for n in range(len(self.settings['in'].keys())):
@@ -721,24 +745,23 @@ class MainWindow(QtGui.QMainWindow):
                 #         self.plotlist2[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
 
                 n += 1
-                av_len = -10
-                av_curr = np.average(current[av_len:])*1e9
+                av_curr = np.average(self.plotarray[0][av_len:])*1e9
                 self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'Current' + ' = ' + '%.2f nA' % av_curr)
 
-                self.plotlist2[n]['plot'].setData(y=current*1e9)
+                self.plotlist2[n]['plot'].setData(y=self.plotarray[0]*1e9)
                 self.plotlist2[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
                 n += 1
-                av_2pt = np.average(r2pt[av_len:])/1000.0
+                av_2pt = np.average(self.plotarray[1][av_len:])/1000.0
                 self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'R2pt' + ' = ' + '%.1f kOhm' % av_2pt)
 
-                self.plotlist2[n]['plot'].setData(y=r2pt/1000.0)
+                self.plotlist2[n]['plot'].setData(y=self.plotarray[1]/1000.0)
                 self.plotlist2[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
 
                 n += 1
-                av_4pt = np.average(r4pt[av_len:])/1000.0
+                av_4pt = np.average(self.plotarray[2][av_len:])/1000.0
                 self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'R4pt' + ' = ' + '%.1f kOhm' % av_4pt)
 
-                self.plotlist2[n]['plot'].setData(y=r4pt/1000.0)
+                self.plotlist2[n]['plot'].setData(y=self.plotarray[2]/1000.0)
                 self.plotlist2[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
 
         if not self.terminate:
