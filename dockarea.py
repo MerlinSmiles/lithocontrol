@@ -10,8 +10,8 @@ import sys
 from PyQt4 import QtCore, QtGui, uic
 
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore, QtGui
-import pyqtgraph.console
+# from pyqtgraph.Qt import QtCore, QtGui
+# import pyqtgraph.console
 import numpy as np
 
 import pyqtgraph.dockarea as pg_dock
