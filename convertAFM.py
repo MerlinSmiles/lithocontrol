@@ -23,8 +23,8 @@ def convertAFM(filenamex, saveImg = True):
             field = c[key]
             xres = field.get_xres()
             yres = field.get_yres()
-            xreal = field.get_xreal()*1e6
-            yreal = field.get_yreal()*1e6
+            xreal = (field.get_xreal()*1e6)/2.0
+            yreal = (field.get_yreal()*1e6)/2.0
 
             weights = gwy.DataLine(xres, 1.0, True)
             weights.part_fill(0, xres//3, 1.0)
@@ -36,7 +36,7 @@ def convertAFM(filenamex, saveImg = True):
             field.subtract_polynom(degrees[0],degrees[1],field.fit_polynom(degrees[0],degrees[1]))
             field.data_changed()
             data = gwyutils.data_field_data_as_array(field)
-            data = np.array(data)
+            data = np.array(data)[::,::-1]
             # data = data[::-1]
 
             imfilename = False
@@ -46,11 +46,13 @@ def convertAFM(filenamex, saveImg = True):
                 imfilename = str(filename)+"/current.png"
                 print imfilename
                 saveAFMimg(data, imfilename )
-    info = {'xreal':xreal, 'yreal':yreal, 'imname': imfilename}
+                writeImageMacro( imfilename , [-xreal, -yreal, xreal, yreal])
+    info = {'width':xreal*2, 'height':yreal*2, 'imname': imfilename}
     gwy.gwy_app_data_browser_remove(c)
     return np.array(data), info
 
 def saveAFMimg(data, filename):
+        data = data[:, ::-1].T
         mn = np.min(data)
         data = data-mn
         data = data*(255.0/np.max(data))
@@ -59,6 +61,24 @@ def saveAFMimg(data, filename):
         res = cv2.resize(im,(px,px), interpolation = cv2.INTER_CUBIC)
         cv2.imwrite(filename, res)
 
+def writeImageMacro(filename, position):
+    x1 = position[0]
+    y1 = position[1]
+    x2 = position[2]
+    y2 = position[3]
+    filestr = ''
+    filestr += '>LoadBMP\n'
+    filestr += ' {\n'
+    filestr += '   <Layer %s\n' %('1') #layer
+    filestr += '   <PointXYZ %f,%f,0\n' %(x1,y1)
+    filestr += '   <PointXYZ %f,%f,0\n' %(x2,y2)
+    filestr += '   <Filename \"%s\"\n' %(str(filename))
+    filestr += ' }\n'
+
+    fname = str(filename)[:-3]+'d3m'
+    f = open(fname, 'w')
+    f.write(filestr)
+    f.close()
 
 if __name__ == '__main__':
     afmFile = './stomilling.002'
