@@ -24,6 +24,16 @@ from IPython.qt.inprocess import QtInProcessKernelManager
 from IPython.lib import guisupport
 
 
+style_sheet = ""
+with open ("source/style.css", "r") as myfile:
+    style_sheet=myfile.read()
+
+
+orangePen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
+bluePen = pg.mkPen(color='0000FF')  #, style=QtCore.Qt.DotLine
+greenPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine
+
+
 class QIPythonWidget(RichIPythonWidget):
     """ Convenience class for a live IPython console widget. We can replace the standard banner using the customBanner argument"""
     def __init__(self,customBanner=None,*args,**kwargs):
@@ -64,23 +74,62 @@ class Test(QtGui.QWidget):
         layout.addWidget(self.area)
         self.setLayout(layout)
 
-        d1 = pg_dock.Dock("Skecthing", size=(500, 300))     ## give this dock the minimum possible size
-        d2 = pg_dock.Dock("Measuring", size=(500,300))
+        sketchDock = pg_dock.Dock("Skecthing", size=(500, 300))
+        ## d2 = pg_dock.Dock("Measuring", size=(500,300))
         # d3 = pg_dock.Dock("Console", size=(500,300))
-
-        self.area.addDock(d1, 'top')
-        self.area.addDock(d2, 'bottom')
-        # self.area.addDock(d3, 'bottom')
+        measureDock = pg_dock.Dock("Measuring", size=(500,300))
 
 
-        w1 = pg.PlotWidget()
-        w1.plot(np.random.normal(size=100))
-        d1.addWidget(w1)
+        self.area.addDock(sketchDock, 'top')
+        self.area.addDock(measureDock, 'bottom')
 
-        w2 = pg.PlotWidget()
-        w2.plot(np.random.normal(size=100))
-        d2.addWidget(w2)
-        # d2.hide()
+
+
+        # w2 = pg.PlotWidget()
+        # w2.setBackground("222")
+        # w2.plot(np.random.normal(size=100))
+        # d2.addWidget(w2)
+
+        # l = QtGui.QGridLayout()
+        # cw.setLayout(l)
+        # l.setSpacing(0)
+        # plt = pg.PlotItem()
+
+        data = pg.gaussianFilter(np.random.normal(size=(256, 256)), (20, 20))
+        img = pg.ImageItem(data)
+        # v = pg.GraphicsView()
+        # vb = pg.ViewBox()
+        # vb.setAspectLocked()
+        # v.setCentralItem(vb)
+        # measureDock.addWidget(v, 0, 0)
+
+        sketchPlot = pg.PlotWidget()
+        sketchPlot.enableAutoRange('x', True)
+        sketchPlot.enableAutoRange('y', True)
+        sketchPlot.setAspectLocked(lock=True, ratio=1)
+        sketchPlot.showGrid(x=1, y=1, alpha=0.8)
+        sketchDock.addWidget(sketchPlot, 0, 0)
+
+        histWidget = pg.HistogramLUTWidget()
+        sketchDock.addWidget(histWidget, 0, 1)
+        histWidget.setImageItem(img)
+
+
+        sketchPlot.addItem(img)
+        sketchPlot.plot(np.random.normal(size=100))
+
+
+
+
+        measurePlot = pg.PlotWidget()
+        measurePlot.plot(np.random.normal(size=100))
+        measureDock.addWidget(measurePlot)
+        # vb.addItem(img)
+        # vb.autoRange()
+
+        # measureDock.addWidget(v)
+
+        ## d2.hide()
 
         # w5 = pg.ImageView()
         # w5.setImage(np.random.normal(size=(100,100)))
@@ -110,6 +159,10 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def addToolbars(self):
+
+        spacer = QtGui.QWidget()
+        spacer.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+
         exitAction = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_delete.png'), 'Exit', self)
         exitAction.setShortcut('Ctrl+Q')
         exitAction.setStatusTip('Exit application')
@@ -213,6 +266,9 @@ class MainWindow(QtGui.QMainWindow):
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
     window = MainWindow()
+    app.setStyle("plastique")
+    window.setStyleSheet(style_sheet)
+
     # window.resize(1000,600)
     window.show()
     sys.exit(app.exec_())
