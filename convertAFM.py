@@ -1,5 +1,5 @@
 import sys
-sys.path.append("C:/Program Files (x86)/Gwyddion/bin")
+# sys.path.append("C:/Program Files (x86)/Gwyddion/bin")
 import gwy, gwyutils, os, re
 import numpy as np
 import time
@@ -17,7 +17,7 @@ def convertAFM(filenamex, saveImg = True):
         c = gwy.gwy_file_load(filename, gwy.RUN_NONINTERACTIVE)
         gwy.gwy_app_data_browser_add(c)
     except:
-        return False, False
+        return None, None
     for key in c.keys_by_name():
         if re.match(r'^/0/data$', key):
             field = c[key]
@@ -82,6 +82,7 @@ def writeImageMacro(filename, position):
 
 if __name__ == '__main__':
     afmFile = './stomilling.002'
+    afmFile = os.path.abspath('D:/Projects/lithocontrol/02181619.001')
     afmData, afmimage = convertAFM(afmFile)
     print afmData
 

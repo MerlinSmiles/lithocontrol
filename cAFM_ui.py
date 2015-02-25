@@ -7,6 +7,7 @@ from PyQt4 import QtCore, QtGui, uic
 
 import pyqtgraph as pg
 import pyqtgraph.exporters
+import pyqtgraph.dockarea as pg_dock
 
 
 # %load_ext autoreload
@@ -14,16 +15,7 @@ import pyqtgraph.exporters
 
 import sys
 
-if sys.platform.startswith('darwin'):
-    parentos = 'OSX'
-    afmImageFolder = './AFMimages/'
-    afmFile = ''
-elif sys.platform.startswith('win32'):
-    parentos = 'WIN'
-    from convertAFM import convertAFM
-    # afmfile = './data.npz'
-    afmFile = './stomilling.002'
-    afmImageFolder = 'D:/lithography/AFMimages/'
+from convertAFM import convertAFM
 
 sys.path.append("D:\\Projects\\qtlab\\source")
 sys.path.append("D:\\Projects\\qtlab\\instrument_plugins")
@@ -55,6 +47,31 @@ orangePen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
 bluePen = pg.mkPen(color='0000FF')  #, style=QtCore.Qt.DotLine
 greenPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine
 
+class PlotFrame(QtGui.QWidget):
+    def __init__( self, parent=None):
+        super(PlotFrame, self).__init__(parent)
+        self.area = pg_dock.DockArea()
+
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(self.area)
+        self.setLayout(layout)
+
+        self.sketchDock = pg_dock.Dock("Skecthing", size=(500, 300))     ## give this dock the minimum possible size
+        self.measureDock = pg_dock.Dock("Measuring", size=(500,300))
+        # d3 = pg_dock.Dock("Console", size=(500,300))
+
+        self.area.addDock(self.sketchDock, 'top')
+        self.area.addDock(self.measureDock, 'bottom')
+        # self.area.addDock(d3, 'bottom')
+
+
+        self.sketchWidget = pg.PlotWidget()
+        self.sketchWidget.plot(np.random.normal(size=100))
+        self.sketchDock.addWidget(self.sketchWidget)
+
+        self.measureWidget = pg.PlotWidget()
+        self.measureWidget.plot(np.random.normal(size=100))
+        self.measureDock.addWidget(self.measureWidget)
 
 class SocketWorker(QtCore.QThread):
 
@@ -120,7 +137,7 @@ class SocketWorker(QtCore.QThread):
         try :
             #Set the whole string
             self.sock.sendall(message)
-            print 'sending message'
+            # print 'sending message'
         except socket.error:
             #Send failed
             print 'Send failed trying again with reconnect'
@@ -128,7 +145,7 @@ class SocketWorker(QtCore.QThread):
             self.connectSocket()
             try :
                 #Set the whole string
-                print 'sending message'
+                # print 'sending message'
                 self.sock.sendall(message)
             except socket.error:
                 #Send failed
@@ -172,9 +189,9 @@ class SocketWorker(QtCore.QThread):
                         line = line.split( )
                         volt = float(line[1])
                         print 'VTIP ' , volt
-                        keithley.set_source_voltage(volt*4)
+                        # keithley.set_source_voltage(volt*4)
                     elif line.startswith('Ready'):
-                        keithley.set_source_voltage(0)
+                        # keithley.set_source_voltage(0)
                         print "\n\nREADY\n\n"
                     elif line.startswith('xyAbs'):
                         line = line.split( )
@@ -253,7 +270,7 @@ class TreeItem(object):
         self.pltData = None
         self.entity = None
         self.pltHandle = []
-        self.checkState = QtCore.Qt.Unchecked
+        self.checkState = QtCore.Qt.Checked
         self.fillAngle = 0
         self.fillStep = 0.1
         self.volt = 10
@@ -548,12 +565,21 @@ class TreeModel(QtCore.QAbstractItemModel):
             self.headerDataChanged.emit(orientation, section, section)
 
         return result
+
     def getColumns(self):
         columns = []
         for i in range(self.columnCount()):
             columns.append(self.headerData(i,QtCore.Qt.Horizontal))
         return columns
 
+    def getRows(self):
+        rows = []
+        for i in range(self.rowCount()):
+            rows.append(self.getItem(self.index(i)))
+        return rows
+
+    def clearData(self):
+        self.rootItem = TreeItem(self.rootData, model=self)
 
     def setupModelData(self, data, parent):
         columns = self.getColumns()
@@ -622,10 +648,21 @@ class TreeModel(QtCore.QAbstractItemModel):
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
+
         super(MainWindow, self).__init__(parent)
         uic.loadUi('mainwindow2.ui', self)
+        self.setWindowTitle('Merlins AFM sketching tool')
+        self.setGeometry(500,100,1200,1000)
+        self.plotwidget = PlotFrame()
+        self.plotSplitter.addWidget(self.plotwidget)
+
+        self.show()
+
         self.actionExit.triggered.connect(QtGui.qApp.quit)
+
         self.outDir = 'U:/'
+        self.afmImageFolder = 'D:/lithography/AFMimages/'
+
         self.inFile = ''
         self.sketchFile = ''
         self.freerate = 2.0
@@ -655,21 +692,20 @@ class MainWindow(QtGui.QMainWindow):
 
         QtCore.QObject.connect(self.loadFile, QtCore.SIGNAL('clicked()'), self.pickFile)
         QtCore.QObject.connect(self.saveDirectory, QtCore.SIGNAL('clicked()'), self.pickDirectory)
-        QtCore.QObject.connect(self.sketchThis, QtCore.SIGNAL('clicked()'), self.sketchNow)
-        QtCore.QObject.connect(self.abortLitho, QtCore.SIGNAL('clicked()'), self.abortNow)
-        QtCore.QObject.connect(self.shutLitho, QtCore.SIGNAL('clicked()'), self.shutLithoNow)
+        # QtCore.QObject.connect(self.sketchThis, QtCore.SIGNAL('clicked()'), self.sketchNow)
+        # QtCore.QObject.connect(self.abortLitho, QtCore.SIGNAL('clicked()'), self.abortNow)
+        # QtCore.QObject.connect(self.shutLitho, QtCore.SIGNAL('clicked()'), self.shutLithoNow)
         QtCore.QObject.connect(self.butUnload, QtCore.SIGNAL('clicked()'), self.stageUnload)
         QtCore.QObject.connect(self.butLoad, QtCore.SIGNAL('clicked()'), self.stageLoad)
-        QtCore.QObject.connect(self.butCapture, QtCore.SIGNAL('clicked()'), self.doCapture)
+        # QtCore.QObject.connect(self.butCapture, QtCore.SIGNAL('clicked()'), self.doCapture)
         QtCore.QObject.connect(self.fileOut, QtCore.SIGNAL('returnPressed()'), self.updateDirText)
         QtCore.QObject.connect(self.fileIn, QtCore.SIGNAL('returnPressed()'), self.updateFileInText)
 
-        self.readFile()
         print ''
         print ''
 
-        self.SocketThread = SocketWorker()
         self.AFMthread = AFMWorker()
+        self.SocketThread = SocketWorker()
 
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("finished()"), self.updateAFM)
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("terminated()"), self.updateAFM)
@@ -677,8 +713,14 @@ class MainWindow(QtGui.QMainWindow):
 
         QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("AFMpos(float, float, float)"), self.updateAFMpos)
 
-        self.AFMthread.monitor(afmImageFolder)
+        self.AFMthread.monitor(self.afmImageFolder)
         self.SocketThread.monitor()
+        self.addToolbars()
+
+
+
+        self.readDXFFile()
+
 
         # self.tree_file.selectionModel().selectionChanged.connect(self.updateActions)
         # self.tree_file.model().dataChanged.connect(self.clicked)
@@ -691,23 +733,26 @@ class MainWindow(QtGui.QMainWindow):
         # self.insertChildAction.triggered.connect(self.insertChild)
 
     @QtCore.pyqtSlot("QString")
-    def newAFMimage(self, filename):
-        filename = str(filename)
-        if parentos == 'WIN':
-            print filename
-            self.afmData, self.afminfo = convertAFM(filename)
-            if self.afmData.any() == False:
-                return
-            self.afmImage = pg.ImageItem(self.afmData)
-            self.afmImage.setZValue(-1000)  # make sure image is behind other data
-            x = self.afminfo['width']
-            y = self.afminfo['height']
-            print x,y
-            self.afmImage.setRect(pg.QtCore.QRectF(-x/2.0, -y/2.0, x, y))
+    def newAFMimage(self, filename=None):
+        if filename == None:
+            filename = sorted(os.listdir(self.afmImageFolder))[-1]
+            # filename = './stomilling.002'
 
-            # self.centerCoord = np.array([0,0])
+        filename = os.path.abspath(filename)
+        print filename
+        self.afmData, self.afminfo = convertAFM(filename)
+        if self.afmData.any() == None:
+            return
+        self.afmImage = pg.ImageItem(self.afmData)
+        self.afmImage.setZValue(-1000)  # make sure image is behind other data
+        x = self.afminfo['width']
+        y = self.afminfo['height']
+        print x,y
+        self.afmImage.setRect(pg.QtCore.QRectF(-x/2.0, -y/2.0, x, y))
 
-            self.pi.addItem(self.afmImage)
+        # self.centerCoord = np.array([0,0])
+
+        self.pi.addItem(self.afmImage)
 
         # print self.pi.listDataItems()
 
@@ -807,6 +852,7 @@ class MainWindow(QtGui.QMainWindow):
         # f = open(fname, 'w')
         # f.write(data)
         # f.close()
+
     def shutLithoNow(self):
         self.SocketThread.send_message('shutdown\n')
         self.SocketThread.stop()
@@ -817,13 +863,24 @@ class MainWindow(QtGui.QMainWindow):
         filename = QtGui.QFileDialog.getOpenFileName(self, 'Select design file', self.inFile, selectedFilter='*.dxf')
         if filename:
             self.dxffileName = str(filename)
-            self.readFile()
+            self.readDXFFile()
 
     def pickDirectory(self):
         outDir = QtGui.QFileDialog.getExistingDirectory(self, 'Select output Directory', self.outDir)
         if outDir:
             self.outDir = outDir
             self.fileOut.setText(self.outDir)
+
+    def pickAFMimageDirectory(self):
+        afmImageFolder = QtGui.QFileDialog.getExistingDirectory(self, 'Select AFM Image Folder', self.afmImageFolder)
+        if afmImageFolder:
+            self.afmImageFolder = afmImageFolder
+
+
+    def reloadAFMimageDirectory(self):
+        # logfiles = sorted(os.listdir(self.afmImageFolder))
+        # logfiles[-1]
+        self.newAFMimage()
 
     def updateDirText(self):
         self.outDir = str(self.fileOut.text())
@@ -833,10 +890,28 @@ class MainWindow(QtGui.QMainWindow):
         self.inFile = str(self.fileIn.text())
         self.fileIn.setText(self.inFile)
         self.dxffileName = str(self.inFile)
-        self.readFile()
+        self.readDXFFile()
 
+    # def reloadDXFFile(self):
+        # self.readDXFFile()
 
-    def readFile(self):
+    def clearDXFFile(self):
+        try:
+            self.model.clearData()
+            self.model.reset()
+
+            del self.dxf
+
+            self.pi.clear()
+            self.pi.addItem(self.afmImage)
+
+            self.updateActions()
+        except:
+            pass
+
+    def readDXFFile(self):
+        self.clearDXFFile()
+
         self.fileIn.setText(self.dxffileName)
         self.dxf = dxfgrabber.readfile(self.dxffileName)
 
@@ -853,7 +928,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
 
-        self.pi = self.plot1.getPlotItem()
+        self.pi = self.plotwidget.sketchWidget.getPlotItem()
         self.pi.clear()
         self.pi.addItem(self.afmImage)
         self.pi.addItem(self.afmPosition)
@@ -864,8 +939,6 @@ class MainWindow(QtGui.QMainWindow):
         self.pi.showGrid(x=1, y=1, alpha=0.8)
 
 
-        # afmFile = r'D:\lithography\AFMimages\01291659.001'
-        # self.AFMimage(afmFile)
 
         QtCore.QObject.connect(self.tree_file.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
         QtCore.QObject.connect(self.tree_schedule.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
@@ -875,9 +948,11 @@ class MainWindow(QtGui.QMainWindow):
         self.updateActions()
 
     @QtCore.pyqtSlot("QModelIndex")
-    def redraw(self, index):
+    def redraw(self):
         model = self.model
+
         item = model.getItem(index)
+
         checked = item.checkState
         if not checked == 0:
             # clear plot from item
@@ -894,6 +969,7 @@ class MainWindow(QtGui.QMainWindow):
             self.updateActions()
 
         # print self.pi.listDataItems()
+
 
     @QtCore.pyqtSlot("QModelIndex")
     def checked(self, index):
@@ -1019,11 +1095,136 @@ class MainWindow(QtGui.QMainWindow):
 
             row = self.tree_file.selectionModel().currentIndex().row()
             column = self.tree_file.selectionModel().currentIndex().column()
-            if self.tree_file.selectionModel().currentIndex().parent().isValid():
-                self.statusBar().showMessage("Position: (%d,%d)" % (row, column))
-            else:
-                self.statusBar().showMessage("Position: (%d,%d) in top level" % (row, column))
+            # if self.tree_file.selectionModel().currentIndex().parent().isValid():
+                # self.statusBar().showMessage("Position: (%d,%d)" % (row, column))
+            # else:
+                # self.statusBar().showMessage("Position: (%d,%d) in top level" % (row, column))
 
+
+    def addToolbars(self):
+        exitAction            = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_delete.png'), 'Exit', self)
+        captureAction         = QtGui.QAction(QtGui.QIcon('icons/afm/a_0006_capture.png'), 'Capture', self)
+        capture_abortAction   = QtGui.QAction(QtGui.QIcon('icons/afm/a_0008_capture_abort.png'), 'Capture Abort', self)
+        capture_forceAction   = QtGui.QAction(QtGui.QIcon('icons/afm/a_0007_capture_force.png'), 'Capture Force', self)
+        frame_downAction      = QtGui.QAction(QtGui.QIcon('icons/afm/a_0004_frame_down.png'), 'Frame Down', self)
+        frame_upAction        = QtGui.QAction(QtGui.QIcon('icons/afm/a_0003_frame_up.png'), 'Frame Up', self)
+        engageAction          = QtGui.QAction(QtGui.QIcon('icons/afm/a_0005_engage.png'), 'Engage', self)
+        withdrawAction        = QtGui.QAction(QtGui.QIcon('icons/afm/a_0000_withdraw.png'), 'Withdraw', self)
+        measureAction         = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_merlin.png'), 'Measure', self)
+        acceptMeasureAction   = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_accept_merlin.png'), 'Save and Clear', self)
+        favoriteMeasureAction = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_favourite_merlin.png'), 'Save as Favorite and Clear', self)
+        stopMeasureAction     = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_deny.png'), 'Stop Measure', self)
+        sketchAction          = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_accept.png'), 'Sketch Now', self)
+        abortSketchAction     = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_deny.png'), 'Abort Lithography', self)
+        afmfolderAction       = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/folder_search.png'), 'AFM Image Folder', self)
+        afmfolderReloadAction = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/folder_reload.png'), 'Reload AFM Image Folder', self)
+        dxfLoadAction         = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/note_add.png'), 'Load dxf', self)
+        dxfReloadAction       = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/note_refresh.png'), 'Reload dxf', self)
+        dxfClearAction        = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/note_deny.png'), 'Clear dxf', self)
+
+
+
+        QtCore.QObject.connect(exitAction, QtCore.SIGNAL('triggered()'), self.close )
+        exitAction.setShortcut('Ctrl+Q')
+        exitAction.setStatusTip('Exit application')
+
+        QtCore.QObject.connect(captureAction,          QtCore.SIGNAL('triggered()'), self.doCapture )
+        QtCore.QObject.connect(capture_abortAction,    QtCore.SIGNAL('triggered()'), self.doCaptureAbort )
+        QtCore.QObject.connect(capture_forceAction,    QtCore.SIGNAL('triggered()'), self.doCaptureForce )
+        QtCore.QObject.connect(frame_downAction,       QtCore.SIGNAL('triggered()'), self.doFrameDown )
+        QtCore.QObject.connect(frame_upAction,         QtCore.SIGNAL('triggered()'), self.doFrameUp )
+
+        QtCore.QObject.connect(engageAction,           QtCore.SIGNAL('triggered()'), self.doEngage )
+        QtCore.QObject.connect(withdrawAction,         QtCore.SIGNAL('triggered()'), self.doWithdraw )
+
+
+
+
+        QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.measure )
+        QtCore.QObject.connect(acceptMeasureAction,    QtCore.SIGNAL('triggered()'), self.measure )
+        QtCore.QObject.connect(favoriteMeasureAction,  QtCore.SIGNAL('triggered()'), self.measure )
+        QtCore.QObject.connect(stopMeasureAction,      QtCore.SIGNAL('triggered()'), self.measure )
+
+        QtCore.QObject.connect(sketchAction,           QtCore.SIGNAL('triggered()'), self.sketchNow )
+        QtCore.QObject.connect(abortSketchAction,      QtCore.SIGNAL('triggered()'), self.abortNow )
+        QtCore.QObject.connect(afmfolderAction,        QtCore.SIGNAL('triggered()'), self.pickAFMimageDirectory )
+        QtCore.QObject.connect(afmfolderReloadAction,  QtCore.SIGNAL('triggered()'), self.reloadAFMimageDirectory )
+        QtCore.QObject.connect(dxfLoadAction,          QtCore.SIGNAL('triggered()'), self.pickFile )
+        QtCore.QObject.connect(dxfReloadAction,        QtCore.SIGNAL('triggered()'), self.readDXFFile )
+        QtCore.QObject.connect(dxfClearAction,         QtCore.SIGNAL('triggered()'), self.clearDXFFile )
+
+
+
+        iconSize                    = QtCore.QSize(32,32)
+        toolbar = self.addToolBar('Exit')
+        toolbar.setIconSize(iconSize)
+        toolbar.addAction(exitAction)
+
+        plttoolbar = self.addToolBar('Sketching')
+        plttoolbar.setIconSize(iconSize)
+        plttoolbar.addAction(sketchAction)
+        plttoolbar.addAction(abortSketchAction)
+        plttoolbar.addSeparator()
+        plttoolbar.addAction(afmfolderAction)
+        plttoolbar.addAction(afmfolderReloadAction)
+        plttoolbar.addSeparator()
+        plttoolbar.addAction(dxfLoadAction)
+        plttoolbar.addAction(dxfReloadAction)
+        plttoolbar.addAction(dxfClearAction)
+        plttoolbar.addSeparator()
+        plttoolbar.addAction(measureAction)
+        plttoolbar.addAction(favoriteMeasureAction)
+        plttoolbar.addAction(acceptMeasureAction)
+        plttoolbar.addAction(stopMeasureAction)
+
+        afmToolbar = self.addToolBar('AFM')
+        afmToolbar.setIconSize(iconSize)
+        afmToolbar.addAction(engageAction)
+        afmToolbar.addAction(withdrawAction)
+        afmToolbar.addSeparator()
+        afmToolbar.addAction(captureAction)
+        afmToolbar.addAction(capture_forceAction)
+        afmToolbar.addAction(capture_abortAction)
+        afmToolbar.addSeparator()
+        afmToolbar.addAction(frame_downAction)
+        afmToolbar.addAction(frame_upAction)
+
+
+
+        # QtCore.QObject.connect(self.saveDirectory, QtCore.SIGNAL('clicked()'), self.pickDirectory)
+        # QtCore.QObject.connect(self.sketchThis, QtCore.SIGNAL('clicked()'), self.sketchNow)
+        # QtCore.QObject.connect(self.abortLitho, QtCore.SIGNAL('clicked()'), self.abortNow)
+        # QtCore.QObject.connect(self.shutLitho, QtCore.SIGNAL('clicked()'), self.shutLithoNow)
+        # QtCore.QObject.connect(self.butUnload, QtCore.SIGNAL('clicked()'), self.stageUnload)
+        # QtCore.QObject.connect(self.butLoad, QtCore.SIGNAL('clicked()'), self.stageLoad)
+        # QtCore.QObject.connect(self.butCapture, QtCore.SIGNAL('clicked()'), self.doCapture)
+        # QtCore.QObject.connect(self.fileOut, QtCore.SIGNAL('returnPressed()'), self.updateDirText)
+        # QtCore.QObject.connect(self.fileIn, QtCore.SIGNAL('returnPressed()'), self.updateFileInText)
+
+
+        # QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("finished()"), self.updateAFM)
+        # QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("terminated()"), self.updateAFM)
+        # QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("AFMimage(QString)"), self.newAFMimage)
+
+        # QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("AFMpos(float, float, float)"), self.updateAFMpos)
+
+
+    def measure(self):
+        pass
+    def doCapture(self):
+        self.SocketThread.send_message('Capture')
+    def doCaptureAbort(self):
+        self.SocketThread.send_message('CaptureAbort')
+    def doCaptureForce(self):
+        self.SocketThread.send_message('CaptureForce')
+    def doFrameDown(self):
+        self.SocketThread.send_message('FrameDown')
+    def doFrameUp(self):
+        self.SocketThread.send_message('FrameUp')
+    def doEngage(self):
+        self.SocketThread.send_message('Engage')
+    def doWithdraw(self):
+        self.SocketThread.send_message('Withdraw')
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
