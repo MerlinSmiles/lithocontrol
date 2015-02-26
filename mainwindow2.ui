@@ -84,57 +84,6 @@
           <number>0</number>
          </property>
          <item>
-          <layout class="QGridLayout" name="gridLayout">
-           <item row="0" column="2">
-            <widget class="QPushButton" name="saveDirectory">
-             <property name="text">
-              <string>Output Directory</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QLineEdit" name="fileOut">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="maxLength">
-              <number>32777</number>
-             </property>
-             <property name="frame">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <layout class="QHBoxLayout" name="horizontalLayout_2">
-             <item>
-              <widget class="QPushButton" name="shutLitho">
-               <property name="text">
-                <string>Shutdown</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <spacer name="horizontalSpacer">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-            </layout>
-           </item>
-          </layout>
-         </item>
-         <item>
           <layout class="QGridLayout" name="gridLayout_3">
            <item row="0" column="1">
             <widget class="QPushButton" name="butUnload">
@@ -203,33 +152,6 @@
           <number>5</number>
          </property>
          <item>
-          <layout class="QGridLayout" name="gridLayout2">
-           <property name="sizeConstraint">
-            <enum>QLayout::SetNoConstraint</enum>
-           </property>
-           <property name="horizontalSpacing">
-            <number>6</number>
-           </property>
-           <property name="verticalSpacing">
-            <number>0</number>
-           </property>
-           <item row="0" column="0">
-            <widget class="QLineEdit" name="fileIn">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QPushButton" name="loadFile">
-             <property name="text">
-              <string>Design File</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
           <widget class="QTreeView" name="tree_file">
            <property name="alternatingRowColors">
             <bool>true</bool>
@@ -263,7 +185,7 @@
      <x>0</x>
      <y>0</y>
      <width>1059</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -321,11 +243,7 @@
   </action>
  </widget>
  <tabstops>
-  <tabstop>fileOut</tabstop>
-  <tabstop>saveDirectory</tabstop>
   <tabstop>tree_schedule</tabstop>
-  <tabstop>fileIn</tabstop>
-  <tabstop>loadFile</tabstop>
   <tabstop>tree_file</tabstop>
  </tabstops>
  <resources/>

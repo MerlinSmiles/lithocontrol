@@ -9,9 +9,8 @@ import cv2
 # Set options in settings...
 
 def convertAFM(filenamex, saveImg = True):
-    print filenamex
     filename = os.path.abspath(filenamex)
-    print filename
+    print 'Loading ', filename
     time.sleep(0.2)
     try:
         c = gwy.gwy_file_load(filename, gwy.RUN_NONINTERACTIVE)
@@ -37,11 +36,9 @@ def convertAFM(filenamex, saveImg = True):
             field.data_changed()
             data = gwyutils.data_field_data_as_array(field)
             data = np.array(data)[::,::-1]
-            # data = data[::-1]
 
             imfilename = False
             if saveImg:
-
                 filename = os.path.abspath('D:/lithography/')
                 imfilename = str(filename)+"/current.png"
                 print imfilename

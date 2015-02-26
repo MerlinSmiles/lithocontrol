@@ -32,7 +32,7 @@ import time
 import socket
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
-# import operator
+# import operatorfmimages
 # import dxfgrabber
 # from collections import Counter
 # import matplotlib.pyplot as plt
@@ -58,20 +58,49 @@ class PlotFrame(QtGui.QWidget):
 
         self.sketchDock = pg_dock.Dock("Skecthing", size=(500, 300))     ## give this dock the minimum possible size
         self.measureDock = pg_dock.Dock("Measuring", size=(500,300))
-        # d3 = pg_dock.Dock("Console", size=(500,300))
 
         self.area.addDock(self.sketchDock, 'top')
         self.area.addDock(self.measureDock, 'bottom')
-        # self.area.addDock(d3, 'bottom')
+
+        data = pg.gaussianFilter(np.random.normal(size=(256, 256)), (20, 20))
+        self.afmIm = pg.ImageItem(data)
+        self.afmIm.setZValue(-1000)
+
+        self.sketchPlot = pg.PlotWidget()
+        self.sketchPlot.enableAutoRange('x', True)
+        self.sketchPlot.enableAutoRange('y', True)
+        self.sketchPlot.setAspectLocked(lock=True, ratio=1)
+        self.sketchPlot.showGrid(x=1, y=1, alpha=0.8)
+        self.sketchDock.addWidget(self.sketchPlot, 0, 0)
 
 
-        self.sketchWidget = pg.PlotWidget()
-        self.sketchWidget.plot(np.random.normal(size=100))
-        self.sketchDock.addWidget(self.sketchWidget)
+        self.histWidget = pg.HistogramLUTWidget()
+        self.sketchDock.addWidget(self.histWidget, 0, 1)
 
-        self.measureWidget = pg.PlotWidget()
-        self.measureWidget.plot(np.random.normal(size=100))
-        self.measureDock.addWidget(self.measureWidget)
+        self.histWidget.setImageItem(self.afmIm)
+        self.p = self.sketchPlot.addItem(self.afmIm)
+        self.sketchPlot.plot(np.random.normal(size=100))
+
+
+
+
+        self.measurePlot = pg.PlotWidget()
+        self.measurePlot.plot(np.random.normal(size=100))
+        self.measureDock.addWidget(self.measurePlot)
+
+    def setAfmImage(self, image_data, x= None, y=None):
+        if not (x==None or y == None):
+            self.afmIm.setRect(pg.QtCore.QRectF(-x/2.0, -y/2.0, x, y))
+        self.afmIm.setImage(image_data)
+
+
+
+    def clearSketchPlot(self):
+        # return
+        self.sketchPlot.clear()
+        self.histWidget.setImageItem(self.afmIm)
+        self.sketchPlot.addItem(self.afmIm)
+
 
 class SocketWorker(QtCore.QThread):
 
@@ -185,6 +214,8 @@ class SocketWorker(QtCore.QThread):
             if msg:
                 lines = msg.splitlines()
                 for line in lines:
+                    # self.statusBar().showMessage(line)
+                    self.emit(QtCore.SIGNAL("AFMStatus(QString)"), line)
                     if line.startswith('vtip'):
                         line = line.split( )
                         volt = float(line[1])
@@ -222,7 +253,7 @@ class MyHandler(PatternMatchingEventHandler):
         # the file will be processed there
         # print event.src_path, event.event_type  # print now only for degug
 
-        self.parent.emit(QtCore.SIGNAL("AFMimage(QString)"), event.src_path)
+        self.parent.emit(QtCore.SIGNAL("afmImage(QString)"), event.src_path)
 
     # def on_modified(self, event):
     #     self.process(event)
@@ -270,14 +301,17 @@ class TreeItem(object):
         self.pltData = None
         self.entity = None
         self.pltHandle = []
-        self.checkState = QtCore.Qt.Checked
+        self.checkState = QtCore.Qt.Unchecked
         self.fillAngle = 0
         self.fillStep = 0.1
         self.volt = 10
         self.rate = 1.0
+        self.length = 0.0
+        self.sketchTime = 0.0
 #     shape.type = None # [VirtualElectrode, line, area]
 
     def redraw(self):
+        print 'called'
         self.setDxfData(dxf2shape(self.entity, fill_step = self.fillStep, fill_angle=self.fillAngle))
 
     def setCheckState(self, value):
@@ -295,10 +329,25 @@ class TreeItem(object):
 
     def setDxfData(self, data):
         self.dxfData = data
-        if len(self.dxfData)>0:
-            self.pltData = []
-            for k in self.dxfData:
-                self.pltData.append(k.reshape((-1,2)))
+        self.pltData = []
+        for k in self.dxfData:
+            self.pltData.append(k.reshape((-1,2)))
+        # self.calcTime()
+
+    def calcLength(self):
+        dat = np.array(self.pltData).reshape((-1,2))
+        dat_b = np.roll(dat,-1)
+        dist = 0
+        for k in range(len(dat)-1):
+            dist += np.linalg.norm(dat[k]-dat_b[k])
+
+        self.length = dist
+        print dist
+
+    def calcTime(self):
+        self.calcLength()
+        self.sketchTime = self.length / float(self.rate)
+        print self.sketchTime
 
     def child(self, row):
         return self.childItems[row]
@@ -370,15 +419,20 @@ class TreeItem(object):
         if column < 0 or column >= len(self.itemData):
             return False
         if self.model.rootData[column] == 'Angle':
-            self.fillAngle = value
-            self.redraw()
+            if self.fillAngle != value:
+                self.fillAngle = value
+                self.redraw()
         elif self.model.rootData[column] == 'Step':
-            self.fillStep = value
-            print value
-            self.redraw()
+            if self.fillStep != value:
+                self.fillStep = value
+                self.redraw()
         elif self.model.rootData[column] == 'Closed':
-            self.entity.is_closed = value
-            self.redraw()
+            if self.entity.is_closed != value:
+                self.entity.is_closed = value
+        elif self.model.rootData[column] == 'Time':
+            if self.sketchTime != value:
+                self.sketchTime = value
+                # self.redraw()
 
         self.itemData[column] = value
         return True
@@ -590,6 +644,7 @@ class TreeModel(QtCore.QAbstractItemModel):
         layers = {}
         parent_dict = {}
         while number < len(data.entities):
+            # entities are right in dxf file!!
             entity = data.entities[number]
             # print entity.is_closed
             if entity.dxftype not in ['POLYLINE']:
@@ -597,7 +652,7 @@ class TreeModel(QtCore.QAbstractItemModel):
                 continue
             layer = entity.layer
             parent = parents[-1]
-            columnData = ['Name', 'Type']
+            # columnData = ['Name', 'Type']
             if layer not in layers:
                 layers[layer] = {'Name': layer, 'Type': 'Layer'}
                 parent.insertChildren(parent.childCount(), 1,
@@ -636,7 +691,8 @@ class TreeModel(QtCore.QAbstractItemModel):
                          'Voltage': thisChild.volt,
                          'Angle': thisChild.fillAngle,
                          'Rate': thisChild.rate,
-                         'Step': thisChild.fillStep}
+                         'Step': thisChild.fillStep,
+                         'Time': thisChild.sketchTime}
             # print columnData
             for column in range(len(columns)):
                 key = columns[column]
@@ -653,15 +709,15 @@ class MainWindow(QtGui.QMainWindow):
         uic.loadUi('mainwindow2.ui', self)
         self.setWindowTitle('Merlins AFM sketching tool')
         self.setGeometry(500,100,1200,1000)
-        self.plotwidget = PlotFrame()
-        self.plotSplitter.addWidget(self.plotwidget)
+        self.plotFrame = PlotFrame()
+        self.plotSplitter.addWidget(self.plotFrame)
 
         self.show()
 
         self.actionExit.triggered.connect(QtGui.qApp.quit)
 
         self.outDir = 'U:/'
-        self.afmImageFolder = 'D:/lithography/AFMimages/'
+        self.afmImageFolder = 'D:/lithography/afmImages/'
 
         self.inFile = ''
         self.sketchFile = ''
@@ -670,10 +726,9 @@ class MainWindow(QtGui.QMainWindow):
         self.tip_offset = 0
 
         self.afminfo = {}
-        self.fileOut.setText(self.outDir)
+        # self.fileOut.setText(self.outDir)
         self.centerCoord = np.array([0,0])
 
-        self.afmImage = pg.ImageItem(None)
         self.afmPosition = pg.ScatterPlotItem(size=5, pen=pg.mkPen(None), brush=pg.mkBrush(180, 180, 255, 255))
 
         # n = 5
@@ -682,24 +737,18 @@ class MainWindow(QtGui.QMainWindow):
         # self.afmPosition.addPoints(spots)
 
         self.preservePlots = []
-        self.preservePlots.append(self.afmImage)
         self.preservePlots.append(self.afmPosition)
 
 
         self.dxffileName = filename
 
-        self.headers = ('Name', 'Voltage', 'Rate', 'Angle', 'Step', 'Closed', 'Type')
+        self.headers = ('Name', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Closed', 'Type')
 
-        QtCore.QObject.connect(self.loadFile, QtCore.SIGNAL('clicked()'), self.pickFile)
-        QtCore.QObject.connect(self.saveDirectory, QtCore.SIGNAL('clicked()'), self.pickDirectory)
-        # QtCore.QObject.connect(self.sketchThis, QtCore.SIGNAL('clicked()'), self.sketchNow)
-        # QtCore.QObject.connect(self.abortLitho, QtCore.SIGNAL('clicked()'), self.abortNow)
-        # QtCore.QObject.connect(self.shutLitho, QtCore.SIGNAL('clicked()'), self.shutLithoNow)
+        # QtCore.QObject.connect(self.loadFile, QtCore.SIGNAL('clicked()'), self.pickFile)
+        # QtCore.QObject.connect(self.saveDirectory, QtCore.SIGNAL('clicked()'), self.pickDirectory)
         QtCore.QObject.connect(self.butUnload, QtCore.SIGNAL('clicked()'), self.stageUnload)
         QtCore.QObject.connect(self.butLoad, QtCore.SIGNAL('clicked()'), self.stageLoad)
-        # QtCore.QObject.connect(self.butCapture, QtCore.SIGNAL('clicked()'), self.doCapture)
-        QtCore.QObject.connect(self.fileOut, QtCore.SIGNAL('returnPressed()'), self.updateDirText)
-        QtCore.QObject.connect(self.fileIn, QtCore.SIGNAL('returnPressed()'), self.updateFileInText)
+        # QtCore.QObject.connect(self.fileIn, QtCore.SIGNAL('returnPressed()'), self.updateFileInText)
 
         print ''
         print ''
@@ -709,9 +758,11 @@ class MainWindow(QtGui.QMainWindow):
 
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("finished()"), self.updateAFM)
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("terminated()"), self.updateAFM)
-        QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("AFMimage(QString)"), self.newAFMimage)
+        QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("afmImage(QString)"), self.newafmImage)
 
         QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("AFMpos(float, float, float)"), self.updateAFMpos)
+        QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("AFMStatus(QString)"), self.updateStatus)
+
 
         self.AFMthread.monitor(self.afmImageFolder)
         self.SocketThread.monitor()
@@ -733,26 +784,21 @@ class MainWindow(QtGui.QMainWindow):
         # self.insertChildAction.triggered.connect(self.insertChild)
 
     @QtCore.pyqtSlot("QString")
-    def newAFMimage(self, filename=None):
+    def newafmImage(self, filename=None):
         if filename == None:
-            filename = sorted(os.listdir(self.afmImageFolder))[-1]
-            # filename = './stomilling.002'
+            filename = self.afmImageFolder+sorted(os.listdir(self.afmImageFolder))[-1]
 
         filename = os.path.abspath(filename)
-        print filename
         self.afmData, self.afminfo = convertAFM(filename)
         if self.afmData.any() == None:
             return
-        self.afmImage = pg.ImageItem(self.afmData)
-        self.afmImage.setZValue(-1000)  # make sure image is behind other data
+        # self.afmImage = pg.ImageItem(self.afmData)
+        # self.afmImage.setZValue(-1000)  # make sure image is behind other data
         x = self.afminfo['width']
         y = self.afminfo['height']
-        print x,y
-        self.afmImage.setRect(pg.QtCore.QRectF(-x/2.0, -y/2.0, x, y))
 
-        # self.centerCoord = np.array([0,0])
+        self.plotFrame.setAfmImage(self.afmData,x,y)
 
-        self.pi.addItem(self.afmImage)
 
         # print self.pi.listDataItems()
 
@@ -775,6 +821,10 @@ class MainWindow(QtGui.QMainWindow):
     def updateAFMpos(self,x,y,rate):
         print 'afmpos: ', x,y,rate
         self.afmPosition.addPoints([{'pos': [x,y]}])
+
+    @QtCore.pyqtSlot("QString")
+    def updateStatus(self,line):
+        self.statusBar().showMessage(line)
 
     def sketchNow(self, index=None):
         self.afmPosition.clear()
@@ -846,12 +896,6 @@ class MainWindow(QtGui.QMainWindow):
 
     def abortNow(self):
         self.SocketThread.disconnectSocket()
-        # self.SocketThread.send_message('shutdown\n')
-        # self.outDir = str(self.outDir)
-        # fname = self.outDir + 'abort.txt'
-        # f = open(fname, 'w')
-        # f.write(data)
-        # f.close()
 
     def shutLithoNow(self):
         self.SocketThread.send_message('shutdown\n')
@@ -869,28 +913,24 @@ class MainWindow(QtGui.QMainWindow):
         outDir = QtGui.QFileDialog.getExistingDirectory(self, 'Select output Directory', self.outDir)
         if outDir:
             self.outDir = outDir
-            self.fileOut.setText(self.outDir)
+            # self.fileOut.setText(self.outDir)
 
-    def pickAFMimageDirectory(self):
+    def pickafmImageDirectory(self):
         afmImageFolder = QtGui.QFileDialog.getExistingDirectory(self, 'Select AFM Image Folder', self.afmImageFolder)
         if afmImageFolder:
             self.afmImageFolder = afmImageFolder
 
 
-    def reloadAFMimageDirectory(self):
+    def reloadafmImageDirectory(self):
         # logfiles = sorted(os.listdir(self.afmImageFolder))
         # logfiles[-1]
-        self.newAFMimage()
+        self.newafmImage()
 
-    def updateDirText(self):
-        self.outDir = str(self.fileOut.text())
-        self.fileOut.setText(self.outDir)
-
-    def updateFileInText(self):
-        self.inFile = str(self.fileIn.text())
-        self.fileIn.setText(self.inFile)
-        self.dxffileName = str(self.inFile)
-        self.readDXFFile()
+    # def updateFileInText(self):
+    #     self.inFile = str(self.fileIn.text())
+    #     self.fileIn.setText(self.inFile)
+    #     self.dxffileName = str(self.inFile)
+    #     self.readDXFFile()
 
     # def reloadDXFFile(self):
         # self.readDXFFile()
@@ -902,8 +942,7 @@ class MainWindow(QtGui.QMainWindow):
 
             del self.dxf
 
-            self.pi.clear()
-            self.pi.addItem(self.afmImage)
+            self.plotFrame.clearSketchPlot()
 
             self.updateActions()
         except:
@@ -912,7 +951,7 @@ class MainWindow(QtGui.QMainWindow):
     def readDXFFile(self):
         self.clearDXFFile()
 
-        self.fileIn.setText(self.dxffileName)
+        # self.fileIn.setText(self.dxffileName)
         self.dxf = dxfgrabber.readfile(self.dxffileName)
 
         self.model = TreeModel(self.headers, self.dxf)
@@ -928,9 +967,8 @@ class MainWindow(QtGui.QMainWindow):
 
 
 
-        self.pi = self.plotwidget.sketchWidget.getPlotItem()
-        self.pi.clear()
-        self.pi.addItem(self.afmImage)
+        self.pi = self.plotFrame.sketchPlot.getPlotItem()
+        self.plotFrame.clearSketchPlot()
         self.pi.addItem(self.afmPosition)
 
         self.pi.enableAutoRange('x', True)
@@ -948,7 +986,7 @@ class MainWindow(QtGui.QMainWindow):
         self.updateActions()
 
     @QtCore.pyqtSlot("QModelIndex")
-    def redraw(self):
+    def redraw(self, index):
         model = self.model
 
         item = model.getItem(index)
@@ -997,6 +1035,7 @@ class MainWindow(QtGui.QMainWindow):
 
     @QtCore.pyqtSlot("QItemSelection, QItemSelection")
     def update_plot(self, selected, deselected):
+        print 'here'
         index = selected.indexes()
         self.tree_file.setCurrentIndex(index[0])
         self.tree_schedule.setCurrentIndex(index[0])
@@ -1147,15 +1186,15 @@ class MainWindow(QtGui.QMainWindow):
 
         QtCore.QObject.connect(sketchAction,           QtCore.SIGNAL('triggered()'), self.sketchNow )
         QtCore.QObject.connect(abortSketchAction,      QtCore.SIGNAL('triggered()'), self.abortNow )
-        QtCore.QObject.connect(afmfolderAction,        QtCore.SIGNAL('triggered()'), self.pickAFMimageDirectory )
-        QtCore.QObject.connect(afmfolderReloadAction,  QtCore.SIGNAL('triggered()'), self.reloadAFMimageDirectory )
+        QtCore.QObject.connect(afmfolderAction,        QtCore.SIGNAL('triggered()'), self.pickafmImageDirectory )
+        QtCore.QObject.connect(afmfolderReloadAction,  QtCore.SIGNAL('triggered()'), self.reloadafmImageDirectory )
         QtCore.QObject.connect(dxfLoadAction,          QtCore.SIGNAL('triggered()'), self.pickFile )
         QtCore.QObject.connect(dxfReloadAction,        QtCore.SIGNAL('triggered()'), self.readDXFFile )
         QtCore.QObject.connect(dxfClearAction,         QtCore.SIGNAL('triggered()'), self.clearDXFFile )
 
 
 
-        iconSize                    = QtCore.QSize(32,32)
+        iconSize = QtCore.QSize(32,32)
         toolbar = self.addToolBar('Exit')
         toolbar.setIconSize(iconSize)
         toolbar.addAction(exitAction)
@@ -1204,7 +1243,7 @@ class MainWindow(QtGui.QMainWindow):
 
         # QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("finished()"), self.updateAFM)
         # QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("terminated()"), self.updateAFM)
-        # QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("AFMimage(QString)"), self.newAFMimage)
+        # QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("afmImage(QString)"), self.newafmImage)
 
         # QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("AFMpos(float, float, float)"), self.updateAFMpos)
 

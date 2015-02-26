@@ -483,7 +483,7 @@ class MainWindow(QtGui.QMainWindow):
         self.worker = Worker(self.settings)
 
         self.workerThread = None
-        self.pi = self.plotView.getPlotItem()
+        self.pi = self.plotView2.getPlotItem()
         self.pi.addLegend()
         self.pi_legend = self.pi.legend
 
@@ -496,7 +496,7 @@ class MainWindow(QtGui.QMainWindow):
             self.plotlist.append({'plot': self.pi.plot(), 'channel': i})
 
 
-        self.pi2 = self.plotView2.getPlotItem()
+        self.pi2 = self.plotView.getPlotItem()
         self.pi2.addLegend()
         self.pi2.enableAutoRange('x', True)
         # self.pi2.setXRange(990000, 1000000)
