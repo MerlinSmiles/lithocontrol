@@ -19,11 +19,11 @@ from convertAFM import convertAFM
 
 sys.path.append("D:\\Projects\\qtlab\\source")
 sys.path.append("D:\\Projects\\qtlab\\instrument_plugins")
-import Keithley_merlin_junk
-keithley = Keithley_merlin_junk.Keithley_2400('Keithley', address='GPIB0::2::INSTR', reset=False)
-keithley.set_output_state(0)
-keithley.set_source_voltage(0)
-keithley.set_output_state(1)
+# import Keithley_merlin_junk
+# keithley = Keithley_merlin_junk.Keithley_2400('Keithley', address='GPIB0::2::INSTR', reset=False)
+# keithley.set_output_state(0)
+# keithley.set_source_voltage(0)
+# keithley.set_output_state(1)
 
 filename = 'D:/lithography/DesignFiles/Untitled-1.dxf'
 
@@ -45,7 +45,7 @@ from source.dxf2shape import *
 # mkPen for selected
 orangePen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
 bluePen = pg.mkPen(color='0000FF')  #, style=QtCore.Qt.DotLine
-greenPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine
+greenPen = pg.mkPen(color='00FF00', width=2)  #, style=QtCore.Qt.DotLine
 
 class PlotFrame(QtGui.QWidget):
     def __init__( self, parent=None):
@@ -722,7 +722,7 @@ class MainWindow(QtGui.QMainWindow):
         self.inFile = ''
         self.sketchFile = ''
         self.freerate = 2.0
-        self.tip_gain = 4.0
+        self.tip_gain = 1.0
         self.tip_offset = 0
 
         self.afminfo = {}
@@ -746,8 +746,8 @@ class MainWindow(QtGui.QMainWindow):
 
         # QtCore.QObject.connect(self.loadFile, QtCore.SIGNAL('clicked()'), self.pickFile)
         # QtCore.QObject.connect(self.saveDirectory, QtCore.SIGNAL('clicked()'), self.pickDirectory)
-        QtCore.QObject.connect(self.butUnload, QtCore.SIGNAL('clicked()'), self.stageUnload)
-        QtCore.QObject.connect(self.butLoad, QtCore.SIGNAL('clicked()'), self.stageLoad)
+        # QtCore.QObject.connect(self.butUnload, QtCore.SIGNAL('clicked()'), self.stageUnload)
+        # QtCore.QObject.connect(self.butLoad, QtCore.SIGNAL('clicked()'), self.stageLoad)
         # QtCore.QObject.connect(self.fileIn, QtCore.SIGNAL('returnPressed()'), self.updateFileInText)
 
         print ''
@@ -958,12 +958,12 @@ class MainWindow(QtGui.QMainWindow):
 
         self.tree_file.setModel(self.model)
         self.tree_file.expandAll()
-        self.tree_schedule.setModel(self.model)
-        self.tree_schedule.expandAll()
+        # self.tree_schedule.setModel(self.model)
+        # self.tree_schedule.expandAll()
 
         for column in range(self.model.columnCount()):
             self.tree_file.resizeColumnToContents(column)
-            self.tree_schedule.resizeColumnToContents(column)
+            # self.tree_schedule.resizeColumnToContents(column)
 
 
 
@@ -979,7 +979,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
         QtCore.QObject.connect(self.tree_file.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
-        QtCore.QObject.connect(self.tree_schedule.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
+        # QtCore.QObject.connect(self.tree_schedule.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
         QtCore.QObject.connect(self.model, QtCore.SIGNAL('checkChanged(QModelIndex)'), self.checked)
         QtCore.QObject.connect(self.model, QtCore.SIGNAL('redraw(QModelIndex)'), self.redraw)
 
@@ -1020,16 +1020,16 @@ class MainWindow(QtGui.QMainWindow):
             self.pi.removeItem(i)
         item.pltHandle = []
 
-        if checked == 0:
+        # if checked == 0:
             # hide item if unchecked
-            self.tree_schedule.setRowHidden(index.row(),index.parent(), True)
-        else:
-            self.tree_schedule.setRowHidden(index.row(),index.parent(), False)
-            data = model.getItem(index).pltData
-            if data:
-                for i in data:
-                    pdi = self.pi.plot(i, pen = greenPen)
-                    item.pltHandle.append(pdi)
+            # self.tree_schedule.setRowHidden(index.row(),index.parent(), True)
+        # else:
+            # self.tree_schedule.setRowHidden(index.row(),index.parent(), False)
+        data = model.getItem(index).pltData
+        if data:
+            for i in data:
+                pdi = self.pi.plot(i, pen = greenPen)
+                item.pltHandle.append(pdi)
         self.updateActions()
 
 
@@ -1038,7 +1038,7 @@ class MainWindow(QtGui.QMainWindow):
         print 'here'
         index = selected.indexes()
         self.tree_file.setCurrentIndex(index[0])
-        self.tree_schedule.setCurrentIndex(index[0])
+        # self.tree_schedule.setCurrentIndex(index[0])
         deindex = deselected.indexes()
         model = self.tree_file.model()
         # print 'bb', index[0], model.getItem(index[0])

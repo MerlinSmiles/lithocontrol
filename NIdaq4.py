@@ -6,6 +6,11 @@ from PyQt4.QtCore import pyqtSignal
 import pyqtgraph as pg
 import numpy as np
 
+import pandas as pd
+import datetime as dt
+from datetime import datetime
+import time
+
 # from functools import partial
 from Queue import Queue
 # import math
@@ -428,6 +433,7 @@ class MainWindow(QtGui.QMainWindow):
         # self.settings['acq_plot'] = True
         # self.settings['li_plot'] = True
         self.update_plotting()
+        self.plot_counter = 0
 
         self.settings['buffer_size'] = 10000000
         self.settings['acq_rate'] = 50000          # samples/second
@@ -540,16 +546,16 @@ class MainWindow(QtGui.QMainWindow):
         self.pi.addLegend()
         self.pi_legend = self.pi.legend
 
-        self.pi.enableAutoRange('x', True)
+        # self.pi.enableAutoRange('x', True)
 
-        self.pi.enableAutoRange('y', True)
+        # self.pi.enableAutoRange('y', True)
         vb = self.pi.getViewBox()
         self.pi.setLimits(yMin = -10)
         self.pi.setLimits(yMax = 1e8)
         self.plotlist = []
         self.pi_names = ['input_ampl','phase_diff','R [ohm]','G [S]']
         for i in range(20):
-            self.plotlist.append({'plot': self.pi.plot(), 'channel': i})
+            self.plotlist.append({'plot': pg.PlotCurveItem(), 'channel': i})
 
 
         self.pi2 = self.plotView2.getPlotItem()
@@ -600,6 +606,8 @@ class MainWindow(QtGui.QMainWindow):
 
         self.resize(800, 700)
 
+    def makeDataset(self):
+        pass
 
     def run(self):
         self.workerThread = QtCore.QThread()
@@ -689,6 +697,7 @@ class MainWindow(QtGui.QMainWindow):
 
         # if self.settings['acq_plot']:
         if True:
+            self.plot_counter +=1
         #     for n in range(len(self.settings['in'].keys())):
         #         if self.settings['in'][n]['lockin']:
         #             if self.settings['in'][n]['fft_arr'].size >0:
@@ -696,7 +705,6 @@ class MainWindow(QtGui.QMainWindow):
         #                 self.plotlist2[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
 
             raw_buffer = self.settings['buff'].get_partial()
-            self.pi2_legend.items = []
 
             num_chans = len(self.settings['in'].keys())
             av_size = num_chans*10
@@ -736,33 +744,40 @@ class MainWindow(QtGui.QMainWindow):
 
                 n += 1
                 av_len = -10
-                # try:
-                #     av_curr = np.average(current[av_len:])*1e9
-                #     self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'Current' + ' = ' + '%.2f nA' % av_curr)
-                # except:
-                #     self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'Current')
-                #     pass
+                if self.plot_counter>11:
+                    self.pi2_legend.items = []
+
+                    try:
+                        av_curr = np.average(current[av_len:])*1e9
+                        self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'Current' + ' = ' + '%.2f nA' % av_curr)
+                    except:
+                        self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'Current')
+                        pass
 
                 self.plotlist2[n]['plot'].setData(y=current*1e9)
                 self.plotlist2[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
                 n += 1
-                # try:
-                #     av_2pt = np.average(r2pt[av_len:])/1000.0
-                #     self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'R2pt' + ' = ' + '%.1f kOhm' % av_2pt)
-                # except:
-                #     self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'R2pt')
-                #     pass
+                if self.plot_counter>11:
+                    try:
+                        av_2pt = np.average(r2pt[av_len:])/1000.0
+                        self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'R2pt' + ' = ' + '%.1f kOhm' % av_2pt)
+                    except:
+                        self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'R2pt')
+                        pass
 
                 self.plotlist2[n]['plot'].setData(y=r2pt/1000.0)
                 self.plotlist2[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
 
-                # n += 1
-                # try:
-                #     av_4pt = np.average(r4pt[av_len:])/1000.0
-                #     self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'R4pt' + ' = ' + '%.1f kOhm' % av_4pt)
-                # except:
-                #     self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'R4pt')
-                #     pass
+                n += 1
+                if self.plot_counter>11:
+
+                    self.plot_counter = 0
+                    try:
+                        av_4pt = np.average(r4pt[av_len:])/1000.0
+                        self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'R4pt' + ' = ' + '%.1f kOhm' % av_4pt)
+                    except:
+                        self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'R4pt')
+                        pass
 
                 self.plotlist2[n]['plot'].setData(y=r4pt/1000.0)
                 self.plotlist2[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
