@@ -3,12 +3,15 @@
 
 from PyQt4 import QtCore, QtGui,uic
 from PyQt4.QtCore import pyqtSignal
+from PyQt4.QtCore import QTime, QTimer
 import pyqtgraph as pg
 import numpy as np
 
 import pandas as pd
-import datetime as dt
-from datetime import datetime
+
+import datetime
+from datetime import datetime as dt
+
 import time
 
 # from functools import partial
@@ -25,6 +28,7 @@ import scipy.fftpack
 
 from PyDAQmx import Task
 import ringbuffer as ringbuffer
+# import listbuffer as listbuffer
 import cProfile
 
 def process_data(data, f, fs):
@@ -98,6 +102,10 @@ class MeasureTask(Task):
         Task.__init__(self)
         self.running = False
         self.settings = settings
+
+        self.settings['time'].start()
+
+
         # self.settings['buffer_size'] = 10000000
         # self.settings['acq_rate'] = 50000          # samples/second
         # self.settings['acq_samples'] = 10000        # every n samples
@@ -121,7 +129,6 @@ class MeasureTask(Task):
         self.AutoRegisterEveryNSamplesEvent(DAQmx_Val_Acquired_Into_Buffer,
                                             self.acq_samples, 0)
         self.AutoRegisterDoneEvent(0)
-
         integration_time = 0.1 #seconds
         self.li_buff_length = int(self.settings['acq_rate']*integration_time*self.num_chans)
         self.li_buffer = np.zeros((self.num_chans,1))
@@ -139,6 +146,7 @@ class MeasureTask(Task):
                                   v_max,
                                   DAQmx_Val_Volts,
                                   None)
+
     def EveryNCallback(self):
         read = int32()
         data = zeros(5*self.num_chans*self.acq_samples)
@@ -170,103 +178,18 @@ class MeasureTask(Task):
 
 
 
-        av_size = 1000
-        data_size = av_size * (read.value/(av_size))
-        av_data = meas_data[:,-data_size:].reshape((-1,av_size))
-
-        av_data = np.mean(av_data,1)
+        # av_size = self.settings['acq_samples']
+        # data_size = av_size * (read.value/(av_size))
+        # av_data = meas_data[:,-data_size:].reshape((-1,av_size))
+        # print av_data.shape()
+        av_data = np.mean(meas_data,1)
         # print 'b', np.shape(av_data)
         # print av_data.shape
         av_data = av_data.reshape((self.num_chans,-1))
-
-        self.settings['buff'].append(av_data)
-        # if False:
-        #     # av_data = meas_data
-        #     av_size = 2000
-        #     n = 0
-        #     if meas_data.size > self.num_chans*av_size:
-        #         while self.settings['acq_samples'] > av_size*n:
-        #             # dat = av_data[:,:av_size]
-        #             self.settings['buff'].append(np.mean(meas_data[:,av_size*n:av_size*n+1],1))
-        #             # av_data = av_data[:,av_size:]
-        #             n+=1
-        #             # if av_data.size < av_size*n:
-        #             #     break
+        tdelta = self.settings['time'].elapsed()/1000.0
+        self.settings['buff'].append([tdelta,av_data[0],av_data[1]])
 
 
-        # Number of samplepoints
-        # N = self.settings['acq_rate']
-
-        # for i in [0]:
-        #     if self.settings['buff'].get_partial().size > self.num_chans*N:
-        #         y = self.settings['buff'].get_partial()[i,-N/4:]
-
-        #         yf = np.abs(scipy.fft(y, 3*N))[100:750]
-        #         xf = np.fft.fftfreq(3*N, d=self.T)[100:750]
-        #         pt = xf[np.argmax(yf)]
-        #         self.freq_buffer.append(pt)
-        #         self.freq =  np.average(self.freq_buffer.get_partial())
-        #         # print self.freq
-
-        # for i in [0]:
-        #     if self.settings['buff'].get_partial().size > self.num_chans*N:
-        #         # y = self.settings['buff'].get_partial()[i,-N/4:]
-        #         y = np.average(self.settings['buff'].get_partial()[N:])
-
-                # yf = np.abs(scipy.fft(y, 3*N))[100:750]
-                # xf = np.fft.fftfreq(3*N, d=self.T)[100:750]
-                # pt = xf[np.argmax(yf)]
-                # self.freq_buffer.append(pt)
-                # self.freq =  np.average(self.freq_buffer.get_partial())
-                # print self.freq
-
-
-                    # self.settings['in'][i]['fft_arr'] = np.array([xf, yf])
-
-
-        # if False:
-        # # if self.settings['li_plot']:
-        #     self.li_buffer = np.concatenate([self.li_buffer, meas_data],axis=1)
-        #     num = 0
-
-        #     if self.li_buffer.size < self.li_buff_length:
-        #         while True:
-        #             num+=1
-        #             li_data = []
-        #             amplitudes, phases = process_data(self.li_buffer[:,:self.li_buff_length], self.settings['out'][0]['freq'], self.settings['acq_rate'])
-        #             # print np.max(self.li_buffer[:,:self.li_buff_length][0,-30000:])
-
-        #             self.li_buffer = self.li_buffer[:,self.li_buff_length:]
-        #             # for i in self.ch_in_list:
-        #                 # print (10**self.settings['in'][i]['curr_amp'])
-        #                 # amplitudes[i] *= (10**self.settings['in'][i]['curr_amp'])
-        #                 # amplitudes[i] *= self.settings['in'][i]['multiplier']
-
-        #             # ldat = self.settings['in'][0]['li_buffer'].get_partial()
-        #             # if ldat.size > 200:
-        #             #     amp = np.average(ldat[0,-20:])
-        #             #     # print amp
-        #             # else:
-        #             #     amp = amplitudes[0]
-
-        #             # amplitudes[2] = amplitudes[1] / amplitudes[0]
-        #             # amplitudes[3] = amplitudes[1] / amp
-        #             # amplitudes[1] /= self.settings['out'][0]['ampl']
-        #             # # print amplitudes[0]
-        #             # li_g = amplitudes
-        #             li_g = amplitudes[:] / amplitudes[0]
-
-        #             li_r = 1.0/li_g
-
-        #             li_data = np.array([amplitudes, phases, li_r, li_g]).reshape(4,-1)
-
-        #             for i in self.ch_in_list:
-        #                 if self.settings['in'][i]['lockin']:
-        #                     self.settings['in'][i]['li_buffer'].append(li_data[:,i])
-
-
-        #             if self.li_buffer.size < self.li_buff_length:
-        #                 break
 
         return 0  # The function should return an integer
 
@@ -399,7 +322,7 @@ class WaveTask(Task):
 
 
 class DataCollection():
-    def __init__(self, buffer_size = 100, num_hans = 1):
+    def __init__(self, buffer_size = 100, num_chans = 1):
         self.settings = settings
 
         self.buffer = ringbuffer.RingBuffer((num_chans, buffer_size))
@@ -412,6 +335,36 @@ class DataCollection():
 
     def append(self,value):
         self.buffer.append(value)
+
+
+class MeasureData():
+    def __init__(self, buffer_size = 100000, columns = ['Data'], extend_num = 1000):
+        self.buffer_size = buffer_size
+        self.columns = columns
+        self.extend_num = extend_num
+
+        tempdata = np.zeros((self.buffer_size,len(self.columns)))
+        self.index = 0
+        self._data = pd.DataFrame(data=tempdata, columns = self.columns, dtype=float)
+
+    def get(self):
+        return self._data[:self.index]
+
+    def extend(self, rows):
+        tempdata = np.zeros((rows,len(self.columns)))
+        data = pd.DataFrame(data=tempdata, columns = self.columns, dtype=float)
+        self._data = pd.concat([self._data, data], axis=0, ignore_index=True)
+        self.buffer_size+=rows
+
+
+    def append(self, value):
+        if self.index >= self.buffer_size:
+            self.extend(self.extend_num)
+        self._data.iloc[self.index] = value
+        self.index +=1
+
+
+
 
 
 
@@ -430,14 +383,15 @@ class MainWindow(QtGui.QMainWindow):
         self.actionExit.triggered.connect(QtGui.qApp.quit)
 
         self.settings = {}
+        self.settings['time'] = QTime()
         # self.settings['acq_plot'] = True
         # self.settings['li_plot'] = True
         self.update_plotting()
         self.plot_counter = 0
 
         self.settings['buffer_size'] = 10000000
-        self.settings['acq_rate'] = 50000          # samples/second
-        self.settings['acq_samples'] = 10000        # every n samples
+        self.settings['acq_rate'] = 10000          # samples/second
+        self.settings['acq_samples'] = 1000        # every n samples
         self.settings['device_input'] = "PCI-6251"
 
         self.settings['waveform_buffer_size'] = 5*1e6
@@ -532,10 +486,11 @@ class MainWindow(QtGui.QMainWindow):
         self.freqSpinBox.setValue(self.settings['out'][0]['freq'])
         self.amplSpinBox.setValue(self.settings['out'][0]['ampl'])
         self.cAmpSpinBox.setValue(self.settings['in'][0]['curr_amp'])
-        self.buff = ringbuffer.RingBuffer((len(self.settings['in']), self.settings['buffer_size']))
+        p = MeasureData(3,['time','A','B'],3)
         # (self._gen_meas_amplitude, self._normamplitudes, self._normphases)
         self.li_buff = ringbuffer.RingBuffer((5, self.settings['buffer_size']/1000))
 
+        self.buff = ringbuffer.RingBuffer((len(self.settings['in'])+1, 36000))
         self.settings['buff'] = self.buff
         self.settings['li_buff'] = self.li_buff
 
@@ -673,45 +628,23 @@ class MainWindow(QtGui.QMainWindow):
 
     def graficar(self):
 
-        # if self.settings['li_plot']:
-        #     li_buffer = self.settings['in'][1]['li_buffer'].get_partial()
-        #     self.pi_legend.items = []
-        #     if li_buffer.size >0:
-        #         p = 0
-        #         for k in range(len(self.settings['in'].keys())):
-        #             if self.settings['in'][k]['lockin']:
-        #                 li_buffer = self.settings['in'][k]['li_buffer'].get_partial()
-        #                 li_buffer[np.isinf(li_buffer)] = np.nan
-        #                 if li_buffer.size > 3:
-        #                     for n,i in enumerate(li_buffer):
-        #                         if n in [0,2,3]:
-        #                             # print k
-        #                             # https://groups.google.com/forum/#!msg/pyqtgraph/LsefNBHA03M/f2VDOA4yR74J
 
-
-        #                             self.pi_legend.addItem(self.plotlist[p]['plot'], 'ai' + str(k) + '  ' + self.pi_names[n] + ' = ' + '%.2e' % np.average(li_buffer[n][-20:]))
-
-        #                             self.plotlist[p]['plot'].setData(y=li_buffer[n])
-        #                             self.plotlist[p]['plot'].setPen(color=self.kelly_colors[self.colors[p]])
-        #                             p+=1
-
-        # if self.settings['acq_plot']:
         if True:
             self.plot_counter +=1
-        #     for n in range(len(self.settings['in'].keys())):
-        #         if self.settings['in'][n]['lockin']:
-        #             if self.settings['in'][n]['fft_arr'].size >0:
-        #                 self.plotlist2[n]['plot'].setData(x = self.settings['in'][n]['fft_arr'][0], y = self.settings['in'][n]['fft_arr'][1], name=str(n))
-        #                 self.plotlist2[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
+
 
             raw_buffer = self.settings['buff'].get_partial()
 
-            num_chans = len(self.settings['in'].keys())
-            av_size = num_chans*10
+            if raw_buffer.size > 10:
 
-            if raw_buffer.size > av_size:
+                d_time = raw_buffer[0]
+                d_ch0 = raw_buffer[1]
+                d_ch1 = raw_buffer[2]
 
-                av_data = raw_buffer #[:,-100*av_size:]
+
+            # if raw_buffer.size > av_size:
+
+                # av_data = raw_buffer #[:,-100*av_size:]
                 # av_data = av_data.reshape((-1,av_size))
                 # av_data = np.mean(av_data,1)
                 # av_data = av_data.reshape((num_chans,-1))
@@ -724,12 +657,12 @@ class MainWindow(QtGui.QMainWindow):
 
 
 
-                current = np.abs(av_data[0]*self.settings['in'][0]['multiplier'])
+                current = np.abs(d_ch0*self.settings['in'][0]['multiplier'])
                 r2pt = np.abs(self.settings['in'][0]['amplitude'] / current)
                 g2pt = 1.0/r2pt
 
 
-                a_b = av_data[1]*self.settings['in'][1]['multiplier']
+                a_b = d_ch1*self.settings['in'][1]['multiplier']
                 r4pt = np.abs(a_b / current)
                 g4pt = 1.0/r4pt
 
@@ -754,7 +687,7 @@ class MainWindow(QtGui.QMainWindow):
                         self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'Current')
                         pass
 
-                self.plotlist2[n]['plot'].setData(y=current*1e9)
+                self.plotlist2[n]['plot'].setData(x=d_time, y=current*1e9)
                 self.plotlist2[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
                 n += 1
                 if self.plot_counter>11:
@@ -765,7 +698,7 @@ class MainWindow(QtGui.QMainWindow):
                         self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'R2pt')
                         pass
 
-                self.plotlist2[n]['plot'].setData(y=r2pt/1000.0)
+                self.plotlist2[n]['plot'].setData(x=d_time, y=r2pt/1000.0)
                 self.plotlist2[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
 
                 n += 1
@@ -779,7 +712,7 @@ class MainWindow(QtGui.QMainWindow):
                         self.pi2_legend.addItem(self.plotlist2[n]['plot'], 'R4pt')
                         pass
 
-                self.plotlist2[n]['plot'].setData(y=r4pt/1000.0)
+                self.plotlist2[n]['plot'].setData(x=d_time, y=r4pt/1000.0)
                 self.plotlist2[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
 
         if not self.terminate:
