@@ -550,8 +550,8 @@ class MainWindow(QtGui.QMainWindow):
 
         # self.pi.enableAutoRange('y', True)
         vb = self.pi.getViewBox()
-        self.pi.setLimits(yMin = -10)
-        self.pi.setLimits(yMax = 1e8)
+        # self.pi.setLimits(yMin = -10)
+        # self.pi.setLimits(yMax = 1e8)
         self.plotlist = []
         self.pi_names = ['input_ampl','phase_diff','R [ohm]','G [S]']
         for i in range(20):
