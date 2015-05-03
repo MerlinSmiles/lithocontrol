@@ -219,8 +219,6 @@ class MainWindow(QtGui.QMainWindow):
 
         self.settings = {}
         self.settings['time'] = QTime()
-        # self.settings['acq_plot'] = True
-        # self.settings['li_plot'] = True
         self.update_plotting()
         self.plot_counter = 0
 
@@ -247,11 +245,7 @@ class MainWindow(QtGui.QMainWindow):
         ch0['multiplier'] = amplification
         ch0['min'] = -10 # +/- 100 mV is the minimum bipolar range
         ch0['max'] = 10
-        ch0['lockin'] = False
         ch0['plot_raw'] = True
-        ch0['li_tc'] = 0.1
-        ch0['li_buffer'] = ringbuffer.RingBuffer((4, self.settings['buffer_size']/10))
-        ch0['fft_arr'] = np.array([])
         ch0['freq_chan'] = 0
 
         ch1['channel'] = "ai1"
@@ -261,11 +255,7 @@ class MainWindow(QtGui.QMainWindow):
         ch1['multiplier'] = amplification
         ch1['min'] = -10
         ch1['max'] = 10
-        ch1['lockin'] = False
         ch1['plot_raw'] = True
-        ch1['li_tc'] = 0.1
-        ch1['li_buffer'] = ringbuffer.RingBuffer((4, self.settings['buffer_size']/10))
-        ch1['fft_arr'] = np.array([])
         ch1['freq_chan'] = 0
         ch1['curr_amp'] = 0
 
@@ -294,16 +284,11 @@ class MainWindow(QtGui.QMainWindow):
         # ch3['curr_amp'] = ch1['curr_amp']
 
 
-        self.freqSpinBox.setValue(self.settings['out'][0]['freq'])
-        self.amplSpinBox.setValue(self.settings['out'][0]['ampl'])
         self.cAmpSpinBox.setValue(self.settings['in'][0]['curr_amp'])
-        p = MeasureData(3,['time','A','B'],3)
         # (self._gen_meas_amplitude, self._normamplitudes, self._normphases)
-        self.li_buff = ringbuffer.RingBuffer((5, self.settings['buffer_size']/1000))
 
         self.buff = ringbuffer.RingBuffer((len(self.settings['in'])+1, 36000))
         self.settings['buff'] = self.buff
-        self.settings['li_buff'] = self.li_buff
 
         self.worker = Worker(self.settings)
 
@@ -357,12 +342,9 @@ class MainWindow(QtGui.QMainWindow):
         self.btn_measure.clicked.connect(self.graficar)
         self.btn_stop.clicked.connect(self.measure_stop)
 
-        self.check_lockin.stateChanged.connect(self.update_plotting)
         self.check_rawdata.stateChanged.connect(self.update_plotting)
         self.plot_update_time.valueChanged.connect(self.update_plotting)
 
-        self.freqSpinBox.valueChanged.connect(self.settings_update)
-        self.amplSpinBox.valueChanged.connect(self.settings_update)
         self.cAmpSpinBox.valueChanged.connect(self.settings_update)
 
         self.sig_measure.connect(self.worker.run)
@@ -373,10 +355,6 @@ class MainWindow(QtGui.QMainWindow):
         self.show()
 
     def update_plotting(self):
-        if self.check_lockin.checkState() == 2:
-            self.settings['li_plot'] = True
-        else:
-            self.settings['li_plot'] = False
         if self.check_rawdata.checkState() == 2:
             self.settings['acq_plot'] = True
         else:
@@ -384,11 +362,7 @@ class MainWindow(QtGui.QMainWindow):
         self.settings['plot_timing'] = self.plot_update_time.value()
 
     def settings_update(self):
-        freq = self.freqSpinBox.value()
-        ampl = self.amplSpinBox.value()
         cAmp = self.cAmpSpinBox.value()
-        self.settings['out'][0]['freq'] = freq
-        self.settings['out'][0]['ampl'] = ampl
         self.settings['in'][1]['curr_amp']= cAmp
         self.sig_settings_update.emit(self.settings)
 
