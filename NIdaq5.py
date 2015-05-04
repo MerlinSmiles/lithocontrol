@@ -135,35 +135,35 @@ class MeasureTask(Task):
         return 0  # The function should return an integer
 
 
-# class MeasureData():
-#     def __init__(self, buffer_size = 10000, columns = ['Data']):
-#         self.buffer_size = buffer_size
-#         self.columns = columns
-#         self.hasfile = False
+class MeasureData():
+    def __init__(self, buffer_size = 10000, columns = ['Data']):
+        self.buffer_size = buffer_size
+        self.columns = columns
+        self.hasfile = False
 
-#         tempdata = np.zeros((self.buffer_size,len(self.columns)))
-#         self.index = 0
-#         self._buffer = pd.DataFrame(data=tempdata, columns = self.columns)
+        tempdata = np.zeros((self.buffer_size,len(self.columns)))
+        self.index = 0
+        self._buffer = pd.DataFrame(data=tempdata, columns = self.columns)
 
-#     def saveData(self):
-#         if not self.hasfile:
-#             self._store = self._buffer
+    def saveData(self):
+        if not self.hasfile:
+            self._store = self._buffer
 
-#     def get(self):
-#         return self._data[:self.index]
+    def get(self):
+        return self._data[:self.index]
 
-#     def extend(self, rows):
-#         tempdata = np.zeros((rows,len(self.columns)))
-#         data = pd.DataFrame(data=tempdata, columns = self.columns)
-#         self._data = pd.concat([self._data, data], axis=0, ignore_index=True)
-#         self.buffer_size+=rows
+    def extend(self, rows):
+        tempdata = np.zeros((rows,len(self.columns)))
+        data = pd.DataFrame(data=tempdata, columns = self.columns)
+        self._data = pd.concat([self._data, data], axis=0, ignore_index=True)
+        self.buffer_size+=rows
 
 
-#     def append(self, value):
-#         if self.index >= self.buffer_size:
-#             self.extend(self.extend_num)
-#         self._data.iloc[self.index] = value
-#         self.index +=1
+    def append(self, value):
+        if self.index >= self.buffer_size:
+            self.extend(self.extend_num)
+        self._data.iloc[self.index] = value
+        self.index +=1
 
 
 
@@ -185,6 +185,8 @@ class MainWindow(QtGui.QMainWindow):
         self.actionExit.triggered.connect(QtGui.qApp.quit)
 
         self.store = pd.HDFStore('store.h5')
+        self.measure_data = MeasureData(columns = ['time', 'current', 'R2pt', 'R4pt'])
+
         self.settings = {}
         self.settings['time'] = QTime()
         self.update_plotting()
@@ -226,30 +228,6 @@ class MainWindow(QtGui.QMainWindow):
         ch1['plot_raw'] = True
         ch1['freq_chan'] = 0
         ch1['curr_amp'] = 0
-
-        # ch2['channel'] = "ai2"
-        # ch2['name'] = 'Current'
-        # ch2['curr_amp'] = -8
-        # ch2['multiplier'] = 10**ch2['curr_amp']
-        # ch2['min'] = -10
-        # ch2['max'] = 10
-        # ch2['lockin'] = True
-        # ch2['plot_raw'] = True
-        # ch2['li_tc'] = 0.1
-        # ch2['li_buffer'] = ringbuffer.RingBuffer((4, self.settings['buffer_size']/100))
-        # ch2['fft_arr'] = np.array([])
-        # ch2['freq_chan'] = 0
-
-        # ch3['channel'] = "ai3"
-        # ch3['min'] = -10
-        # ch3['max'] = 10
-        # ch3['lockin'] = True
-        # ch3['plot_raw'] = False
-        # ch3['li_tc'] = 0.1
-        # ch3['li_buffer'] = ringbuffer.RingBuffer((3, self.settings['buffer_size']/100))
-        # ch3['fft_arr'] = np.array([])
-        # ch3['freq_chan'] = 0
-        # ch3['curr_amp'] = ch1['curr_amp']
 
 
         self.cAmpSpinBox.setValue(self.settings['in'][0]['curr_amp'])
@@ -370,6 +348,7 @@ class MainWindow(QtGui.QMainWindow):
                 r4pt = np.abs(a_b / current)
                 g4pt = 1.0/r4pt
 
+                self.measure_data.append([d_time, current, r2pt, r4pt])
                 n=0
                 # for n in range(len(self.settings['in'].keys())):
                 #     if self.settings['in'][n]['plot_raw']:
