@@ -322,8 +322,8 @@ class MainWindow(QtGui.QMainWindow):
     def setterminate(self):
         self.terminate = True
 
-
-    def daticar(self):
+    def graficar(self):
+        print self.settings['buff'].size
         raw_buffer = self.settings['buff'].get_partial_clear()
 
         if raw_buffer.size > 0:
@@ -342,14 +342,6 @@ class MainWindow(QtGui.QMainWindow):
             g4pt = 1.0/r4pt
 
             self.store.append([d_time, current, r2pt, r4pt])
-
-
-
-    if not self.terminate:
-        QtCore.QTimer.singleShot(self.settings['plot_timing'], self.daticar)
-
-    def graficar(self):
-
 
         if True:
             self.plot_counter +=1
