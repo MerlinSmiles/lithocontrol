@@ -1,6 +1,19 @@
 # D:\Projects\lithocontrol>python -m cProfile -s cumulative -o profile.pstats NIdaq4.py
 # D:\Projects\lithocontrol>gprof2dot -f pstats profile.pstats | dot -Tsvg -o nidaq4.svg
 
+
+# add:
+# - temperature
+# - humidity
+# - vtip (measure? might be more accurate... test rpc first)
+# - sketch-object ( ID, start, end )
+# - exact start time from session
+# - start and end from sketch object
+# - sketch-id (also save everything with that ID: cad, afm image, schedule)
+# - cuttng start / cutting end
+# - type comments and save them with timing
+
+
 from PyQt4 import QtCore, QtGui,uic
 from PyQt4.QtCore import pyqtSignal
 from PyQt4.QtCore import QTime, QTimer
@@ -14,11 +27,7 @@ from datetime import datetime as dt
 
 import time
 
-# from functools import partial
-from Queue import Queue
-# import math
 import sys
-# import time
 
 # https://github.com/clade/PyDAQmx/tree/master/PyDAQmx/example
 from PyDAQmx import *
@@ -28,21 +37,7 @@ import scipy.fftpack
 
 from PyDAQmx import Task
 import ringbuffer as ringbuffer
-import cProfile
-
-def process_data(data, f, fs):
-    '''Perform lock-in analysis and save results in memory'''
-    phi = 2*numpy.pi*f * numpy.array(range(len(data[0]))) / float(fs)
-    sini = (numpy.sin(phi) * data).sum(axis=1)
-    cosi = (numpy.cos(phi) * data).sum(axis=1)
-    amplitudes = 2 * numpy.sqrt(sini**2 + cosi**2) / float(len(phi))
-    # amplitudes[1:] = (amplitudes[1:] / amplitudes[0])
-    # amplitudes[0] = amplitudes[0]
-    phases = numpy.arctan2(cosi, sini)
-    phases[1:] = phases[1:] - phases[0]
-    normphases = numpy.mod(phases + numpy.pi, 2 * numpy.pi) - numpy.pi
-    return (amplitudes, normphases)
-
+# import cProfile
 
 class Worker(QtCore.QObject):
 
@@ -58,8 +53,9 @@ class Worker(QtCore.QObject):
     def run(self):
         self.task.StartTask()
 
-    def wave_start(self,val):
-        pass
+    def stop(self):
+        self.task.StopTask()
+        self.task.ClearTask()
 
     def settings_update(self, settings):
         pass
@@ -75,19 +71,12 @@ class MeasureTask(Task):
         self.settings = settings
 
         self.settings['time'].start()
-
-
-        # self.settings['buffer_size'] = 10000000
-        # self.settings['acq_rate'] = 50000          # samples/second
-        # self.settings['acq_samples'] = 10000        # every n samples
-
         self.acq_samples = self.settings['acq_samples']
 
         ###################################
         self.ch_in_list = self.settings['in'].keys()
 
         self.num_chans = len(self.ch_in_list)
-        print self.num_chans
         self.ch_out = []
         self.data_buffer = {}
         for i in self.ch_in_list:
@@ -100,14 +89,6 @@ class MeasureTask(Task):
         self.AutoRegisterEveryNSamplesEvent(DAQmx_Val_Acquired_Into_Buffer,
                                             self.acq_samples, 0)
         self.AutoRegisterDoneEvent(0)
-        integration_time = 0.1 #seconds
-        self.li_buff_length = int(self.settings['acq_rate']*integration_time*self.num_chans)
-        self.li_buffer = np.zeros((self.num_chans,1))
-
-        self.freq_buffer = ringbuffer.RingBuffer((1, 31))
-        self.freq = 0.0
-        self.T =1.0 / self.settings['acq_rate']
-
 
     def create_chan(self, chan, v_min=-10, v_max=10):
         self.CreateAIVoltageChan( chan,
@@ -149,45 +130,31 @@ class MeasureTask(Task):
         self.settings['buff'].append([tdelta,av_data[0],av_data[1]])
         return 0  # The function should return an integer
 
-
     def DoneCallback(self, status):
         # print "Status", status.value
         return 0  # The function should return an integer
 
 
-
-class DataCollection():
-    def __init__(self, buffer_size = 100, num_chans = 1):
-        self.settings = settings
-
-        self.buffer = ringbuffer.RingBuffer((num_chans, buffer_size))
-
-    def get_partial(self):
-        return self.buffer.get_partial()
-
-    def get_all(self):
-        return self.buffer.get_all()
-
-    def append(self,value):
-        self.buffer.append(value)
-
-
 # class MeasureData():
-#     def __init__(self, buffer_size = 100000, columns = ['Data'], extend_num = 1000):
+#     def __init__(self, buffer_size = 10000, columns = ['Data']):
 #         self.buffer_size = buffer_size
 #         self.columns = columns
-#         self.extend_num = extend_num
+#         self.hasfile = False
 
 #         tempdata = np.zeros((self.buffer_size,len(self.columns)))
 #         self.index = 0
-#         self._data = pd.DataFrame(data=tempdata, columns = self.columns, dtype=float)
+#         self._buffer = pd.DataFrame(data=tempdata, columns = self.columns)
+
+#     def saveData(self):
+#         if not self.hasfile:
+#             self._store = self._buffer
 
 #     def get(self):
 #         return self._data[:self.index]
 
 #     def extend(self, rows):
 #         tempdata = np.zeros((rows,len(self.columns)))
-#         data = pd.DataFrame(data=tempdata, columns = self.columns, dtype=float)
+#         data = pd.DataFrame(data=tempdata, columns = self.columns)
 #         self._data = pd.concat([self._data, data], axis=0, ignore_index=True)
 #         self.buffer_size+=rows
 
@@ -208,7 +175,7 @@ class DataCollection():
 class MainWindow(QtGui.QMainWindow):
 
     sig_measure = pyqtSignal(int)
-    sig_wave_start = pyqtSignal(int)
+    sig_measure_stop = pyqtSignal(int)
     sig_settings_update = pyqtSignal(dict)
 
     def __init__(self, parent=None):
@@ -217,6 +184,7 @@ class MainWindow(QtGui.QMainWindow):
         self.terminate = False
         self.actionExit.triggered.connect(QtGui.qApp.quit)
 
+        self.store = pd.HDFStore('store.h5')
         self.settings = {}
         self.settings['time'] = QTime()
         self.update_plotting()
@@ -348,6 +316,7 @@ class MainWindow(QtGui.QMainWindow):
         self.cAmpSpinBox.valueChanged.connect(self.settings_update)
 
         self.sig_measure.connect(self.worker.run)
+        self.sig_measure_stop.connect(self.worker.stop)
         self.sig_settings_update.connect(self.worker.settings_update)
 
         self.workerThread.start()
@@ -372,6 +341,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def measure_stop(self):
         self.terminate = True
+        self.sig_measure_stop.emit(500)
 
     def setterminate(self):
         self.terminate = True
