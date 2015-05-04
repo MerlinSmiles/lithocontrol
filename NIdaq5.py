@@ -49,17 +49,17 @@ class Worker(QtCore.QObject):
         self.settings = settings
         DAQmxResetDevice("PCI-6251")
         self.task = MeasureTask(self.settings)
+        self.running = False
 
     def run(self):
-        self.task.StartTask()
+        if self.running == False:
+            self.running = True
+            self.task.StartTask()
 
     def stop(self):
         self.task.StopTask()
-        self.task.ClearTask()
-
-    def settings_update(self, settings):
-        pass
-
+        self.running = False
+        # self.task.ClearTask()
 
 ##################################################################
 
@@ -150,19 +150,19 @@ class MeasureData():
             self._store = self._buffer
 
     def get(self):
-        return self._data[:self.index]
+        return self._buffer[:self.index]
 
     def extend(self, rows):
         tempdata = np.zeros((rows,len(self.columns)))
         data = pd.DataFrame(data=tempdata, columns = self.columns)
-        self._data = pd.concat([self._data, data], axis=0, ignore_index=True)
+        self._buffer = pd.concat([self._buffer, data], axis=0, ignore_index=True)
         self.buffer_size+=rows
 
 
     def append(self, value):
         if self.index >= self.buffer_size:
             self.extend(self.extend_num)
-        self._data.iloc[self.index] = value
+        self._buffer.iloc[self.index] = value
         self.index +=1
 
 
@@ -176,16 +176,11 @@ class MainWindow(QtGui.QMainWindow):
 
     sig_measure = pyqtSignal(int)
     sig_measure_stop = pyqtSignal(int)
-    sig_settings_update = pyqtSignal(dict)
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         uic.loadUi('daqlayout2.ui', self)
         self.terminate = False
-        self.actionExit.triggered.connect(QtGui.qApp.quit)
-
-        self.store = pd.HDFStore('store.h5')
-        self.measure_data = MeasureData(columns = ['time', 'current', 'R2pt', 'R4pt'])
 
         self.settings = {}
         self.settings['time'] = QTime()
@@ -277,6 +272,16 @@ class MainWindow(QtGui.QMainWindow):
 
         self.resize(800, 700)
 
+    def closeEvent(self,event):
+        reply=QtGui.QMessageBox.question(self,'Message',"Are you sure to quit?",QtGui.QMessageBox.Yes,QtGui.QMessageBox.No)
+        if reply==QtGui.QMessageBox.Yes:
+            self.measure_stop()
+            self.workerThread.quit()
+
+            event.accept()
+        else:
+            event.ignore()
+
     def makeDataset(self):
         pass
 
@@ -291,11 +296,9 @@ class MainWindow(QtGui.QMainWindow):
         self.check_rawdata.stateChanged.connect(self.update_plotting)
         self.plot_update_time.valueChanged.connect(self.update_plotting)
 
-        self.cAmpSpinBox.valueChanged.connect(self.settings_update)
 
         self.sig_measure.connect(self.worker.run)
         self.sig_measure_stop.connect(self.worker.stop)
-        self.sig_settings_update.connect(self.worker.settings_update)
 
         self.workerThread.start()
 
@@ -307,11 +310,6 @@ class MainWindow(QtGui.QMainWindow):
         else:
             self.settings['acq_plot'] = False
         self.settings['plot_timing'] = self.plot_update_time.value()
-
-    def settings_update(self):
-        cAmp = self.cAmpSpinBox.value()
-        self.settings['in'][1]['curr_amp']= cAmp
-        self.sig_settings_update.emit(self.settings)
 
     def measure_start(self):
         self.terminate = False
@@ -348,7 +346,6 @@ class MainWindow(QtGui.QMainWindow):
                 r4pt = np.abs(a_b / current)
                 g4pt = 1.0/r4pt
 
-                self.measure_data.append([d_time, current, r2pt, r4pt])
                 n=0
                 # for n in range(len(self.settings['in'].keys())):
                 #     if self.settings['in'][n]['plot_raw']:
