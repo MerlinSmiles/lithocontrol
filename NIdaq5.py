@@ -167,9 +167,6 @@ class MeasureData():
 
 
 
-
-
-
 ###############################################################
 
 class MainWindow(QtGui.QMainWindow):
@@ -228,8 +225,11 @@ class MainWindow(QtGui.QMainWindow):
         self.cAmpSpinBox.setValue(self.settings['in'][0]['curr_amp'])
         # (self._gen_meas_amplitude, self._normamplitudes, self._normphases)
 
-        self.buff = ringbuffer.RingBuffer((len(self.settings['in'])+1, 36000))
+        self.buff = ringbuffer.RingBuffer((len(self.settings['in'])+1, 2000))
         self.settings['buff'] = self.buff
+        self.store_columns = ['time', 'current','r2p','r4p']
+        self.store = ringbuffer.RingBuffer((len(self.store_columns), 360000))
+
 
         self.worker = Worker(self.settings)
 
@@ -322,6 +322,32 @@ class MainWindow(QtGui.QMainWindow):
     def setterminate(self):
         self.terminate = True
 
+
+    def daticar(self):
+        raw_buffer = self.settings['buff'].get_partial_clear()
+
+        if raw_buffer.size > 0:
+
+            d_time = raw_buffer[0]
+            d_ch0 = raw_buffer[1]
+            d_ch1 = raw_buffer[2]
+
+            current = np.abs(d_ch0*self.settings['in'][0]['multiplier'])
+            r2pt = np.abs(self.settings['in'][0]['amplitude'] / current)
+            g2pt = 1.0/r2pt
+
+
+            a_b = d_ch1*self.settings['in'][1]['multiplier']
+            r4pt = np.abs(a_b / current)
+            g4pt = 1.0/r4pt
+
+            self.store.append([d_time, current, r2pt, r4pt])
+
+
+
+    if not self.terminate:
+        QtCore.QTimer.singleShot(self.settings['plot_timing'], self.daticar)
+
     def graficar(self):
 
 
@@ -329,7 +355,7 @@ class MainWindow(QtGui.QMainWindow):
             self.plot_counter +=1
 
 
-            raw_buffer = self.settings['buff'].get_partial()
+            raw_buffer = self.store.get_partial()
 
             if raw_buffer.size > 10:
 
