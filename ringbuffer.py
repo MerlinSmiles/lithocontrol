@@ -1,8 +1,13 @@
 import numpy as np
+import pandas as pd
 
 class RingBuffer(object):
-    def __init__(self, size_max, default_value=0.0, dtype=float):
+    def __init__(self, size_max, default_value=0.0, dtype=float, filename='store.h5', cols=['d_time', 'current', 'r2pt', 'r4pt']):
         """initialization"""
+        self.data_store = pd.HDFStore(filename)
+        self.cols = cols
+        self.data_store_index = 0
+
         self._dimensions = np.size(size_max)
         if self._dimensions == 1:
             self.size_max = (1,size_max)
@@ -48,14 +53,11 @@ class RingBuffer(object):
         self.size = 0
         return dat
 
-    # def set_size_max(self, size_max):
+    def save_data(self):
+        df = pd.DataFrame(self.get_partial()[self.data_store_index:].T, columns = self.cols)
+        self.data_store_index = self.size
+        self.data_store.append('measurement',df,append=True)
 
-    #     self.size_max = size_max
-    #     if self.size > self.size_max:
-    #         self._data = self._data[-self.size_max:]
-
-    # def __len__(self):
-    #     return(self.size)
 
     def __getitem__(self, key):
         """get element"""
