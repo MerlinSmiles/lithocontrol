@@ -10,6 +10,10 @@ import numpy as np
 from helpers import *
 
 def get_points(entity, threshold = 1e-9):
+    if entity.dxftype == 'LINE':
+        pts = np.array([entity.start[:-1], entity.end[:-1]])
+        print pts
+        return pts
     pts = entity.points
     pts = np.array(pts)[:,:2]
 
@@ -32,6 +36,7 @@ def dxf2shape(i, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_directi
     pts  = get_points(i)[::path_direction]
 
     if not i.is_closed:
+        print pts
         return [pts]
     else:
         pts = np.append(pts,[pts[0]],axis = 0)

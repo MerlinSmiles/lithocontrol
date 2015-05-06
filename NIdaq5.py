@@ -192,14 +192,15 @@ class MainWindow(QtGui.QMainWindow):
         self.settings['acq_rate'] = 30000          # samples/second
         self.settings['acq_samples'] = 1000        # every n samples
         self.settings['device_input'] = "PCI-6251"
+        self.settings['SR_sensitivity'] = 10e-9
+        self.settings['PAR_sensitivity'] = 1e-3
+        self.SRSensitivity.setText("%.0e" %(self.settings['SR_sensitivity']))
+        self.PARSensitivity.setText("%.0e" %(self.settings['PAR_sensitivity']))
+        self.settings['plotR'] = True
 
         self.settings['in'] = {}
         ch0 = self.settings['in'][0] = {}
         ch1 = self.settings['in'][1] = {}
-        # ch2 = self.settings['in'][2] = {}
-        # ch3 = self.settings['in'][3] = {}
-
-        # ch2['curr_amp'] = -8
 
 
         ch0['channel'] = "ai0"
@@ -225,8 +226,7 @@ class MainWindow(QtGui.QMainWindow):
         ch1['freq_chan'] = 0
         ch1['curr_amp'] = 0
 
-
-        self.cAmpSpinBox.setValue(self.settings['in'][0]['curr_amp'])
+        # self.cAmpSpinBox.setValue(self.settings['in'][0]['curr_amp'])
         # (self._gen_meas_amplitude, self._normamplitudes, self._normphases)
 
         self.buff = ringbuffer.RingBuffer((len(self.settings['in'])+1, 2000))
@@ -297,8 +297,13 @@ class MainWindow(QtGui.QMainWindow):
         self.btn_measure.clicked.connect(self.graficar)
         self.btn_stop.clicked.connect(self.measure_stop)
 
-        self.check_rawdata.stateChanged.connect(self.update_plotting)
+        self.check_plot.stateChanged.connect(self.update_plotting)
+        self.radio_plotR.toggled.connect(self.update_plotting)
+        self.radio_plotC.toggled.connect(self.update_plotting)
         self.plot_update_time.valueChanged.connect(self.update_plotting)
+        self.SRSensitivity.editingFinished.connect(self.update_plotting)
+        self.PARSensitivity.editingFinished.connect(self.update_plotting)
+
 
 
         self.sig_measure.connect(self.worker.run)
@@ -309,11 +314,16 @@ class MainWindow(QtGui.QMainWindow):
         self.show()
 
     def update_plotting(self):
-        if self.check_rawdata.checkState() == 2:
+        if self.check_plot.checkState() == 2:
             self.settings['acq_plot'] = True
         else:
             self.settings['acq_plot'] = False
         self.settings['plot_timing'] = self.plot_update_time.value()
+        self.settings['SR_sensitivity'] = float(self.SRSensitivity.text ())
+        self.settings['PAR_sensitivity'] = float(self.PARSensitivity.text ())
+        self.settings['plotR'] = self.radio_plotR.isChecked()
+        self.SRSensitivity.setText("%.0e" %(self.settings['SR_sensitivity']))
+        self.PARSensitivity.setText("%.0e" %(self.settings['PAR_sensitivity']))
 
     def measure_start(self):
         self.terminate = False
@@ -336,83 +346,95 @@ class MainWindow(QtGui.QMainWindow):
             d_ch0 = raw_buffer[1]
             d_ch1 = raw_buffer[2]
 
-            current = np.abs(d_ch0*self.settings['in'][0]['multiplier'])
+            current = np.abs(d_ch0*self.settings['SR_sensitivity']/10.0)
             r2pt = np.abs(self.settings['in'][0]['amplitude'] / current)
-            g2pt = 1.0/r2pt
 
-
-            a_b = d_ch1*self.settings['in'][1]['multiplier']
+            a_b = d_ch1*self.settings['PAR_sensitivity']/10
             r4pt = np.abs(a_b / current)
-            g4pt = 1.0/r4pt
 
             self.store.append([d_time, current, r2pt, r4pt])
 
-        if self.store.size>1:
-            n = 0
-            self.plot_counter +=1
-            raw_buffer = self.store.get_partial()
+        if self.settings['acq_plot']:
+            if self.store.size>1:
+                n = 0
+                self.plot_counter +=1
+                raw_buffer = self.store.get_partial()
 
-            d_time = raw_buffer[0]
-            d_ch0 = raw_buffer[1]
-            d_ch1 = raw_buffer[2]
+                d_time = raw_buffer[0]
+                current = raw_buffer[1]
 
-            current = np.abs(d_ch0*self.settings['in'][0]['multiplier'])
-            r2pt = np.abs(self.settings['in'][0]['amplitude'] / current)
-            # g2pt = 1.0/r2pt
+                n += 1
+                av_len = -10
+                if self.plot_counter>11:
+                    self.pi_legend.items = []
 
+                    try:
+                        av_curr = np.average(current[av_len:])*1e9
+                        self.pi_legend.addItem(self.plotlist[n]['plot'], 'Current' + ' = ' + '%.2f nA' % av_curr)
+                    except:
+                        self.pi_legend.addItem(self.plotlist[n]['plot'], 'Current')
+                        pass
 
-            a_b = d_ch1*self.settings['in'][1]['multiplier']
-            r4pt = np.abs(a_b / current)
-            # g4pt = 1.0/r4pt
+                self.plotlist[n]['plot'].setData(x=d_time, y=current*1e9)
+                self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
+                n += 1
 
-            # n=0
-            # for n in range(len(self.settings['in'].keys())):
-            #     if self.settings['in'][n]['plot_raw']:
+                if self.settings['plotR']:
+                    r2pt = raw_buffer[2]
+                    r4pt = raw_buffer[3]
+                    if self.plot_counter>11:
+                        try:
+                            av_2pt = np.average(r2pt[av_len:])/1000.0
+                            self.pi_legend.addItem(self.plotlist[n]['plot'], 'R2pt' + ' = ' + '%.1f kOhm' % av_2pt)
+                        except:
+                            self.pi_legend.addItem(self.plotlist[n]['plot'], 'R2pt')
+                            pass
 
-            #         self.pi_legend.addItem(self.plotlist[n]['plot'], 'ai' + str(n) + ' = ' + '%.2e' % np.average(raw_buffer[n][-20:]))
+                    self.plotlist[n]['plot'].setData(x=d_time, y=r2pt/1000.0)
+                    self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
 
-            #         self.plotlist[n]['plot'].setData(y=av_data[n], name=self.settings['in'][n]['name'])
-            #         self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
+                    n += 1
+                    if self.plot_counter>11:
 
-            n += 1
-            av_len = -10
-            if self.plot_counter>11:
-                self.pi_legend.items = []
+                        self.plot_counter = 0
+                        try:
+                            av_4pt = np.average(r4pt[av_len:])/1000.0
+                            self.pi_legend.addItem(self.plotlist[n]['plot'], 'R4pt' + ' = ' + '%.1f kOhm' % av_4pt)
+                        except:
+                            self.pi_legend.addItem(self.plotlist[n]['plot'], 'R4pt')
+                            pass
 
-                try:
-                    av_curr = np.average(current[av_len:])*1e9
-                    self.pi_legend.addItem(self.plotlist[n]['plot'], 'Current' + ' = ' + '%.2f nA' % av_curr)
-                except:
-                    self.pi_legend.addItem(self.plotlist[n]['plot'], 'Current')
-                    pass
+                    self.plotlist[n]['plot'].setData(x=d_time, y=r4pt/1000.0)
+                    self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
 
-            self.plotlist[n]['plot'].setData(x=d_time, y=current*1e9)
-            self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
-            n += 1
-            if self.plot_counter>11:
-                try:
-                    av_2pt = np.average(r2pt[av_len:])/1000.0
-                    self.pi_legend.addItem(self.plotlist[n]['plot'], 'R2pt' + ' = ' + '%.1f kOhm' % av_2pt)
-                except:
-                    self.pi_legend.addItem(self.plotlist[n]['plot'], 'R2pt')
-                    pass
+                if not self.settings['plotR']:
+                    g2pt = 1.0/raw_buffer[2] *1e6
+                    g4pt = 1.0/raw_buffer[3] *1e6
 
-            self.plotlist[n]['plot'].setData(x=d_time, y=r2pt/1000.0)
-            self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
+                    if self.plot_counter>11:
+                        try:
+                            av_2pt = np.average(g2pt[av_len:])
+                            self.pi_legend.addItem(self.plotlist[n]['plot'], 'g2pt' + ' = ' + '%.1f uS' % av_2pt)
+                        except:
+                            self.pi_legend.addItem(self.plotlist[n]['plot'], 'g2pt')
+                            pass
 
-            n += 1
-            if self.plot_counter>11:
+                    self.plotlist[n]['plot'].setData(x=d_time, y=g2pt)
+                    self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
 
-                self.plot_counter = 0
-                try:
-                    av_4pt = np.average(r4pt[av_len:])/1000.0
-                    self.pi_legend.addItem(self.plotlist[n]['plot'], 'R4pt' + ' = ' + '%.1f kOhm' % av_4pt)
-                except:
-                    self.pi_legend.addItem(self.plotlist[n]['plot'], 'R4pt')
-                    pass
+                    n += 1
+                    if self.plot_counter>11:
 
-            self.plotlist[n]['plot'].setData(x=d_time, y=r4pt/1000.0)
-            self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
+                        self.plot_counter = 0
+                        try:
+                            av_4pt = np.average(g4pt[av_len:])
+                            self.pi_legend.addItem(self.plotlist[n]['plot'], 'g4pt' + ' = ' + '%.1f uS' % av_4pt)
+                        except:
+                            self.pi_legend.addItem(self.plotlist[n]['plot'], 'g4pt')
+                            pass
+
+                    self.plotlist[n]['plot'].setData(x=d_time, y=g4pt)
+                    self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
 
         if not self.terminate:
             QtCore.QTimer.singleShot(self.settings['plot_timing'], self.graficar)

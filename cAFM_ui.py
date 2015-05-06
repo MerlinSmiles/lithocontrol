@@ -311,7 +311,6 @@ class TreeItem(object):
 #     shape.type = None # [VirtualElectrode, line, area]
 
     def redraw(self):
-        print 'called'
         self.setDxfData(dxf2shape(self.entity, fill_step = self.fillStep, fill_angle=self.fillAngle))
 
     def setCheckState(self, value):
@@ -646,10 +645,11 @@ class TreeModel(QtCore.QAbstractItemModel):
         while number < len(data.entities):
             # entities are right in dxf file!!
             entity = data.entities[number]
-            # print entity.is_closed
-            if entity.dxftype not in ['POLYLINE']:
+            if entity.dxftype not in ['POLYLINE','LINE']:
                 number +=1
                 continue
+            if entity.dxftype == 'LINE':
+                entity.is_closed = False
             layer = entity.layer
             parent = parents[-1]
             # columnData = ['Name', 'Type']
