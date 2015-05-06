@@ -13,8 +13,8 @@
 # - cuttng start / cutting end
 # - type comments and save them with timing
 
-- python array for data storage
-- pandas store for storing data every 1 minute?
+# - python array for data storage
+# - pandas store for storing data every 1 minute?
 
 
 
