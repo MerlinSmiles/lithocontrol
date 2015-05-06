@@ -320,6 +320,7 @@ class MainWindow(QtGui.QMainWindow):
         self.sig_measure.emit(500)
 
     def measure_stop(self):
+        self.store.save_data()
         self.terminate = True
         self.sig_measure_stop.emit(500)
 
@@ -327,10 +328,9 @@ class MainWindow(QtGui.QMainWindow):
         self.terminate = True
 
     def graficar(self):
-        print self.settings['buff'].size
-        raw_buffer = self.settings['buff'].get_partial_clear()
 
-        if raw_buffer.size > 0:
+        if self.settings['buff'].size > 0:
+            raw_buffer = self.settings['buff'].get_partial_clear()
 
             d_time = raw_buffer[0]
             d_ch0 = raw_buffer[1]
@@ -347,75 +347,72 @@ class MainWindow(QtGui.QMainWindow):
 
             self.store.append([d_time, current, r2pt, r4pt])
 
-        if True:
+        if self.store.size>1:
+            n = 0
             self.plot_counter +=1
-
-
             raw_buffer = self.store.get_partial()
 
-            if raw_buffer.size > 10:
+            d_time = raw_buffer[0]
+            d_ch0 = raw_buffer[1]
+            d_ch1 = raw_buffer[2]
 
-                d_time = raw_buffer[0]
-                d_ch0 = raw_buffer[1]
-                d_ch1 = raw_buffer[2]
-
-                current = np.abs(d_ch0*self.settings['in'][0]['multiplier'])
-                r2pt = np.abs(self.settings['in'][0]['amplitude'] / current)
-                g2pt = 1.0/r2pt
+            current = np.abs(d_ch0*self.settings['in'][0]['multiplier'])
+            r2pt = np.abs(self.settings['in'][0]['amplitude'] / current)
+            # g2pt = 1.0/r2pt
 
 
-                a_b = d_ch1*self.settings['in'][1]['multiplier']
-                r4pt = np.abs(a_b / current)
-                g4pt = 1.0/r4pt
+            a_b = d_ch1*self.settings['in'][1]['multiplier']
+            r4pt = np.abs(a_b / current)
+            # g4pt = 1.0/r4pt
 
-                n=0
-                # for n in range(len(self.settings['in'].keys())):
-                #     if self.settings['in'][n]['plot_raw']:
+            # n=0
+            # for n in range(len(self.settings['in'].keys())):
+            #     if self.settings['in'][n]['plot_raw']:
 
-                #         self.pi_legend.addItem(self.plotlist[n]['plot'], 'ai' + str(n) + ' = ' + '%.2e' % np.average(raw_buffer[n][-20:]))
+            #         self.pi_legend.addItem(self.plotlist[n]['plot'], 'ai' + str(n) + ' = ' + '%.2e' % np.average(raw_buffer[n][-20:]))
 
-                #         self.plotlist[n]['plot'].setData(y=av_data[n], name=self.settings['in'][n]['name'])
-                #         self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
+            #         self.plotlist[n]['plot'].setData(y=av_data[n], name=self.settings['in'][n]['name'])
+            #         self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
 
-                n += 1
-                av_len = -10
-                if self.plot_counter>11:
-                    self.pi_legend.items = []
+            n += 1
+            av_len = -10
+            if self.plot_counter>11:
+                self.pi_legend.items = []
 
-                    try:
-                        av_curr = np.average(current[av_len:])*1e9
-                        self.pi_legend.addItem(self.plotlist[n]['plot'], 'Current' + ' = ' + '%.2f nA' % av_curr)
-                    except:
-                        self.pi_legend.addItem(self.plotlist[n]['plot'], 'Current')
-                        pass
+                try:
+                    av_curr = np.average(current[av_len:])*1e9
+                    self.pi_legend.addItem(self.plotlist[n]['plot'], 'Current' + ' = ' + '%.2f nA' % av_curr)
+                except:
+                    self.pi_legend.addItem(self.plotlist[n]['plot'], 'Current')
+                    pass
 
-                self.plotlist[n]['plot'].setData(x=d_time, y=current*1e9)
-                self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
-                n += 1
-                if self.plot_counter>11:
-                    try:
-                        av_2pt = np.average(r2pt[av_len:])/1000.0
-                        self.pi_legend.addItem(self.plotlist[n]['plot'], 'R2pt' + ' = ' + '%.1f kOhm' % av_2pt)
-                    except:
-                        self.pi_legend.addItem(self.plotlist[n]['plot'], 'R2pt')
-                        pass
+            self.plotlist[n]['plot'].setData(x=d_time, y=current*1e9)
+            self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
+            n += 1
+            if self.plot_counter>11:
+                try:
+                    av_2pt = np.average(r2pt[av_len:])/1000.0
+                    self.pi_legend.addItem(self.plotlist[n]['plot'], 'R2pt' + ' = ' + '%.1f kOhm' % av_2pt)
+                except:
+                    self.pi_legend.addItem(self.plotlist[n]['plot'], 'R2pt')
+                    pass
 
-                self.plotlist[n]['plot'].setData(x=d_time, y=r2pt/1000.0)
-                self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
+            self.plotlist[n]['plot'].setData(x=d_time, y=r2pt/1000.0)
+            self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
 
-                n += 1
-                if self.plot_counter>11:
+            n += 1
+            if self.plot_counter>11:
 
-                    self.plot_counter = 0
-                    try:
-                        av_4pt = np.average(r4pt[av_len:])/1000.0
-                        self.pi_legend.addItem(self.plotlist[n]['plot'], 'R4pt' + ' = ' + '%.1f kOhm' % av_4pt)
-                    except:
-                        self.pi_legend.addItem(self.plotlist[n]['plot'], 'R4pt')
-                        pass
+                self.plot_counter = 0
+                try:
+                    av_4pt = np.average(r4pt[av_len:])/1000.0
+                    self.pi_legend.addItem(self.plotlist[n]['plot'], 'R4pt' + ' = ' + '%.1f kOhm' % av_4pt)
+                except:
+                    self.pi_legend.addItem(self.plotlist[n]['plot'], 'R4pt')
+                    pass
 
-                self.plotlist[n]['plot'].setData(x=d_time, y=r4pt/1000.0)
-                self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
+            self.plotlist[n]['plot'].setData(x=d_time, y=r4pt/1000.0)
+            self.plotlist[n]['plot'].setPen(color=self.kelly_colors[self.colors[n]])
 
         if not self.terminate:
             QtCore.QTimer.singleShot(self.settings['plot_timing'], self.graficar)
