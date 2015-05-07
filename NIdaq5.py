@@ -25,7 +25,7 @@ import pyqtgraph as pg
 import numpy as np
 
 import pandas as pd
-
+import serial
 import datetime
 from datetime import datetime as dt
 
@@ -64,6 +64,41 @@ class Worker(QtCore.QObject):
         self.task.StopTask()
         self.running = False
         # self.task.ClearTask()
+
+
+
+class dhtWorker(QtCore.QObject):
+
+
+    def __init__(self, settings, parent=None):
+
+        super(dhtWorker, self).__init__(parent)
+        self.settings = settings
+        self.terminate = True
+        if self.settings['dht_serial'] != None:
+            print "Monitoring serial port " + self.settings['dht_serial'].name
+            self.terminate = False
+
+    def run(self):
+        data = ''
+        while self.terminate == False:
+            self.settings['dht_serial'].write('READ:HUM:TEMP')
+            ch = self.settings['dht_serial'].readline()
+            if len(ch) != 0:
+                data = ch
+                if data.startswith('DHT:'):
+                    data = data.split()
+                    humidity = float(data[1])
+                    temperature = float(data[2])
+                    tdelta = self.settings['time'].elapsed()/1000.0
+                    self.settings['dht_buff'].append([tdelta, temperature, humidity])
+
+    def stop(self):
+        self.terminate = True
+        self.settings['dht_serial'].close()
+
+
+
 
 ##################################################################
 
@@ -187,6 +222,12 @@ class MainWindow(QtGui.QMainWindow):
         self.settings['time'] = QTime()
         self.update_plotting()
         self.plot_counter = 0
+        try:
+            self.settings['dht_serial'] = serial.Serial(4, baudrate=115200, timeout=5) # opens, too.
+        except:
+            print 'dht failed'
+            self.settings['dht_serial'] = None
+            pass
 
         self.settings['buffer_size'] = 10000000
         self.settings['acq_rate'] = 30000          # samples/second
@@ -232,12 +273,21 @@ class MainWindow(QtGui.QMainWindow):
         self.buff = ringbuffer.RingBuffer((len(self.settings['in'])+1, 2000))
         self.settings['buff'] = self.buff
         self.store_columns = ['time', 'current','r2p','r4p']
-        self.store = ringbuffer.RingBuffer((len(self.store_columns), 360000))
+        self.store = ringbuffer.RingBuffer((len(self.store_columns), 360000), filename='store_data.h5')
+
+
+        self.dht_buff = ringbuffer.RingBuffer((3, 2000))
+        self.settings['dht_buff'] = self.dht_buff
+
+        self.dht_store_columns = ['time', 'temperature', 'humidity']
+        self.dht_store = ringbuffer.RingBuffer((len(self.dht_store_columns), 360000), filename='store_dht.h5')
 
 
         self.worker = Worker(self.settings)
-
         self.workerThread = None
+
+        self.dhtWorker = dhtWorker(self.settings)
+        self.dhtWorkerThread = None
 
 
         self.pi = self.plotView.getPlotItem()
@@ -281,6 +331,7 @@ class MainWindow(QtGui.QMainWindow):
         if reply==QtGui.QMessageBox.Yes:
             self.measure_stop()
             self.workerThread.quit()
+            self.dhtWorkerThread.quit()
 
             event.accept()
         else:
@@ -293,6 +344,10 @@ class MainWindow(QtGui.QMainWindow):
         self.workerThread = QtCore.QThread()
         self.worker.terminate.connect(self.setterminate)
         self.worker.moveToThread(self.workerThread)
+        self.dhtWorkerThread = QtCore.QThread()
+        # self.dhtWorker.terminate.connect(self.setterminate)
+        self.dhtWorker.moveToThread(self.dhtWorkerThread)
+
         self.btn_measure.clicked.connect(self.measure_start)
         self.btn_measure.clicked.connect(self.graficar)
         self.btn_stop.clicked.connect(self.measure_stop)
@@ -309,7 +364,11 @@ class MainWindow(QtGui.QMainWindow):
         self.sig_measure.connect(self.worker.run)
         self.sig_measure_stop.connect(self.worker.stop)
 
+        self.sig_measure.connect(self.dhtWorker.run)
+        self.sig_measure_stop.connect(self.dhtWorker.stop)
+
         self.workerThread.start()
+        self.dhtWorkerThread.start()
 
         self.show()
 
@@ -331,6 +390,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def measure_stop(self):
         self.store.save_data()
+        self.dht_store.save_data()
         self.terminate = True
         self.sig_measure_stop.emit(500)
 
@@ -353,6 +413,15 @@ class MainWindow(QtGui.QMainWindow):
             r4pt = np.abs(a_b / current)
 
             self.store.append([d_time, current, r2pt, r4pt])
+
+        if self.settings['dht_buff'].size > 0:
+            raw_buffer = self.settings['dht_buff'].get_partial_clear()
+            a = raw_buffer[0].mean()
+            b = raw_buffer[1].mean()
+            c = raw_buffer[2].mean()
+            self.dht_store.append([a,b,c])
+            self.text_temp.setText('Tmp: %.1f\xb0C'%(raw_buffer[1].mean()))
+            self.text_hum.setText('Hum: %.1f%%'%(raw_buffer[2].mean()))
 
         if self.settings['acq_plot']:
             if self.store.size>1:

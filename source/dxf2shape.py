@@ -12,7 +12,6 @@ from helpers import *
 def get_points(entity, threshold = 1e-9):
     if entity.dxftype == 'LINE':
         pts = np.array([entity.start[:-1], entity.end[:-1]])
-        print pts
         return pts
     pts = entity.points
     pts = np.array(pts)[:,:2]

@@ -2,6 +2,7 @@ from PyQt4 import QtCore, QtGui,uic
 from PyQt4.QtCore import pyqtSignal
 import pyqtgraph as pg
 import numpy as np
+import serial   # http://pyserial.sf.net
 
 # from functools import partial
 from Queue import Queue
@@ -20,7 +21,6 @@ import ringbuffer as ringbuffer
 import cProfile
 
 
-
 def process_data(data, f, fs):
     '''Perform lock-in analysis and save results in memory'''
     phi = 2*numpy.pi*f * numpy.array(range(len(data[0]))) / float(fs)
@@ -33,6 +33,49 @@ def process_data(data, f, fs):
     phases[1:] = phases[1:] - phases[0]
     normphases = numpy.mod(phases + numpy.pi, 2 * numpy.pi) - numpy.pi
     return (amplitudes, normphases)
+
+
+
+    s=''
+
+class read_dht(QtCore.QObject):
+
+
+    def __init__(self, settings, parent=None):
+
+        super(read_dht, self).__init__(parent)
+        self.settings = settings
+        self.port = 4
+        self.ser = serial.Serial(self.port, baudrate=115200, timeout=5) # opens, too.
+        print "Monitoring serial port " + self.ser.name
+        self.humidity = np.NAN
+        self.temperature = np.NAN
+        self.terminate = False
+
+    def run(self):
+        data = ''
+        while self.terminate == False:
+            self.ser.write('READ:HUM:TEMP')
+            ch = self.ser.readline()
+            if len(ch) != 0:
+                data = ch
+                print (data)
+                if data.startswith('DHT:'):
+                    data = data.split()
+                    # print data
+                    self.humidity = float(data[1])
+                    self.temperature = float(data[2])
+                    print 'HUM ' , humidity
+                    print 'TMP ' , temperature
+            # print('worker thread id: {}'.format(QtCore.QThread.currentThreadId()))
+            # self.wave_task.StartTask()
+            self.task.StartTask()
+
+    def stop(self):
+        self.terminate = True
+        ser.close()
+
+
 
 
 class Worker(QtCore.QObject):
@@ -481,8 +524,11 @@ class MainWindow(QtGui.QMainWindow):
         self.settings['li_buff'] = self.li_buff
 
         self.worker = Worker(self.settings)
-
         self.workerThread = None
+
+        self.dht_worker = read_dht(self.settings)
+        self.dhtThread = None
+
         self.pi = self.plotView2.getPlotItem()
         self.pi.addLegend()
         self.pi_legend = self.pi.legend
@@ -546,8 +592,11 @@ class MainWindow(QtGui.QMainWindow):
 
     def run(self):
         self.workerThread = QtCore.QThread()
+        self.dhtThread = QtCore.QThread()
         self.worker.terminate.connect(self.setterminate)
         self.worker.moveToThread(self.workerThread)
+        # self.dht_worker.terminate.connect(self.setterminate)
+        self.dht_worker.moveToThread(self.dhtThread)
         self.btn_measure.clicked.connect(self.measure_start)
         self.btn_measure.clicked.connect(self.graficar)
         self.btn_stop.clicked.connect(self.measure_stop)
@@ -563,10 +612,12 @@ class MainWindow(QtGui.QMainWindow):
         self.cAmpSpinBox.valueChanged.connect(self.settings_update)
 
         self.sig_measure.connect(self.worker.run)
+        self.sig_measure.connect(self.dht_worker.run)
         self.sig_wave_start.connect(self.worker.wave_start)
         self.sig_settings_update.connect(self.worker.settings_update)
 
         self.workerThread.start()
+        self.dhtThread.start()
 
         self.show()
 

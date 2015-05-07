@@ -669,7 +669,7 @@ class TreeModel(QtCore.QAbstractItemModel):
 
                 # for column in range(len(columnData)):
                     # parent.child(parent.childCount() -1).setData(column, layers[layer][columnData[column]])
-                    # print columnData[column], layers[layer][columnData[column]]
+                    # columnData[column], layers[layer][columnData[column]]
 
             parent = parent_dict[layer]
 
@@ -992,6 +992,7 @@ class MainWindow(QtGui.QMainWindow):
         item = model.getItem(index)
 
         checked = item.checkState
+        print checked
         if not checked == 0:
             # clear plot from item
             for i in item.pltHandle:
