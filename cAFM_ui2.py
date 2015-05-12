@@ -15,7 +15,7 @@ import pyqtgraph.dockarea as pg_dock
 
 import sys
 
-from convertAFM import convertAFM
+# from convertAFM import convertAFM
 
 sys.path.append("D:\\Projects\\qtlab\\source")
 sys.path.append("D:\\Projects\\qtlab\\instrument_plugins")
@@ -41,6 +41,32 @@ import numpy as np
 # from scipy.interpolate import interp1d
 from source.helpers import *
 from source.dxf2shape import *
+from source.convertAFM import *
+from source.socketworker import *
+from source.treeclass import *
+from source.ni_measurement import *
+
+colors = ['vivid_yellow','strong_purple','vivid_orange','very_light_blue','vivid_red','grayish_yellow','medium_gray','vivid_green','strong_purplish_pink','strong_blue','strong_yellowish_pink','strong_violet','vivid_orange_yellow','strong_purplish_red','vivid_greenish_yellow','strong_reddish_brown','vivid_yellowish_green','deep_yellowish_brown','vivid_reddish_orange','dark_olive_green']
+kelly_colors = dict(vivid_yellow=(255, 179, 0),
+            strong_purple=(128, 62, 117),
+            vivid_orange=(255, 104, 0),
+            very_light_blue=(166, 189, 215),
+            vivid_red=(193, 0, 32),
+            grayish_yellow=(206, 162, 98),
+            medium_gray=(129, 112, 102),
+            vivid_green=(0, 125, 52),
+            strong_purplish_pink=(246, 118, 142),
+            strong_blue=(0, 83, 138),
+            strong_yellowish_pink=(255, 122, 92),
+            strong_violet=(83, 55, 122),
+            vivid_orange_yellow=(255, 142, 0),
+            strong_purplish_red=(179, 40, 81),
+            vivid_greenish_yellow=(244, 200, 0),
+            strong_reddish_brown=(127, 24, 13),
+            vivid_yellowish_green=(147, 170, 0),
+            deep_yellowish_brown=(89, 51, 21),
+            vivid_reddish_orange=(241, 58, 19),
+            dark_olive_green=(35, 44, 22))
 
 # mkPen for selected
 orangePen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
@@ -85,7 +111,6 @@ class PlotFrame(QtGui.QWidget):
 
 
         self.measurePlot = pg.PlotWidget()
-        self.measurePlot.plot(np.random.normal(size=100))
         self.measureDock.addWidget(self.measurePlot)
 
     def setAfmImage(self, image_data, x= None, y=None):
@@ -93,144 +118,11 @@ class PlotFrame(QtGui.QWidget):
             self.afmIm.setRect(pg.QtCore.QRectF(-x/2.0, -y/2.0, x, y))
         self.afmIm.setImage(image_data)
 
-
-
     def clearSketchPlot(self):
         # return
         self.sketchPlot.clear()
         self.histWidget.setImageItem(self.afmIm)
         self.sketchPlot.addItem(self.afmIm)
-
-
-class SocketWorker(QtCore.QThread):
-
-    def __init__(self, parent = None):
-
-        QtCore.QThread.__init__(self, parent)
-        self.exiting = False
-
-        self.host = 'nanoman'
-        self.remote_ip = None
-        self.port = 12345
-        self.sock = None
-        self.init = False
-        self.connected = False
-
-        self.initSocket()
-        self.connectSocket()
-
-    def __del__(self):
-        self.stop()
-
-    def initSocket(self):
-        try:
-            #create an AF_INET, STREAM socket (TCP)
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        except socket.error, msg:
-            print 'Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + msg[1]
-            self.init =  False
-
-        try:
-            self.remote_ip = socket.gethostbyname( self.host )
-        except socket.gaierror:
-            #could not resolve
-            print 'Hostname could not be resolved. Exiting'
-            self.init =  False
-        self.init =  True
-
-    def connectSocket(self):
-        #Connect to remote server
-        if not self.init:
-            self.initSocket()
-        if self.connected:
-            self.disconnectSocket()
-        try:
-            self.sock.connect((self.remote_ip , self.port))
-            print 'Socket Connected to ' + self.host + ' on ip ' + self.remote_ip
-            self.connected = True
-        except:
-            self.connected = False
-            pass
-
-    def disconnectSocket(self):
-        try:
-            self.sock.close()
-            print 'Socket disconnected'
-            self.connected = False
-        except:
-            pass
-
-    def send_message(self, message):
-        if not self.connected:
-            self.connectSocket()
-        try :
-            #Set the whole string
-            self.sock.sendall(message)
-            # print 'sending message'
-        except socket.error:
-            #Send failed
-            print 'Send failed trying again with reconnect'
-            self.initSocket()
-            self.connectSocket()
-            try :
-                #Set the whole string
-                # print 'sending message'
-                self.sock.sendall(message)
-            except socket.error:
-                #Send failed
-                print 'Send failed: Serious error'
-
-    def recv_message(self, timeout =0, buf = 4096):
-        if not self.connected:
-            self.connectSocket()
-        try:
-            self.sock.settimeout(timeout)
-            msg = self.sock.recv(buf)
-            return msg
-        except socket.error, e:
-            return False
-        else:
-            print 'got a message, do something :)'
-            pass
-
-    def monitor(self):
-        self.exiting = False
-        self.start()
-
-    def stop(self):
-        self.exiting = True
-        self.init = False
-        self.connected = False
-        self.disconnectSocket()
-
-    def run(self):
-        self.exiting = False
-        if not self.connected:
-            self.connectSocket()
-
-        while not self.exiting:
-            time.sleep(1)
-            msg = self.recv_message(timeout = 0.05)
-            if msg:
-                lines = msg.splitlines()
-                for line in lines:
-                    # self.statusBar().showMessage(line)
-                    self.emit(QtCore.SIGNAL("AFMStatus(QString)"), line)
-                    if line.startswith('vtip'):
-                        line = line.split( )
-                        volt = float(line[1])
-                        print 'VTIP ' , volt
-                        # keithley.set_source_voltage(volt*4)
-                    elif line.startswith('Ready'):
-                        # keithley.set_source_voltage(0)
-                        print "\n\nREADY\n\n"
-                    elif line.startswith('xyAbs'):
-                        line = line.split( )
-                        x = float(line[1])
-                        y = float(line[2])
-                        r = float(line[3])
-                        self.emit(QtCore.SIGNAL("AFMpos(float, float, float)"), x,y,r)
-
 
 
 
@@ -291,424 +183,15 @@ class AFMWorker(QtCore.QThread):
         observer.stop()
         observer.join()
 
-class TreeItem(object):
-    def __init__(self, data, parent=None, model=None):
-        self.model = model
-        self.parentItem = parent
-        self.itemData = data
-        self.childItems = []
-        self.dxfData = None
-        self.pltData = None
-        self.entity = None
-        self.pltHandle = []
-        self.checkState = QtCore.Qt.Unchecked
-        self.fillAngle = 0
-        self.fillStep = 0.1
-        self.volt = 10
-        self.rate = 1.0
-        self.length = 0.0
-        self.sketchTime = 0.0
-#     shape.type = None # [VirtualElectrode, line, area]
-
-    def redraw(self):
-        self.setDxfData(dxf2shape(self.entity, fill_step = self.fillStep, fill_angle=self.fillAngle))
-
-    def setCheckState(self, value):
-        if value == 2:
-            self.checkState = QtCore.Qt.Checked
-        elif value == 1:
-            self.checkState = QtCore.Qt.PartiallyChecked
-        else:
-            self.checkState = QtCore.Qt.Unchecked
-        return self.checkState
-
-    def setEntity(self, entity):
-        self.entity = entity
-        self.redraw()
-
-    def setDxfData(self, data):
-        self.dxfData = data
-        self.pltData = []
-        for k in self.dxfData:
-            self.pltData.append(k.reshape((-1,2)))
-        # self.calcTime()
-
-    def calcLength(self):
-        dat = np.array(self.pltData).reshape((-1,2))
-        dat_b = np.roll(dat,-1)
-        dist = 0
-        for k in range(len(dat)-1):
-            dist += np.linalg.norm(dat[k]-dat_b[k])
-
-        self.length = dist
-        print 'dist'
-        print dist
-
-    def calcTime(self):
-        self.calcLength()
-        self.sketchTime = self.length / float(self.rate)
-        print 'time'
-        print self.sketchTime
-
-    def child(self, row):
-        return self.childItems[row]
-
-    def childCount(self):
-        return len(self.childItems)
-
-    def childNumber(self):
-        if self.parentItem != None:
-            return self.parentItem.childItems.index(self)
-        return 0
-
-    def columnCount(self):
-        return len(self.itemData)
-
-    def data(self, column=None):
-        if column == None:
-            return self.itemData[:]
-        return self.itemData[column]
-
-    def insertChildren(self, position, count, columns):
-        if position < 0 or position > len(self.childItems):
-            return False
-
-        for row in range(count):
-            data = [None for v in range(columns)]
-            item = TreeItem(data, self, self.model)
-            self.childItems.insert(position, item)
-
-        return True
-
-    def insertColumns(self, position, columns):
-        if position < 0 or position > len(self.itemData):
-            return False
-
-        for column in range(columns):
-            self.itemData.insert(position, None)
-
-        for child in self.childItems:
-            child.insertColumns(position, columns)
-
-        return True
-
-    def parent(self):
-        return self.parentItem
-
-    def removeChildren(self, position, count):
-        if position < 0 or position + count > len(self.childItems):
-            return False
-
-        for row in range(count):
-            self.childItems.pop(position)
-
-        return True
-
-    def removeColumns(self, position, columns):
-        if position < 0 or position + columns > len(self.itemData):
-            return False
-
-        for column in range(columns):
-            self.itemData.pop(position)
-
-        for child in self.childItems:
-            child.removeColumns(position, columns)
-
-        return True
-
-    def setData(self, column, value):
-        if column < 0 or column >= len(self.itemData):
-            return False
-        if self.model.rootData[column] == 'Angle':
-            if self.fillAngle != value:
-                self.fillAngle = value
-                self.redraw()
-        elif self.model.rootData[column] == 'Step':
-            if self.fillStep != value:
-                self.fillStep = value
-                self.redraw()
-        elif self.model.rootData[column] == 'Closed':
-            if self.entity.is_closed != value:
-                self.entity.is_closed = value
-        elif self.model.rootData[column] == 'Time':
-            if self.sketchTime != value:
-                self.sketchTime = value
-                # self.redraw()
-
-        self.itemData[column] = value
-        return True
-
-
-class TreeModel(QtCore.QAbstractItemModel):
-    def __init__(self, headers, data, parent=None):
-        super(TreeModel, self).__init__(parent)
-        self.checks = {}
-
-        self.rootData = [header for header in headers] # Header Names
-        self.rootItem = TreeItem(self.rootData, model=self)
-        self.setupModelData(data, self.rootItem)
-
-        self._checked=[[False for i in xrange(self.columnCount())] for j in xrange(self.rowCount())]
-
-    def columnCount(self, parent=QtCore.QModelIndex()):
-        return self.rootItem.columnCount()
-
-    def data(self, index, role):
-        if not index.isValid():
-            return None
-
-        if role == QtCore.Qt.CheckStateRole:
-            if index.column() == 0:
-                return self.checkState(index)
-
-        if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
-            return None
-        item = self.getItem(index)
-        return item.data(index.column())
-
-    def flags(self, index):
-        if not index.isValid():
-            return 0
-
-        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsUserCheckable |QtCore.Qt.ItemIsDropEnabled |QtCore.Qt.ItemIsDragEnabled
-
-    def getItem(self, index):
-        if index.isValid():
-            item = index.internalPointer()
-            if item:
-                return item
-        return self.rootItem
-
-    def checkState(self, index):
-        return self.getItem(index).checkState
-
-    def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
-        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
-            return self.rootItem.data(section)
-
-        return None
-
-    def index(self, row, column=0, parent=QtCore.QModelIndex()):
-        if parent.isValid() and parent.column() != 0:
-            return QtCore.QModelIndex()
-
-        parentItem = self.getItem(parent)
-        childItem = parentItem.child(row)
-        if childItem:
-            return self.createIndex(row, column, childItem)
-        else:
-            return QtCore.QModelIndex()
-
-    def insertColumns(self, position, columns, parent=QtCore.QModelIndex()):
-        self.beginInsertColumns(parent, position, position + columns - 1)
-        success = self.rootItem.insertColumns(position, columns)
-        self.endInsertColumns()
-
-        return success
-
-    def insertRows(self, position, rows, parent=QtCore.QModelIndex()):
-        parentItem = self.getItem(parent)
-        self.beginInsertRows(parent, position, position + rows - 1)
-        success = parentItem.insertChildren(position, rows,
-                self.rootItem.columnCount())
-        self.endInsertRows()
-
-        return success
-
-    def parent(self, index):
-        if not index.isValid():
-            return QtCore.QModelIndex()
-
-        childItem = self.getItem(index)
-        parentItem = childItem.parent()
-
-        if parentItem == self.rootItem:
-            return QtCore.QModelIndex()
-
-        return self.createIndex(parentItem.childNumber(), 0, parentItem)
-
-    def removeColumns(self, position, columns, parent=QtCore.QModelIndex()):
-        self.beginRemoveColumns(parent, position, position + columns - 1)
-        success = self.rootItem.removeColumns(position, columns)
-        self.endRemoveColumns()
-
-        if self.rootItem.columnCount() == 0:
-            self.removeRows(0, self.rowCount())
-
-        return success
-
-    def removeRows(self, position, rows, parent=QtCore.QModelIndex()):
-        parentItem = self.getItem(parent)
-
-        self.beginRemoveRows(parent, position, position + rows - 1)
-        success = parentItem.removeChildren(position, rows)
-        self.endRemoveRows()
-
-        return success
-
-    def rowCount(self, parent=QtCore.QModelIndex()):
-        parentItem = self.getItem(parent)
-
-        return parentItem.childCount()
-
-    def childCount(self, parent=QtCore.QModelIndex()):
-        return self.rowCount(parent)
-
-    def are_parent_and_child(self, parent, child):
-        while child.isValid():
-            if child == parent:
-                return True
-            child = child.parent()
-        return False
-
-    def setData(self, index, value, role=QtCore.Qt.EditRole):
-
-        if (role == QtCore.Qt.CheckStateRole and index.column() == 0):
-            self.layoutAboutToBeChanged.emit()
-            item = self.getItem(index)
-
-            item.setCheckState(value)
-            self.emit(QtCore.SIGNAL('checkChanged(QModelIndex)'), index)
-
-            cc = item.childCount()
-            if cc > 0:
-                for i in range(cc):
-                    chindex =  self.createIndex(i, 0, item.child(i))
-                    self.setData(chindex,value,role)
-
-
-            item = self.getItem(index.parent())
-            cc = item.childCount()
-            no_checked = 0
-            if cc > 0:
-                for i in range(cc):
-                    if item.child(i).checkState == 2:
-                        no_checked+=1
-                if no_checked == cc:
-                    item.setCheckState(2)
-                elif no_checked > 0:
-                    item.setCheckState(1)
-                else:
-                    item.setCheckState(0)
-                # self.emit(QtCore.SIGNAL('checkChanged(QModelIndex)'), index.parent())
-
-            self.layoutChanged.emit()
-            return True
-
-        if role != QtCore.Qt.EditRole:
-            return False
-
-        item = self.getItem(index)
-        result = item.setData(index.column(), value)
-
-        if result:
-            # if self.rootData[index.column()] == 'Angle':
-            #     item.redraw()
-
-            self.emit(QtCore.SIGNAL('redraw(QModelIndex)'), index)
-            self.emit(QtCore.SIGNAL('dataChanged(QModelIndex)'), index)
-                # , value
-
-        return result
-
-    def setHeaderData(self, section, orientation, value, role=QtCore.Qt.EditRole):
-        if role != QtCore.Qt.EditRole or orientation != QtCore.Qt.Horizontal:
-            return False
-
-        result = self.rootItem.setData(section, value)
-        if result:
-            self.headerDataChanged.emit(orientation, section, section)
-
-        return result
-
-    def getColumns(self):
-        columns = []
-        for i in range(self.columnCount()):
-            columns.append(self.headerData(i,QtCore.Qt.Horizontal))
-        return columns
-
-    def getRows(self):
-        rows = []
-        for i in range(self.rowCount()):
-            rows.append(self.getItem(self.index(i)))
-        return rows
-
-    def clearData(self):
-        self.rootItem = TreeItem(self.rootData, model=self)
-
-    def setupModelData(self, data, parent):
-        columns = self.getColumns()
-        parents = [parent]
-        indentations = [0]
-
-        number = 0
-        layers = {}
-        parent_dict = {}
-        while number < len(data.entities):
-            # entities are right in dxf file!!
-            entity = data.entities[number]
-            if entity.dxftype not in ['POLYLINE','LINE']:
-                number +=1
-                continue
-            if entity.dxftype == 'LINE':
-                entity.is_closed = False
-            layer = entity.layer
-            parent = parents[-1]
-            # columnData = ['Name', 'Type']
-            if layer not in layers:
-                layers[layer] = {'Name': layer, 'Type': 'Layer'}
-                parent.insertChildren(parent.childCount(), 1,
-                                    self.rootItem.columnCount())
-
-                parent_dict[layer] = parent.child(parent.childCount() -1)
-                thisChild = parent.child(parent.childCount() -1)
-
-
-                for column in range(len(columns)):
-                    key = columns[column]
-                    if key in layers[layer]:
-                        thisChild.setData(column, layers[layer][key])
-
-                # for column in range(len(columnData)):
-                    # parent.child(parent.childCount() -1).setData(column, layers[layer][columnData[column]])
-                    # columnData[column], layers[layer][columnData[column]]
-
-            parent = parent_dict[layer]
-
-            parent.insertChildren(parent.childCount(), 1,
-                                self.rootItem.columnCount())
-
-            thisChild = parent.child(parent.childCount() -1)
-            # print thisChild
-
-            # entity.is_closed = True
-            thisChild.setEntity(entity)
-
-            # print self.headerData(0,QtCore.Qt.Horizontal)
-
-            # print str(entity.is_closed)
-            item_data = {'Name': 'Id'+str(number),
-                         'Type': entity.dxftype,
-                         'Closed': entity.is_closed,
-                         'Voltage': thisChild.volt,
-                         'Angle': thisChild.fillAngle,
-                         'Rate': thisChild.rate,
-                         'Step': thisChild.fillStep,
-                         'Time': thisChild.sketchTime}
-            # print columnData
-            for column in range(len(columns)):
-                key = columns[column]
-                if key in item_data:
-                    thisChild.setData(column, item_data[key])
-
-            number += 1
-
-
 class MainWindow(QtGui.QMainWindow):
+
+    sig_measure = pyqtSignal(int)
+    sig_measure_stop = pyqtSignal(int)
+
     def __init__(self, parent=None):
 
         super(MainWindow, self).__init__(parent)
-        uic.loadUi('mainwindow2.ui', self)
+        uic.loadUi('mainwindow5.ui', self)
         self.setWindowTitle('Merlins AFM sketching tool')
         self.setGeometry(500,100,1200,1000)
         self.plotFrame = PlotFrame()
@@ -716,11 +199,17 @@ class MainWindow(QtGui.QMainWindow):
 
         self.show()
 
-        self.actionExit.triggered.connect(QtGui.qApp.quit)
-
         self.outDir = 'U:/'
         self.afmImageFolder = 'D:/lithography/afmImages/'
 
+        print ''
+        print ''
+
+        self.addToolbars()
+        self.init_sketching()
+        self.init_measurement()
+
+    def init_sketching(self):
         self.inFile = ''
         self.sketchFile = ''
         self.freerate = 2.0
@@ -728,15 +217,11 @@ class MainWindow(QtGui.QMainWindow):
         self.tip_offset = 0
 
         self.afminfo = {}
-        # self.fileOut.setText(self.outDir)
+
         self.centerCoord = np.array([0,0])
 
         self.afmPosition = pg.ScatterPlotItem(size=5, pen=pg.mkPen(None), brush=pg.mkBrush(180, 180, 255, 255))
 
-        # n = 5
-        # pos = np.random.normal(size=(2,n))
-        # spots = [{'pos': pos[:,i], 'data': 1} for i in range(n)] + [{'pos': [0,0], 'data': 1}]
-        # self.afmPosition.addPoints(spots)
 
         self.preservePlots = []
         self.preservePlots.append(self.afmPosition)
@@ -745,16 +230,6 @@ class MainWindow(QtGui.QMainWindow):
         self.dxffileName = filename
 
         self.headers = ('Name', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Closed', 'Type')
-
-        # QtCore.QObject.connect(self.loadFile, QtCore.SIGNAL('clicked()'), self.pickFile)
-        # QtCore.QObject.connect(self.saveDirectory, QtCore.SIGNAL('clicked()'), self.pickDirectory)
-        # QtCore.QObject.connect(self.butUnload, QtCore.SIGNAL('clicked()'), self.stageUnload)
-        # QtCore.QObject.connect(self.butLoad, QtCore.SIGNAL('clicked()'), self.stageLoad)
-        # QtCore.QObject.connect(self.fileIn, QtCore.SIGNAL('returnPressed()'), self.updateFileInText)
-
-        print ''
-        print ''
-
         self.AFMthread = AFMWorker()
         self.SocketThread = SocketWorker()
 
@@ -764,26 +239,98 @@ class MainWindow(QtGui.QMainWindow):
 
         QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("AFMpos(float, float, float)"), self.updateAFMpos)
         QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("AFMStatus(QString)"), self.updateStatus)
-
-
         self.AFMthread.monitor(self.afmImageFolder)
         self.SocketThread.monitor()
-        self.addToolbars()
-
-
-
         self.readDXFFile()
 
 
-        # self.tree_file.selectionModel().selectionChanged.connect(self.updateActions)
-        # self.tree_file.model().dataChanged.connect(self.clicked)
+    def init_measurement(self):
+        self.ni_terminate = False
 
-        # self.actionsMenu.aboutToShow.connect(self.updateActions)
-        # self.insertRowAction.triggered.connect(self.insertRow)
-        # self.insertColumnAction.triggered.connect(self.insertColumn)
-        # self.removeRowAction.triggered.connect(self.removeRow)
-        # self.removeColumnAction.triggered.connect(self.removeColumn)
-        # self.insertChildAction.triggered.connect(self.insertChild)
+        self.plotlist = []
+        self.settings = {}
+        self.settings['time'] = QTime()
+        self.update_plotting()
+        self.plot_counter = 0
+
+        self.settings['buffer_size'] = 10000000
+        self.settings['acq_rate'] = 30000          # samples/second
+        self.settings['acq_samples'] = 1000        # every n samples
+        self.settings['device_input'] = "PCI-6251"
+        self.settings['SR_sensitivity'] = 10e-9
+        self.settings['PAR_sensitivity'] = 1e-3
+        self.settings['plot_2pt'] = True
+        self.settings['plot_4pt'] = True
+        self.settings['plot_current'] = True
+        self.SRSensitivity.setText("%.0e" %(self.settings['SR_sensitivity']))
+        self.PARSensitivity.setText("%.0e" %(self.settings['PAR_sensitivity']))
+        self.settings['plotR'] = True
+        self.settings['DHTport'] = 6
+        self.initSerial()
+
+        self.settings['in'] = {}
+        ch0 = self.settings['in'][0] = {}
+        ch1 = self.settings['in'][1] = {}
+
+
+        ch0['channel'] = "ai0"
+        ch0['name'] = 'Current'
+        ch0['curr_amp'] = 0
+        ch0['amplitude'] = 1e-3
+        # amplification = 200mV / 10V
+        amplification = 10e-9/10.0
+        ch0['multiplier'] = amplification
+        ch0['min'] = -10 # +/- 100 mV is the minimum bipolar range
+        ch0['max'] = 10
+        ch0['plot_raw'] = True
+        ch0['freq_chan'] = 0
+
+        ch1['channel'] = "ai1"
+        ch1['name'] = 'A-B'
+        ch1['amplitude'] = 1*1e-3
+        amplification = 0.001/10.0
+        ch1['multiplier'] = amplification
+        ch1['min'] = -10
+        ch1['max'] = 10
+        ch1['plot_raw'] = True
+        ch1['freq_chan'] = 0
+        ch1['curr_amp'] = 0
+        self.spinCom.setValue( self.settings['DHTport'] )
+        # self.cAmpSpinBox.setValue(self.settings['in'][0]['curr_amp'])
+        # (self._gen_meas_amplitude, self._normamplitudes, self._normphases)
+
+        self.buff = ringbuffer.RingBuffer((len(self.settings['in'])+1, 2000))
+        self.settings['buff'] = self.buff
+        self.store_columns = ['time', 'current','r2p','r4p']
+        self.store = ringbuffer.RingBuffer((len(self.store_columns), 360000), filename='store_data.h5')
+
+
+        self.dht_buff = ringbuffer.RingBuffer((3, 2000))
+        self.settings['dht_buff'] = self.dht_buff
+
+        self.dht_store_columns = ['time', 'temperature', 'humidity']
+        self.dht_store = ringbuffer.RingBuffer((len(self.dht_store_columns), 360000), filename='store_dht.h5')
+
+
+        self.ni_worker = ni_Worker(self.settings)
+        self.ni_workerThread = None
+
+        self.dht_Worker = dht_Worker(self.settings)
+        self.dht_WorkerThread = None
+
+        self.ni_pi = self.plotFrame.measurePlot.getPlotItem()
+        # self.ni_pi = self.plotView.getPlotItem()
+        self.ni_pi.addLegend()
+        self.ni_pi_legend = self.ni_pi.legend
+        self.ni_pi.enableAutoRange('x', True)
+        # self.ni_pi.setXRange(990000, 1000000)
+        self.ni_pi.enableAutoRange('y', True)
+        # li_data = np.array([[gen_meas_amplitude], [normamplitudes], [normphases], [li_r/1e6], [li_g]])
+        self.ni_pi_names = ['ch0','ch1','ch2','ch3','ch4','ch5','ch6','ch7','ch8','ch9',]
+        for i in range(5):
+            self.plotlist.append({'plot': self.ni_pi.plot(name=self.ni_pi_names[i]), 'channel': i})
+        self.run()
+
 
     @QtCore.pyqtSlot("QString")
     def newafmImage(self, filename=None):
@@ -1180,10 +727,11 @@ class MainWindow(QtGui.QMainWindow):
 
 
 
-        QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.measure )
+        QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.measure_start )
+        QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.graficar )
         QtCore.QObject.connect(acceptMeasureAction,    QtCore.SIGNAL('triggered()'), self.measure )
         QtCore.QObject.connect(favoriteMeasureAction,  QtCore.SIGNAL('triggered()'), self.measure )
-        QtCore.QObject.connect(stopMeasureAction,      QtCore.SIGNAL('triggered()'), self.measure )
+        QtCore.QObject.connect(stopMeasureAction,      QtCore.SIGNAL('triggered()'), self.measure_stop )
 
         QtCore.QObject.connect(sketchAction,           QtCore.SIGNAL('triggered()'), self.sketchNow )
         QtCore.QObject.connect(abortSketchAction,      QtCore.SIGNAL('triggered()'), self.abortNow )
@@ -1265,6 +813,243 @@ class MainWindow(QtGui.QMainWindow):
         self.SocketThread.send_message('Engage')
     def doWithdraw(self):
         self.SocketThread.send_message('Withdraw')
+
+
+
+
+    def initSerial(self):
+        try:
+            self.settings['dht_serial'] = serial.Serial(self.settings['DHTport']-1, baudrate=115200, timeout=5) # opens, too.
+            try:
+                self.dht_WorkerThread.quit()
+            except:
+                pass
+            self.dht_Worker = dht_Worker(self.settings)
+            self.dht_WorkerThread = QtCore.QThread()
+            self.dht_Worker.moveToThread(self.dht_WorkerThread)
+            self.dht_WorkerThread.start()
+            # self.dht_Worker.run()
+
+            self.sig_measure.connect(self.dht_Worker.run)
+            self.sig_measure_stop.connect(self.dht_Worker.stop)
+        except:
+            print 'dht failed'
+            self.settings['dht_serial'] = None
+            pass
+
+    def closeEvent(self,event):
+        reply=QtGui.QMessageBox.question(self,'Message',"Are you sure to quit?",QtGui.QMessageBox.Yes,QtGui.QMessageBox.No)
+        if reply==QtGui.QMessageBox.Yes:
+            self.measure_stop()
+            self.ni_workerThread.quit()
+            self.dht_WorkerThread.quit()
+
+            event.accept()
+        else:
+            event.ignore()
+
+
+    def makeDataset(self):
+        pass
+
+    def run(self):
+        self.ni_workerThread = QtCore.QThread()
+        self.ni_worker.terminate.connect(self.setterminate)
+        self.ni_worker.moveToThread(self.ni_workerThread)
+        self.dht_WorkerThread = QtCore.QThread()
+        self.dht_Worker.terminate.connect(self.setterminate)
+        self.dht_Worker.moveToThread(self.dht_WorkerThread)
+
+
+        self.check_plot.stateChanged.connect(self.update_plotting)
+        self.check_2pt.stateChanged.connect(self.update_plotting)
+        self.check_4pt.stateChanged.connect(self.update_plotting)
+        self.check_current.stateChanged.connect(self.update_plotting)
+        self.radio_plotR.toggled.connect(self.update_plotting)
+        self.radio_plotC.toggled.connect(self.update_plotting)
+        self.plot_update_time.valueChanged.connect(self.update_plotting)
+        self.spinCom.valueChanged.connect(self.update_plotting)
+        self.spinCom.valueChanged.connect(self.initSerial)
+        self.SRSensitivity.editingFinished.connect(self.update_plotting)
+        self.PARSensitivity.editingFinished.connect(self.update_plotting)
+
+
+
+        self.sig_measure.connect(self.ni_worker.run)
+        self.sig_measure_stop.connect(self.ni_worker.stop)
+
+        self.sig_measure.connect(self.dht_Worker.run)
+        self.sig_measure_stop.connect(self.dht_Worker.stop)
+
+        self.ni_workerThread.start()
+        self.dht_WorkerThread.start()
+
+        self.show()
+
+    def update_plotting(self):
+        if self.check_plot.checkState() == 2:
+            self.settings['acq_plot'] = True
+        else:
+            self.settings['acq_plot'] = False
+
+        if self.check_2pt.checkState() == 2:
+            self.settings['plot_2pt'] = True
+        else:
+            self.settings['plot_2pt'] = False
+
+        if self.check_4pt.checkState() == 2:
+            self.settings['plot_4pt'] = True
+        else:
+            self.settings['plot_4pt'] = False
+
+        if self.check_current.checkState() == 2:
+            self.settings['plot_current'] = True
+        else:
+            self.settings['plot_current'] = False
+
+        for i in self.plotlist:
+            i['plot'].clear()
+
+        self.settings['plot_timing'] = self.plot_update_time.value()
+        self.settings['SR_sensitivity'] = float(self.SRSensitivity.text ())
+        self.settings['PAR_sensitivity'] = float(self.PARSensitivity.text ())
+        self.settings['plotR'] = self.radio_plotR.isChecked()
+        self.settings['DHTport'] = self.spinCom.value()
+        self.SRSensitivity.setText("%.0e" %(self.settings['SR_sensitivity']))
+        self.PARSensitivity.setText("%.0e" %(self.settings['PAR_sensitivity']))
+
+    def measure_start(self):
+        self.ni_terminate = False
+        self.sig_measure.emit(500)
+
+    def measure_stop(self):
+        self.store.save_data()
+        self.dht_store.save_data()
+        self.ni_terminate = True
+        self.sig_measure_stop.emit(500)
+
+    def setterminate(self):
+        self.ni_terminate = True
+
+    def graficar(self):
+
+        if self.settings['buff'].size > 0:
+            raw_buffer = self.settings['buff'].get_partial_clear()
+
+            d_time = raw_buffer[0]
+            d_ch0 = raw_buffer[1]
+            d_ch1 = raw_buffer[2]
+
+            current = np.abs(d_ch0*self.settings['SR_sensitivity']/10.0)
+            r2pt = np.abs(self.settings['in'][0]['amplitude'] / current)
+
+            a_b = d_ch1*self.settings['PAR_sensitivity']/10
+            r4pt = np.abs(a_b / current)
+
+            self.store.append([d_time, current, r2pt, r4pt])
+
+        if self.settings['dht_buff'].size > 0:
+            raw_buffer = self.settings['dht_buff'].get_partial_clear()
+            a = raw_buffer[0].mean()
+            b = raw_buffer[1].mean()
+            c = raw_buffer[2].mean()
+            self.dht_store.append([a,b,c])
+            self.text_temp.setText('Tmp: %.1f\xb0C'%(raw_buffer[1].mean()))
+            self.text_hum.setText('Hum: %.1f%%'%(raw_buffer[2].mean()))
+
+        if self.settings['acq_plot']:
+            if self.store.size>1:
+                n = 0
+                self.plot_counter +=1
+                raw_buffer = self.store.get_partial()
+
+                d_time = raw_buffer[0]
+                current = raw_buffer[1]
+
+                n += 1
+                av_len = -10
+                if self.plot_counter>11:
+                    self.ni_pi_legend.items = []
+
+                if self.settings['plot_current'] == True:
+                    if self.plot_counter>11:
+
+                        try:
+                            av_curr = np.average(current[av_len:])*1e9
+                            self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'Current' + ' = ' + '%.2f nA' % av_curr)
+                        except:
+                            self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'Current')
+                            pass
+
+                    self.plotlist[n]['plot'].setData(x=d_time, y=current*1e9)
+                    self.plotlist[n]['plot'].setPen(color=kelly_colors[colors[n]])
+                n += 1
+
+                if self.settings['plotR']:
+                    r2pt = raw_buffer[2]
+                    r4pt = raw_buffer[3]
+
+                    if self.settings['plot_2pt'] == True:
+                        if self.plot_counter>11:
+                            try:
+                                av_2pt = np.average(r2pt[av_len:])/1000.0
+                                self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'R2pt' + ' = ' + '%.1f kOhm' % av_2pt)
+                            except:
+                                self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'R2pt')
+                                pass
+
+                        self.plotlist[n]['plot'].setData(x=d_time, y=r2pt/1000.0)
+                        self.plotlist[n]['plot'].setPen(color=kelly_colors[colors[n]])
+
+                    n += 1
+                    if self.settings['plot_4pt'] == True:
+                        if self.plot_counter>11:
+
+                            self.plot_counter = 0
+                            try:
+                                av_4pt = np.average(r4pt[av_len:])/1000.0
+                                self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'R4pt' + ' = ' + '%.1f kOhm' % av_4pt)
+                            except:
+                                self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'R4pt')
+                                pass
+
+                        self.plotlist[n]['plot'].setData(x=d_time, y=r4pt/1000.0)
+                        self.plotlist[n]['plot'].setPen(color=kelly_colors[colors[n]])
+
+                if not self.settings['plotR']:
+                    g2pt = 1.0/raw_buffer[2] *1e6
+                    g4pt = 1.0/raw_buffer[3] *1e6
+
+                    if self.settings['plot_2pt'] == True:
+                        if self.plot_counter>11:
+                            try:
+                                av_2pt = np.average(g2pt[av_len:])
+                                self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'g2pt' + ' = ' + '%.1f uS' % av_2pt)
+                            except:
+                                self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'g2pt')
+                                pass
+
+                        self.plotlist[n]['plot'].setData(x=d_time, y=g2pt)
+                        self.plotlist[n]['plot'].setPen(color=kelly_colors[colors[n]])
+
+                    n += 1
+                    if self.settings['plot_4pt'] == True:
+                        if self.plot_counter>11:
+
+                            self.plot_counter = 0
+                            try:
+                                av_4pt = np.average(g4pt[av_len:])
+                                self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'g4pt' + ' = ' + '%.1f uS' % av_4pt)
+                            except:
+                                self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'g4pt')
+                                pass
+
+                        self.plotlist[n]['plot'].setData(x=d_time, y=g4pt)
+                        self.plotlist[n]['plot'].setPen(color=kelly_colors[colors[n]])
+
+        if not self.ni_terminate:
+            QtCore.QTimer.singleShot(self.settings['plot_timing'], self.graficar)
+
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)

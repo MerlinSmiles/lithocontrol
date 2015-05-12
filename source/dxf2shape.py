@@ -35,7 +35,6 @@ def dxf2shape(i, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_directi
     pts  = get_points(i)[::path_direction]
 
     if not i.is_closed:
-        print pts
         return [pts]
     else:
         pts = np.append(pts,[pts[0]],axis = 0)
