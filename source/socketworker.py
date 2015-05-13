@@ -121,19 +121,4 @@ class SocketWorker(QtCore.QThread):
                 for line in lines:
                     # self.statusBar().showMessage(line)
                     self.emit(QtCore.SIGNAL("AFMStatus(QString)"), line)
-                    if line.startswith('vtip'):
-                        line = line.split( )
-                        volt = float(line[1])
-                        print 'VTIP ' , volt
-                        # keithley.set_source_voltage(volt*4)
-                    elif line.startswith('Ready'):
-                        self.emit(QtCore.SIGNAL("READY"))
-                        # keithley.set_source_voltage(0)
-                        print "\n\nREADY\n\n"
-                    elif line.startswith('xyAbs'):
-                        line = line.split( )
-                        x = float(line[1])
-                        y = float(line[2])
-                        r = float(line[3])
-                        self.emit(QtCore.SIGNAL("AFMpos(float, float, float)"), x,y,r)
 

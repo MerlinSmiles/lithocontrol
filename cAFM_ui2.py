@@ -264,7 +264,7 @@ class MainWindow(QtGui.QMainWindow):
         self.readDXFFile()
 
     def afmReady(self):
-        print 'afmready'
+        self.log('sketch', 'end')
         self.afmPosition.clear()
 
 
@@ -416,6 +416,20 @@ class MainWindow(QtGui.QMainWindow):
     @QtCore.pyqtSlot("QString")
     def updateStatus(self,line):
         self.statusBar().showMessage(line)
+        if line.startswith('vtip'):
+            line = line.split( )
+            volt = float(line[1])
+            self.log('vtip', volt)
+            print 'VTIP ' , volt
+        elif line.startswith('Ready'):
+            self.afmReady()
+            print "\n\nREADY\n\n"
+        elif line.startswith('xyAbs'):
+            line = line.split( )
+            x = float(line[1])
+            y = float(line[2])
+            r = float(line[3])
+            self.emit(QtCore.SIGNAL("AFMpos(float, float, float)"), x,y,r)
 
     def sketchNow(self, index=None):
         self.afmPosition.clear()
@@ -483,6 +497,7 @@ class MainWindow(QtGui.QMainWindow):
             pass
         os.rename(fname, fname[:-3] + 'txt')
         self.SocketThread.send_message('sketch out.txt\n')
+        self.log('sketch', 'start')
 
     def abortNow(self):
         self.SocketThread.disconnectSocket()
