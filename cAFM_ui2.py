@@ -2,6 +2,8 @@
 
 import sip
 sip.setapi('QVariant', 2)
+import numpy as np
+
 
 from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import QTime, QTimer, QDate
@@ -19,13 +21,7 @@ import shutil
 
 import sys
 
-sys.path.append("D:\\Projects\\qtlab\\source")
-sys.path.append("D:\\Projects\\qtlab\\instrument_plugins")
-# import Keithley_merlin_junk
-# keithley = Keithley_merlin_junk.Keithley_2400('Keithley', address='GPIB0::2::INSTR', reset=False)
-# keithley.set_output_state(0)
-# keithley.set_source_voltage(0)
-# keithley.set_output_state(1)
+sys.path.append(".\\source")
 
 filename = 'D:/lithography/DesignFiles/Untitled-1.dxf'
 
@@ -34,13 +30,7 @@ import time
 import socket
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
-# import operatorfmimages
-# import dxfgrabber
-# from collections import Counter
-# import matplotlib.pyplot as plt
-# %matplotlib inline
-import numpy as np
-# from scipy.interpolate import interp1d
+
 from source.helpers import *
 from source.dxf2shape import *
 from source.convertAFM import *
@@ -48,7 +38,6 @@ from source.socketworker import *
 from source.ringbuffer import *
 from source.DataStore import *
 from source.treeclass import *
-from source.convertAFM import *
 from source.ni_measurement import *
 
 
