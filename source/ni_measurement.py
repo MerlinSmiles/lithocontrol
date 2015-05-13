@@ -77,7 +77,10 @@ class dht_Worker(QtCore.QObject):
 
     def stop(self):
         self.running = True
-        self.settings['dht_serial'].close()
+        try:
+            self.settings['dht_serial'].close()
+        except:
+            pass
 
 
 

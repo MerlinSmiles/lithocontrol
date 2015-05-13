@@ -4,6 +4,7 @@ import sip
 sip.setapi('QVariant', 2)
 
 from PyQt4 import QtCore, QtGui, uic
+from PyQt4.QtCore import pyqtSignal
 
 import pyqtgraph as pg
 import pyqtgraph.exporters

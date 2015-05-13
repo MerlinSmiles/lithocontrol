@@ -4,18 +4,20 @@ import sip
 sip.setapi('QVariant', 2)
 
 from PyQt4 import QtCore, QtGui, uic
+from PyQt4.QtCore import QTime, QTimer, QDate
+from PyQt4.QtCore import pyqtSignal
 
 import pyqtgraph as pg
 import pyqtgraph.exporters
 import pyqtgraph.dockarea as pg_dock
+
+import shutil
 
 
 # %load_ext autoreload
 # %autoreload 2
 
 import sys
-
-# from convertAFM import convertAFM
 
 sys.path.append("D:\\Projects\\qtlab\\source")
 sys.path.append("D:\\Projects\\qtlab\\instrument_plugins")
@@ -43,8 +45,13 @@ from source.helpers import *
 from source.dxf2shape import *
 from source.convertAFM import *
 from source.socketworker import *
+from source.ringbuffer import *
+from source.DataStore import *
 from source.treeclass import *
+from source.convertAFM import *
 from source.ni_measurement import *
+
+
 
 colors = ['vivid_yellow','strong_purple','vivid_orange','very_light_blue','vivid_red','grayish_yellow','medium_gray','vivid_green','strong_purplish_pink','strong_blue','strong_yellowish_pink','strong_violet','vivid_orange_yellow','strong_purplish_red','vivid_greenish_yellow','strong_reddish_brown','vivid_yellowish_green','deep_yellowish_brown','vivid_reddish_orange','dark_olive_green']
 kelly_colors = dict(vivid_yellow=(255, 179, 0),
@@ -126,7 +133,6 @@ class PlotFrame(QtGui.QWidget):
 
 
 
-
 class MyHandler(PatternMatchingEventHandler):
     def __init__(self, parent = None):
         super( MyHandler, self ).__init__()
@@ -203,13 +209,34 @@ class MainWindow(QtGui.QMainWindow):
 
         self.outDir = 'U:/'
         self.afmImageFolder = 'D:/lithography/afmImages/'
+        self.sketchFolder = 'D:/lithography/sketches/'
+        self.sketchSubFolder = './'
 
         print ''
         print ''
 
         self.addToolbars()
+        self.init_stores()
         self.init_sketching()
         self.init_measurement()
+
+        self.log('log', 'init')
+
+    def init_stores(self):
+        self.storeFolder = str(self.sketchFolder + QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss') + '/')
+        os.mkdir(self.storeFolder)
+        self.log_store = DataStore(filename=self.storeFolder+'store_logging.h5')
+
+        self.ni_store_columns = ['time', 'current','r2p','r4p']
+        self.ni_store = RingBuffer(360000, filename=self.storeFolder+'store_ni_data.h5',cols = self.ni_store_columns)
+
+        self.dht_store_columns = ['time', 'temperature', 'humidity']
+        self.dht_store = RingBuffer(360000, filename=self.storeFolder+'store_dht_data.h5',cols = self.dht_store_columns)
+
+    def log(self, column, value):
+        tdelta = self.settings['time'].elapsed()/1000.0
+        self.log_store.append([tdelta,value], ['time', column])
+        print self.log_store.data
 
     def init_sketching(self):
         self.inFile = ''
@@ -222,7 +249,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.centerCoord = np.array([0,0])
 
-        self.afmPosition = pg.ScatterPlotItem(size=5, pen=pg.mkPen(None), brush=pg.mkBrush(180, 180, 255, 255))
+        self.afmPosition = pg.ScatterPlotItem(size=5, pen=pg.mkPen(None), brush=pg.mkBrush(255, 0, 0, 255))
 
 
         self.preservePlots = []
@@ -300,18 +327,14 @@ class MainWindow(QtGui.QMainWindow):
         self.spinCom.setValue( self.settings['DHTport'] )
         # self.cAmpSpinBox.setValue(self.settings['in'][0]['curr_amp'])
         # (self._gen_meas_amplitude, self._normamplitudes, self._normphases)
+        print  ['time'] + self.settings['in'].keys()
 
-        self.buff = ringbuffer.RingBuffer((len(self.settings['in'])+1, 2000))
-        self.settings['buff'] = self.buff
-        self.store_columns = ['time', 'current','r2p','r4p']
-        self.store = ringbuffer.RingBuffer((len(self.store_columns), 360000), filename='store_data.h5')
+        self.ni_buff = RingBuffer(2000, cols = ['time'] + self.settings['in'].keys())
+        self.settings['buff'] = self.ni_buff
 
-
-        self.dht_buff = ringbuffer.RingBuffer((3, 2000))
+        self.dht_buff = RingBuffer(2000, cols = self.dht_store_columns)
         self.settings['dht_buff'] = self.dht_buff
 
-        self.dht_store_columns = ['time', 'temperature', 'humidity']
-        self.dht_store = ringbuffer.RingBuffer((len(self.dht_store_columns), 360000), filename='store_dht.h5')
 
 
         self.ni_worker = ni_Worker(self.settings)
@@ -333,6 +356,25 @@ class MainWindow(QtGui.QMainWindow):
             self.plotlist.append({'plot': self.ni_pi.plot(name=self.ni_pi_names[i]), 'channel': i})
         self.run()
 
+    def saveSketch(self):
+        self.settings['time'].elapsed()
+        self.sketchSubFolder = QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss')
+        os.mkdir(self.storeFolder + self.sketchSubFolder)
+
+        data = self.sketchFile
+        self.outDir = str(self.storeFolder + self.sketchSubFolder+'/')
+        fname = self.outDir + 'out.txt'
+        f = open(fname, 'w')
+        f.write(data)
+        f.close()
+        try:
+            filename = sorted(os.listdir(self.afmImageFolder))[-1]
+            shutil.copy2(self.afmImageFolder + filename,self.outDir+filename)
+            shutil.copy2('D:/lithography/current.png',self.outDir+'current.png')
+        except:
+            pass
+
+        self.log('sketch', str(self.storeFolder + self.sketchSubFolder))
 
     @QtCore.pyqtSlot("QString")
     def newafmImage(self, filename=None):
@@ -341,6 +383,8 @@ class MainWindow(QtGui.QMainWindow):
 
         filename = os.path.abspath(filename)
         self.afmData, self.afminfo = convertAFM(filename)
+        if self.afmData == None:
+            return
         if self.afmData.any() == None:
             return
         # self.afmImage = pg.ImageItem(self.afmData)
@@ -383,7 +427,7 @@ class MainWindow(QtGui.QMainWindow):
         if index == None:
             index = self.model
         nfile = False
-        print "here I will sketch the file"
+        print "Sketching Now"
         for i in range(index.rowCount()):
             # print '- ', i
             item = index.getItem(index.index(i))
@@ -415,6 +459,7 @@ class MainWindow(QtGui.QMainWindow):
                             self.sAdd('vtip\t%f' %(0.0))
         if nfile:
             self.writeFile(self.sketchFile)
+            self.saveSketch()
 
     def sComment(self, stuff):
         adding = ''
@@ -441,7 +486,6 @@ class MainWindow(QtGui.QMainWindow):
         except:
             pass
         os.rename(fname, fname[:-3] + 'txt')
-        # print  fname[:-3] + 'txt'
 
         self.SocketThread.send_message('sketch out.txt\n')
 
@@ -471,20 +515,14 @@ class MainWindow(QtGui.QMainWindow):
         if afmImageFolder:
             self.afmImageFolder = afmImageFolder
 
+    def pickSketchImageDirectory(self):
+        sketchFolder = QtGui.QFileDialog.getExistingDirectory(self, 'Select Sketch Folder', self.sketchFolder)
+        if sketchFolder:
+            self.sketchFolder = sketchFolder
+
 
     def reloadafmImageDirectory(self):
-        # logfiles = sorted(os.listdir(self.afmImageFolder))
-        # logfiles[-1]
         self.newafmImage()
-
-    # def updateFileInText(self):
-    #     self.inFile = str(self.fileIn.text())
-    #     self.fileIn.setText(self.inFile)
-    #     self.dxffileName = str(self.inFile)
-    #     self.readDXFFile()
-
-    # def reloadDXFFile(self):
-        # self.readDXFFile()
 
     def clearDXFFile(self):
         try:
@@ -705,8 +743,9 @@ class MainWindow(QtGui.QMainWindow):
         stopMeasureAction     = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_deny.png'), 'Stop Measure', self)
         sketchAction          = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_accept.png'), 'Sketch Now', self)
         abortSketchAction     = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_deny.png'), 'Abort Lithography', self)
-        afmfolderAction       = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/folder_search.png'), 'AFM Image Folder', self)
-        afmfolderReloadAction = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/folder_reload.png'), 'Reload AFM Image Folder', self)
+        sketchFolderAction    = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/folder_edit.png'), 'Sketch Folder', self)
+        afmFolderAction       = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/folder_search.png'), 'AFM Image Folder', self)
+        afmFolderReloadAction = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/folder_reload.png'), 'Reload AFM Image Folder', self)
         dxfLoadAction         = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/note_add.png'), 'Load dxf', self)
         dxfReloadAction       = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/note_refresh.png'), 'Reload dxf', self)
         dxfClearAction        = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/note_deny.png'), 'Clear dxf', self)
@@ -731,14 +770,15 @@ class MainWindow(QtGui.QMainWindow):
 
         QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.measure_start )
         QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.graficar )
-        QtCore.QObject.connect(acceptMeasureAction,    QtCore.SIGNAL('triggered()'), self.measure )
+        QtCore.QObject.connect(acceptMeasureAction,    QtCore.SIGNAL('triggered()'), self.measure_save_clear )
         QtCore.QObject.connect(favoriteMeasureAction,  QtCore.SIGNAL('triggered()'), self.measure )
         QtCore.QObject.connect(stopMeasureAction,      QtCore.SIGNAL('triggered()'), self.measure_stop )
 
         QtCore.QObject.connect(sketchAction,           QtCore.SIGNAL('triggered()'), self.sketchNow )
         QtCore.QObject.connect(abortSketchAction,      QtCore.SIGNAL('triggered()'), self.abortNow )
-        QtCore.QObject.connect(afmfolderAction,        QtCore.SIGNAL('triggered()'), self.pickafmImageDirectory )
-        QtCore.QObject.connect(afmfolderReloadAction,  QtCore.SIGNAL('triggered()'), self.reloadafmImageDirectory )
+        QtCore.QObject.connect(sketchFolderAction,     QtCore.SIGNAL('triggered()'), self.pickSketchImageDirectory )
+        QtCore.QObject.connect(afmFolderAction,        QtCore.SIGNAL('triggered()'), self.pickafmImageDirectory )
+        QtCore.QObject.connect(afmFolderReloadAction,  QtCore.SIGNAL('triggered()'), self.reloadafmImageDirectory )
         QtCore.QObject.connect(dxfLoadAction,          QtCore.SIGNAL('triggered()'), self.pickFile )
         QtCore.QObject.connect(dxfReloadAction,        QtCore.SIGNAL('triggered()'), self.readDXFFile )
         QtCore.QObject.connect(dxfClearAction,         QtCore.SIGNAL('triggered()'), self.clearDXFFile )
@@ -755,8 +795,10 @@ class MainWindow(QtGui.QMainWindow):
         plttoolbar.addAction(sketchAction)
         plttoolbar.addAction(abortSketchAction)
         plttoolbar.addSeparator()
-        plttoolbar.addAction(afmfolderAction)
-        plttoolbar.addAction(afmfolderReloadAction)
+        plttoolbar.addAction(sketchFolderAction)
+        plttoolbar.addSeparator()
+        plttoolbar.addAction(afmFolderAction)
+        plttoolbar.addAction(afmFolderReloadAction)
         plttoolbar.addSeparator()
         plttoolbar.addAction(dxfLoadAction)
         plttoolbar.addAction(dxfReloadAction)
@@ -925,10 +967,43 @@ class MainWindow(QtGui.QMainWindow):
         self.sig_measure.emit(500)
 
     def measure_stop(self):
-        self.store.save_data()
-        self.dht_store.save_data()
         self.ni_terminate = True
         self.sig_measure_stop.emit(500)
+        try:
+            self.ni_store.clear()
+            self.ni_buff.clear()
+        except:
+            print 'Error clearing ni_store'
+            print sys.exc_info()
+        try:
+            self.dht_store.clear()
+            self.ni_buff.clear()
+        except:
+            print 'Error clearing dht_store'
+            print sys.exc_info()
+
+
+
+    def measure_save_clear(self):
+        try:
+            self.ni_store.save_data()
+            self.ni_store.clear()
+        except:
+            print 'Error saving ni_store'
+            print sys.exc_info()
+        try:
+            self.dht_store.save_data()
+            self.dht_store.clear()
+        except:
+            print 'Error saving dht_store'
+            print sys.exc_info()
+        try:
+            self.log_store.save_data()
+            self.log_store.clear()
+        except:
+            print 'Error saving log_store'
+            print sys.exc_info()
+        self.init_stores()
 
     def setterminate(self):
         self.ni_terminate = True
@@ -948,7 +1023,7 @@ class MainWindow(QtGui.QMainWindow):
             a_b = d_ch1*self.settings['PAR_sensitivity']/10
             r4pt = np.abs(a_b / current)
 
-            self.store.append([d_time, current, r2pt, r4pt])
+            self.ni_store.append([d_time, current, r2pt, r4pt])
 
         if self.settings['dht_buff'].size > 0:
             raw_buffer = self.settings['dht_buff'].get_partial_clear()
@@ -960,10 +1035,10 @@ class MainWindow(QtGui.QMainWindow):
             self.text_hum.setText('Hum: %.1f%%'%(raw_buffer[2].mean()))
 
         if self.settings['acq_plot']:
-            if self.store.size>1:
+            if self.ni_store.size>1:
                 n = 0
                 self.plot_counter +=1
-                raw_buffer = self.store.get_partial()
+                raw_buffer = self.ni_store.get_partial()
 
                 d_time = raw_buffer[0]
                 current = raw_buffer[1]
