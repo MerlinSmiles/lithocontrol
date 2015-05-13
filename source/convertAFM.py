@@ -17,7 +17,6 @@ def convertAFM(filenamex, saveImg = True):
         gwy.gwy_app_data_browser_add(c)
     except:
         return None, None
-    print('gothere')
     for key in c.keys_by_name():
         if re.match(r'^/0/data$', key):
             field = c[key]

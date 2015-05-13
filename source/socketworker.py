@@ -127,6 +127,7 @@ class SocketWorker(QtCore.QThread):
                         print 'VTIP ' , volt
                         # keithley.set_source_voltage(volt*4)
                     elif line.startswith('Ready'):
+                        self.emit(QtCore.SIGNAL("READY"))
                         # keithley.set_source_voltage(0)
                         print "\n\nREADY\n\n"
                     elif line.startswith('xyAbs'):

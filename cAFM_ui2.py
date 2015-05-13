@@ -78,7 +78,7 @@ kelly_colors = dict(vivid_yellow=(255, 179, 0),
 # mkPen for selected
 orangePen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
 bluePen = pg.mkPen(color='0000FF')  #, style=QtCore.Qt.DotLine
-greenPen = pg.mkPen(color='00FF00', width=2)  #, style=QtCore.Qt.DotLine
+greenPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine , width=
 
 class PlotFrame(QtGui.QWidget):
     def __init__( self, parent=None):
@@ -249,7 +249,8 @@ class MainWindow(QtGui.QMainWindow):
 
         self.centerCoord = np.array([0,0])
 
-        self.afmPosition = pg.ScatterPlotItem(size=5, pen=pg.mkPen(None), brush=pg.mkBrush(255, 0, 0, 255))
+        self.afmPosition = pg.ScatterPlotItem(size=7, pen=pg.mkPen(None), brush=pg.mkBrush(255, 0, 0, 255))
+        self.afmPosition.setZValue(100)
 
 
         self.preservePlots = []
@@ -267,10 +268,15 @@ class MainWindow(QtGui.QMainWindow):
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("afmImage(QString)"), self.newafmImage)
 
         QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("AFMpos(float, float, float)"), self.updateAFMpos)
+        QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("READY"), self.afmReady)
         QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("AFMStatus(QString)"), self.updateStatus)
         self.AFMthread.monitor(self.afmImageFolder)
         self.SocketThread.monitor()
         self.readDXFFile()
+
+    def afmReady(self):
+        print 'afmready'
+        self.afmPosition.clear()
 
 
     def init_measurement(self):
@@ -362,15 +368,15 @@ class MainWindow(QtGui.QMainWindow):
         os.mkdir(self.storeFolder + self.sketchSubFolder)
 
         data = self.sketchFile
-        self.outDir = str(self.storeFolder + self.sketchSubFolder+'/')
-        fname = self.outDir + 'out.txt'
+        self.sketchOutDir = str(self.storeFolder + self.sketchSubFolder+'/')
+        fname = self.sketchOutDir + 'out.txt'
         f = open(fname, 'w')
         f.write(data)
         f.close()
         try:
             filename = sorted(os.listdir(self.afmImageFolder))[-1]
-            shutil.copy2(self.afmImageFolder + filename,self.outDir+filename)
-            shutil.copy2('D:/lithography/current.png',self.outDir+'current.png')
+            shutil.copy2(self.afmImageFolder + filename,self.sketchOutDir+filename)
+            shutil.copy2('D:/lithography/current.png',self.sketchOutDir+'current.png')
         except:
             pass
 
@@ -379,14 +385,15 @@ class MainWindow(QtGui.QMainWindow):
     @QtCore.pyqtSlot("QString")
     def newafmImage(self, filename=None):
         if filename == None:
-            filename = self.afmImageFolder+sorted(os.listdir(self.afmImageFolder))[-1]
+            filename = self.afmImageFolder+'/'+sorted(os.listdir(self.afmImageFolder))[-1]
 
         filename = os.path.abspath(filename)
         self.afmData, self.afminfo = convertAFM(filename)
-        if self.afmData == None:
-            return
+
         if self.afmData.any() == None:
             return
+        self.afmData = np.array(self.afmData)
+        print np.min(self.afmData), np.max(self.afmData)
         # self.afmImage = pg.ImageItem(self.afmData)
         # self.afmImage.setZValue(-1000)  # make sure image is behind other data
         x = self.afminfo['width']
@@ -477,7 +484,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def writeFile(self, data):
         self.outDir = str(self.outDir)
-        fname = self.outDir + 'out.tmp'
+        fname = str(self.outDir + 'out.tmp')
         f = open(fname, 'w')
         f.write(data)
         f.close()
@@ -486,7 +493,6 @@ class MainWindow(QtGui.QMainWindow):
         except:
             pass
         os.rename(fname, fname[:-3] + 'txt')
-
         self.SocketThread.send_message('sketch out.txt\n')
 
     def abortNow(self):
