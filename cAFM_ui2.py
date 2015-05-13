@@ -196,6 +196,8 @@ class MainWindow(QtGui.QMainWindow):
         self.setGeometry(500,100,1200,1000)
         self.plotFrame = PlotFrame()
         self.plotSplitter.addWidget(self.plotFrame)
+        # self.splitter.setStretch(1,1)
+        self.splitter.setStretchFactor(1,1)
 
         self.show()
 
