@@ -11,8 +11,10 @@ class DataStore(object):
 
     def append(self, value, column):
         """append an element"""
+        print value, column
         ds = pd.Series(value, column)
-        self.data = self.data.append(ds[pd.notnull(ds)],ignore_index=True)
+        print ds
+        self.data = self.data.append(ds,ignore_index=True)
 
     def keys(self):
         return self.data.keys()
@@ -25,10 +27,6 @@ class DataStore(object):
 
         self.data_store_index += df.shape[0]
 
-        try:
-            print df['current']
-        except:
-            pass
         self.data_store.append('data',df,append=True, ignore_index=True)
         self.data_store.close()
 

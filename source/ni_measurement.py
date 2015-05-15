@@ -56,14 +56,14 @@ class dht_Worker(QtCore.QObject):
 
         super(dht_Worker, self).__init__(parent)
         self.settings = settings
-        self.running = True
+        self.running = False
         if self.settings['dht_serial'] != None:
             print "Monitoring serial port " + self.settings['dht_serial'].name
-            self.running = False
+            self.running = True
 
     def run(self):
         data = ''
-        while self.running == False:
+        while (self.running == True) and (self.settings['dht_serial'] != None):
             self.settings['dht_serial'].write('READ:HUM:TEMP')
             ch = self.settings['dht_serial'].readline()
             if len(ch) != 0:
@@ -72,11 +72,12 @@ class dht_Worker(QtCore.QObject):
                     data = data.split()
                     humidity = float(data[1])
                     temperature = float(data[2])
-                    tdelta = self.settings['time'].elapsed()/1000.0
-                    self.settings['dht_buff'].append([tdelta, temperature, humidity])
+                    if (humidity>9) and (temperature>9 ):
+                        tdelta = self.settings['time'].elapsed()/1000.0
+                        self.settings['dht_buff'].append([tdelta, temperature, humidity])
 
     def stop(self):
-        self.running = True
+        self.running = False
         try:
             self.settings['dht_serial'].close()
         except:
