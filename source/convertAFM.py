@@ -16,7 +16,7 @@ def convertAFM(filenamex, saveImg = True):
         c = gwy.gwy_file_load(filename, gwy.RUN_NONINTERACTIVE)
         gwy.gwy_app_data_browser_add(c)
     except:
-        return False
+        return None, None
     for key in c.keys_by_name():
         if re.match(r'^/0/data$', key):
             field = c[key]
@@ -42,11 +42,11 @@ def convertAFM(filenamex, saveImg = True):
                 filename = os.path.abspath('D:/lithography/')
                 imfilename = str(filename)+"/current.png"
                 print imfilename
-                res = saveAFMimg(data, imfilename )
+                saveAFMimg(data, imfilename )
                 writeImageMacro( imfilename , [-xreal, -yreal, xreal, yreal])
     info = {'width':xreal*2, 'height':yreal*2, 'imname': imfilename}
     gwy.gwy_app_data_browser_remove(c)
-    return data, info
+    return np.array(data), info
 
 def saveAFMimg(data, filename):
         data = data[:, ::-1].T
@@ -54,17 +54,9 @@ def saveAFMimg(data, filename):
         data = data-mn
         data = data*(255.0/np.max(data))
         px = np.max(np.shape(data))
-        img = np.array(data, dtype = np.uint8)
-
-        # create a CLAHE object (Arguments are optional).
-        clahe = cv2.createCLAHE(clipLimit=10.0, tileGridSize=(3,3))
-        res = clahe.apply(img)
-
+        im = np.array(data, dtype = np.uint8)
+        res = cv2.resize(im,(px,px), interpolation = cv2.INTER_CUBIC)
         cv2.imwrite(filename, res)
-        return res[::-1,:].T
-
-
-
 
 def writeImageMacro(filename, position):
     x1 = position[0]
@@ -86,7 +78,8 @@ def writeImageMacro(filename, position):
     f.close()
 
 if __name__ == '__main__':
-    afmFile = os.path.abspath('D:/lithography/afmImages/05131739.001')
+    afmFile = './stomilling.002'
+    afmFile = os.path.abspath('D:/lithography/afmImages/05131740.001')
     afmData, afmimage = convertAFM(afmFile)
     print afmData
 

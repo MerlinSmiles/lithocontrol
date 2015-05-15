@@ -5,7 +5,6 @@ sip.setapi('QVariant', 2)
 
 from PyQt4 import QtCore, QtGui, uic
 from source.dxf2shape import *
-import itertools
 
 class TreeItem(object):
     def __init__(self, data, parent=None, model=None):
@@ -27,8 +26,7 @@ class TreeItem(object):
 #     shape.type = None # [VirtualElectrode, line, area]
 
     def redraw(self):
-        if self.entity != None:
-            self.setDxfData(dxf2shape(self.entity, fill_step = self.fillStep, fill_angle=self.fillAngle))
+        self.setDxfData(dxf2shape(self.entity, fill_step = self.fillStep, fill_angle=self.fillAngle))
 
     def setCheckState(self, value):
         if value == 2:
@@ -48,27 +46,24 @@ class TreeItem(object):
         self.pltData = []
         for k in self.dxfData:
             self.pltData.append(k.reshape((-1,2)))
-        self.calcTime()
+        # self.calcTime()
 
     def calcLength(self):
-        try:
-            dat = np.concatenate(self.pltData).reshape((-1,2))
-        except:
-            print 'error calculating length'
-            return
-        dat_b = np.roll(dat,-2)
+        dat = np.array(self.pltData).reshape((-1,2))
+        dat_b = np.roll(dat,-1)
         dist = 0
         for k in range(len(dat)-1):
             dist += np.linalg.norm(dat[k]-dat_b[k])
 
         self.length = dist
+        print 'dist'
+        print dist
 
     def calcTime(self):
         self.calcLength()
         self.sketchTime = self.length / float(self.rate)
-
-        self.setData(5,round(float(self.sketchTime),1))
-
+        print 'time'
+        print self.sketchTime
 
     def child(self, row):
         return self.childItems[row]
@@ -140,34 +135,22 @@ class TreeItem(object):
         if column < 0 or column >= len(self.itemData):
             return False
         if self.model.rootData[column] == 'Angle':
-            value= float(value)
             if self.fillAngle != value:
                 self.fillAngle = value
                 self.redraw()
-        elif self.model.rootData[column] == 'Rate':
-            value= float(value)
-            if self.rate != value:
-                self.rate = value
-                self.calcTime()
         elif self.model.rootData[column] == 'Step':
-            value= float(value)
             if self.fillStep != value:
                 self.fillStep = value
                 self.redraw()
         elif self.model.rootData[column] == 'Closed':
-            value= bool(value)
             if self.entity.is_closed != value:
                 self.entity.is_closed = value
         elif self.model.rootData[column] == 'Time':
-            value= float(value)
-            # return True
             if self.sketchTime != value:
                 self.sketchTime = value
+                # self.redraw()
 
         self.itemData[column] = value
-        if self.model.rootData[column] in  ['Voltage', 'Angle', 'Rate', 'Step']:
-            for ch in self.childItems:
-                ch.setData(column, value)
         return True
 
 
@@ -195,7 +178,6 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
             return None
-
         item = self.getItem(index)
         return item.data(index.column())
 
@@ -295,6 +277,7 @@ class TreeModel(QtCore.QAbstractItemModel):
         return False
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
+
         if (role == QtCore.Qt.CheckStateRole and index.column() == 0):
             self.layoutAboutToBeChanged.emit()
             item = self.getItem(index)
@@ -313,15 +296,9 @@ class TreeModel(QtCore.QAbstractItemModel):
             cc = item.childCount()
             no_checked = 0
             if cc > 0:
-                item.sketchTime = 0.0
-                item.setData(5,item.sketchTime)
                 for i in range(cc):
                     if item.child(i).checkState == 2:
                         no_checked+=1
-
-                        item.sketchTime += item.child(i).sketchTime
-                        if item.child(i).childCount() == 0:
-                            item.setData(5,item.sketchTime)
                 if no_checked == cc:
                     item.setCheckState(2)
                 elif no_checked > 0:
@@ -333,13 +310,16 @@ class TreeModel(QtCore.QAbstractItemModel):
             self.layoutChanged.emit()
             return True
 
-        self.emit(QtCore.SIGNAL('dataChanged(QModelIndex)'), index)
         if role != QtCore.Qt.EditRole:
             return False
 
         item = self.getItem(index)
         result = item.setData(index.column(), value)
+
         if result:
+            # if self.rootData[index.column()] == 'Angle':
+            #     item.redraw()
+
             self.emit(QtCore.SIGNAL('redraw(QModelIndex)'), index)
             self.emit(QtCore.SIGNAL('dataChanged(QModelIndex)'), index)
                 # , value
