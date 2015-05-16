@@ -11,12 +11,12 @@ import cv2
 def convertAFM(filenamex, saveImg = True):
     filename = os.path.abspath(filenamex)
     print 'Loading ', filename
-    time.sleep(0.2)
-    try:
+    for i in range(30):
         c = gwy.gwy_file_load(filename, gwy.RUN_NONINTERACTIVE)
-        gwy.gwy_app_data_browser_add(c)
-    except:
-        return False
+        if c != None:
+            break
+        time.sleep(0.1)
+    gwy.gwy_app_data_browser_add(c)
     for key in c.keys_by_name():
         if re.match(r'^/0/data$', key):
             field = c[key]

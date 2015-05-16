@@ -254,7 +254,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.centerCoord = np.array([0,0])
 
-        self.afmPosition = pg.ScatterPlotItem(size=7, pen=pg.mkPen(None), brush=pg.mkBrush(255, 0, 0, 255))
+        self.afmPosition = pg.ScatterPlotItem(size=5, pen=pg.mkPen(None), brush=pg.mkBrush(255, 0, 0, 255))
         self.afmPosition.setZValue(100)
 
 
