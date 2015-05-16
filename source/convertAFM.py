@@ -57,7 +57,7 @@ def saveAFMimg(data, filename):
         img = np.array(data, dtype = np.uint8)
 
         # create a CLAHE object (Arguments are optional).
-        clahe = cv2.createCLAHE(clipLimit=10.0, tileGridSize=(3,3))
+        clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(3,3))
         res = clahe.apply(img)
 
         cv2.imwrite(filename, res)

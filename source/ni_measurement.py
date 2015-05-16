@@ -152,7 +152,8 @@ class MeasureTask(Task):
 
         av_data = av_data.reshape((self.num_chans,-1))
         tdelta = self.settings['time'].elapsed()/1000.0
-        self.settings['buff'].append([tdelta,av_data[0],av_data[1]])
+        if tdelta>0.1:
+            self.settings['buff'].append([tdelta,av_data[0],av_data[1]])
         return 0  # The function should return an integer
 
     def DoneCallback(self, status):

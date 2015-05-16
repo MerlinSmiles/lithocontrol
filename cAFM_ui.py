@@ -246,7 +246,7 @@ class MainWindow(QtGui.QMainWindow):
     def init_sketching(self):
         self.inFile = ''
         self.sketchFile = ''
-        self.freerate = 2.0
+        self.freerate = 4.0
         self.tip_gain = 1.0
         self.tip_offset = 0
 
@@ -295,7 +295,7 @@ class MainWindow(QtGui.QMainWindow):
         self.settings['acq_rate'] = 30000          # samples/second
         self.settings['acq_samples'] = 1000        # every n samples
         self.settings['device_input'] = "PCI-6251"
-        self.settings['SR_sensitivity'] = 10e-9
+        self.settings['SR_sensitivity'] = 100e-9
         self.settings['PAR_sensitivity'] = 1e-3
         self.settings['plot_2pt'] = True
         self.settings['plot_4pt'] = True
