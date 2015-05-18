@@ -7,14 +7,23 @@ from PyQt4 import QtCore, QtGui, uic
 import itertools
 import sys
 
-class SetTreeItem(object):
-    def __init__(self, data, parent=None):
+from collections import Iterable
+def flatten(foo):
+    for x in foo:
+        if hasattr(x, '__iter__'):
+            for y in flatten(x):
+                yield y
+        else:
+            yield x
+
+
+class TreeItem(object):
+    def __init__(self, data, parent=None, model=None):
+        self.model = model
         self.parentItem = parent
         self.itemData = data
         self.childItems = []
-        self.changed = False
-        # self.name = data[0]
-        # self.value = data[1]
+        self.parentKeys = []
 
     def child(self, row):
         return self.childItems[row]
@@ -41,15 +50,10 @@ class SetTreeItem(object):
 
         for row in range(count):
             data = [None for v in range(columns)]
-            item = SetTreeItem(data, self, self.parentItem)
+            item = TreeItem(data, self, self.model)
             self.childItems.insert(position, item)
+
         return True
-
-    def appendRow(self, data):
-
-        self.insertChildren(self.childCount, 1, self.columnCount())
-
-        # print data
 
     def insertColumns(self, position, columns):
         if position < 0 or position > len(self.itemData):
@@ -69,8 +73,10 @@ class SetTreeItem(object):
     def removeChildren(self, position, count):
         if position < 0 or position + count > len(self.childItems):
             return False
+
         for row in range(count):
             self.childItems.pop(position)
+
         return True
 
     def removeColumns(self, position, columns):
@@ -86,24 +92,29 @@ class SetTreeItem(object):
         return True
 
     def setData(self, column, value):
-        if column < 0 or column >= len(self.itemData):
-            return False
-        # if self.model.rootData[column] == 'Angle':
-
         self.itemData[column] = value
         return True
 
+    def appendKeys(self, value):
+        # for i in value:
+        self.parentKeys.append(value)
+        self.parentKeys = list(flatten(self.parentKeys))
+        # x = self.parentKeys
 
-class SetTreeModel(QtCore.QAbstractItemModel):
+        # self.parentKeys = x
+        # self.parentKeys = list(itertools.chain.from_iterable(self.parentKeys))
+
+
+class TreeModel(QtCore.QAbstractItemModel):
     def __init__(self, headers, data, parent=None):
-        super(SetTreeModel, self).__init__(parent)
+        super(TreeModel, self).__init__(parent)
+        self.checks = {}
 
         self.rootData = [header for header in headers] # Header Names
-        self.rootItem = SetTreeItem(self.rootData)
-        self.data = data
-        self.setupModelData(self.data, self.rootItem)
-
-        self._checked=[[False for i in xrange(self.columnCount())] for j in xrange(self.rowCount())]
+        self.rootItem = TreeItem(self.rootData, model=self)
+        self.rootDict = data
+        self.iterDict(data, self.rootItem)
+        self.display()
 
     def columnCount(self, parent=QtCore.QModelIndex()):
         return self.rootItem.columnCount()
@@ -111,10 +122,6 @@ class SetTreeModel(QtCore.QAbstractItemModel):
     def data(self, index, role):
         if not index.isValid():
             return None
-
-        if role == QtCore.Qt.CheckStateRole:
-            if index.column() == 0:
-                return self.checkState(index)
 
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
             return None
@@ -125,7 +132,7 @@ class SetTreeModel(QtCore.QAbstractItemModel):
     def flags(self, index):
         if not index.isValid():
             return 0
-        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable |QtCore.Qt.ItemIsDropEnabled |QtCore.Qt.ItemIsDragEnabled
+        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsDropEnabled |QtCore.Qt.ItemIsDragEnabled
 
     def getItem(self, index):
         if index.isValid():
@@ -134,9 +141,13 @@ class SetTreeModel(QtCore.QAbstractItemModel):
                 return item
         return self.rootItem
 
+    def checkState(self, index):
+        return self.getItem(index).checkState
+
     def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
         if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
             return self.rootItem.data(section)
+
         return None
 
     def index(self, row, column=0, parent=QtCore.QModelIndex()):
@@ -154,35 +165,35 @@ class SetTreeModel(QtCore.QAbstractItemModel):
         self.beginInsertColumns(parent, position, position + columns - 1)
         success = self.rootItem.insertColumns(position, columns)
         self.endInsertColumns()
+
         return success
 
     def insertRows(self, position, rows, parent=QtCore.QModelIndex()):
         parentItem = self.getItem(parent)
         self.beginInsertRows(parent, position, position + rows - 1)
-        success = parentItem.insertChildren(position, rows, self.rootItem.columnCount())
+        success = parentItem.insertChildren(position, rows,
+                self.rootItem.columnCount())
         self.endInsertRows()
-        return success
 
-    def appendRow(self, position, rows, parent=QtCore.QModelIndex()):
-        parentItem = self.getItem(parent)
-        self.beginInsertRows(parent, position, position + rows - 1)
-        success = parentItem.insertChildren(position, rows, self.rootItem.columnCount())
-        self.endInsertRows()
         return success
 
     def parent(self, index):
         if not index.isValid():
             return QtCore.QModelIndex()
+
         childItem = self.getItem(index)
         parentItem = childItem.parent()
+
         if parentItem == self.rootItem:
             return QtCore.QModelIndex()
+
         return self.createIndex(parentItem.childNumber(), 0, parentItem)
 
     def removeColumns(self, position, columns, parent=QtCore.QModelIndex()):
         self.beginRemoveColumns(parent, position, position + columns - 1)
         success = self.rootItem.removeColumns(position, columns)
         self.endRemoveColumns()
+
         if self.rootItem.columnCount() == 0:
             self.removeRows(0, self.rowCount())
 
@@ -190,37 +201,33 @@ class SetTreeModel(QtCore.QAbstractItemModel):
 
     def removeRows(self, position, rows, parent=QtCore.QModelIndex()):
         parentItem = self.getItem(parent)
+
         self.beginRemoveRows(parent, position, position + rows - 1)
         success = parentItem.removeChildren(position, rows)
         self.endRemoveRows()
+
         return success
 
     def rowCount(self, parent=QtCore.QModelIndex()):
         parentItem = self.getItem(parent)
+
         return parentItem.childCount()
 
     def childCount(self, parent=QtCore.QModelIndex()):
         return self.rowCount(parent)
 
-    def are_parent_and_child(self, parent, child):
-        while child.isValid():
-            if child == parent:
-                return True
-            child = child.parent()
-        return False
-
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         if role != QtCore.Qt.EditRole:
             return False
-        self.layoutAboutToBeChanged.emit()
+        if index.column() != 1:
+            return False
 
         item = self.getItem(index)
         result = item.setData(index.column(), value)
         if result:
-            self.emit(QtCore.SIGNAL('dataChanged(QModelIndex)'), index)
-
-        self.layoutChanged.emit()
-        return result
+            self.emit(QtCore.SIGNAL('settingsChanged(QModelIndex)'), index)
+            return True
+        return False
 
     def setHeaderData(self, section, orientation, value, role=QtCore.Qt.EditRole):
         if role != QtCore.Qt.EditRole or orientation != QtCore.Qt.Horizontal:
@@ -245,75 +252,48 @@ class SetTreeModel(QtCore.QAbstractItemModel):
         return rows
 
     def clearData(self):
-        self.layoutAboutToBeChanged.emit()
-        self.rootItem = TreeItem(self.rootData)
-        self.emit(QtCore.SIGNAL('dataChanged(QModelIndex)'), index)
-        self.layoutChanged.emit()
+        self.rootItem = TreeItem(self.rootData, model=self)
 
-    def setupModelData(self, data, parent):
+    def display(self):
+        return self.g_dict(self.rootItem)[self.rootItem.data(0)]
 
-        self.iterDict(self.data, parent)
-
+    def g_dict(self, item):
+        data = {}
+        if item.childCount() > 0:
+            data[item.data(0)]= {}
+            for i in item.childItems:
+                p = self.g_dict(i)
+                key = i.data(0)
+                for key in p.keys():
+                    data[item.data(0)][key] = p[key]
+        else:
+            key = item.data(0)
+            value = item.data(1)
+            data[key] = value
+        return data
 
     def iterDict(self, data, parent):
-        print data
         for x in data:
             if not data[x]:
                 continue
             if type(data[x]) == dict:
-
-                parent.insertChildren(parent.childCount(), 1,self.rootItem.columnCount())
-
+                parent.insertChildren(parent.childCount(), 1, self.rootItem.columnCount())
                 thisChild = parent.child(parent.childCount() -1)
-                node = QtGui.QStandardItem(x)
-                node.setFlags(QtCore.Qt.NoItemFlags)
-                self.iterDict(data[x], node)
-                parent.appendRow(node)
+                thisChild.setData(0, x)
+                thisChild.appendKeys(parent.parentKeys)
+                thisChild.appendKeys(x)
+                self.iterDict(data[x], thisChild)
             else:
                 value =  data[x]
-                child0 = QtGui.QStandardItem(x)
-                child0.setFlags(QtCore.Qt.NoItemFlags | QtCore.Qt.ItemIsEnabled)
-                child1 = QtGui.QStandardItem(str(value))
-                child1.setFlags(QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsEditable | ~ QtCore.Qt.ItemIsSelectable)
-                child2 = QtGui.QStandardItem(type(value).__name__)
-                child2.setFlags(QtCore.Qt.ItemIsEnabled)
+                parent.insertChildren(parent.childCount(), 1, self.rootItem.columnCount())
+                thisChild = parent.child(parent.childCount() -1)
 
-                parent.appendRow([child0, child1, child2])
+                thisChild.appendKeys(parent.parentKeys)
+                thisChild.appendKeys(x)
+                thisChild.setData(0, x)
+                thisChild.setData(1, value)
+                thisChild.setData(2, type(value).__name__)
 
-
-
-    def xxx(self, data, parent):
-        columns = self.getColumns()
-        parents = [parent]
-        indentations = [0]
-
-        number = 0
-        layers = {}
-        parent_dict = {}
-        while number < len(data.entities):
-            parent = parents[-1]
-            parent.insertChildren(parent.childCount(), 1,self.rootItem.columnCount())
-
-            thisChild = parent.child(parent.childCount() -1)
-
-
-            for column in range(len(columns)):
-                key = columns[column]
-                if key in layers[layer]:
-                    thisChild.setData(column, layers[layer][key])
-
-            parent = parent_dict[layer]
-
-            parent.insertChildren(parent.childCount(), 1,
-                                self.rootItem.columnCount())
-
-            thisChild = parent.child(parent.childCount() -1)
-
-            for column in range(len(columns)):
-                if key in item_data:
-                    thisChild.setData(column, item_data[key])
-
-            number += 1
 
 class Example(QtGui.QWidget):
 
@@ -339,12 +319,12 @@ class Example(QtGui.QWidget):
         ch0 = self.data['in']['ch0'] = {}
         ch0['channel'] = "ai0"
         ch0['name'] = 'Current'
-        ch0['curr_amp'] = 0
+        ch0['curr_amp'] = '0'
         ch0['amplitude'] = 1e-3
         ch0['min'] = -10 # +/- 100 mV is the minimum bipolar range
         ch0['max'] = 10
         ch0['plot_raw'] = True
-        ch0['freq_chan'] = 0
+        ch0['freq_chan'] = '0'
         ch1 = self.data['in']['ch1'] = {}
         ch1['channel'] = "ai1"
         ch1['name'] = 'A-B'
@@ -352,8 +332,8 @@ class Example(QtGui.QWidget):
         ch1['min'] = -10
         ch1['max'] = 10
         ch1['plot_raw'] = True
-        ch1['freq_chan'] = 0
-        ch1['curr_amp'] = 0
+        ch1['freq_chan'] = '0'
+        ch1['curr_amp'] = '0'
 
 
         # Layout
@@ -367,47 +347,18 @@ class Example(QtGui.QWidget):
         self.setGeometry(300, 300, 600, 400)
 
         # Tree view
-        self.model = SetTreeModel(['Parameter', 'Value', 'type'], self.data)
+        self.model = TreeModel(['Parameter', 'Value', 'type'], self.data)
         self.tree.setModel(self.model)
         self.tree.setAlternatingRowColors(True)
         self.tree.setSortingEnabled(True)
         self.tree.setHeaderHidden(False)
 
-        # self.model.setHorizontalHeaderLabels()
-
-        # self.model.setupModelData(self.data)
-        # self.iterDict(self.data, self.model)
         self.tree.expandAll()
 
         for column in range(self.model.columnCount()):
             self.tree.resizeColumnToContents(column)
 
-        QtCore.QObject.connect(self.model, QtCore.SIGNAL('itemChanged(QModelIndex)'), self.test)
-        QtCore.QObject.connect(self.tree, QtCore.SIGNAL('valueChanged(QModelIndex)'), self.test)
-
-    @QtCore.pyqtSlot("QModelIndex")
-    def test(self, bla =None):
-        print bla
-
-    def iterDict(self, data, parent):
-        for x in data:
-            if not data[x]:
-                continue
-            if type(data[x]) == dict:
-                node = SetTreeItem(x)
-                # node.setFlags(QtCore.Qt.NoItemFlags)
-                self.iterDict(data[x], node)
-                parent.appendRow(node)
-            else:
-                value =  data[x]
-                child0 = SetTreeItem(x)
-                # child0.setFlags(QtCore.Qt.NoItemFlags | QtCore.Qt.ItemIsEnabled)
-                child1 = SetTreeItem(str(value))
-                # child1.setFlags(QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsEditable | ~ QtCore.Qt.ItemIsSelectable)
-                child2 = SetTreeItem(type(value).__name__)
-                # child2.setFlags(QtCore.Qt.ItemIsEnabled)
-
-                parent.appendRow([child0, child1, child2])
+        print self.model.display()
 
 
 if __name__ == '__main__':
