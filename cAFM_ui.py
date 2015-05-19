@@ -78,8 +78,8 @@ class PlotFrame(QtGui.QWidget):
         layout.addWidget(self.area)
         self.setLayout(layout)
 
-        self.sketchDock = pg_dock.Dock("Skecthing", size=(500, 300))     ## give this dock the minimum possible size
-        self.measureDock = pg_dock.Dock("Measuring", size=(500,300))
+        self.sketchDock = pg_dock.Dock("Skecthing", size=(500, 500))     ## give this dock the minimum possible size
+        self.measureDock = pg_dock.Dock("Measuring", size=(500,200))
 
         self.area.addDock(self.sketchDock, 'top')
         self.area.addDock(self.measureDock, 'bottom')
@@ -201,6 +201,7 @@ class MainWindow(QtGui.QMainWindow):
         self.plotSplitter.addWidget(self.plotFrame)
         # self.splitter.setStretch(1,1)
         self.splitter.setStretchFactor(1,1)
+        # self.tree_splitter.set
 
         self.show()
 
@@ -577,7 +578,7 @@ class MainWindow(QtGui.QMainWindow):
         self.dxf = dxfgrabber.readfile(self.dxffileName)
 
         self.model = TreeModel(self.headers, self.dxf)
-
+        # self.tree_file.setSizes([20, 300])
         self.tree_file.setModel(self.model)
         self.tree_file.expandAll()
         # self.tree_schedule.setModel(self.model)

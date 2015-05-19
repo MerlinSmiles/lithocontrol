@@ -54,7 +54,7 @@ class TreeItem(object):
         try:
             dat = np.concatenate(self.pltData).reshape((-1,2))
         except:
-            print 'error calculating length'
+            # print 'error calculating length'
             return
         dat_b = np.roll(dat,-2)
         dist = 0
@@ -64,9 +64,15 @@ class TreeItem(object):
         self.length = dist
 
     def calcTime(self):
-        self.calcLength()
-        self.sketchTime = self.length / float(self.rate)
-
+        if self.childCount() == 0:
+            self.calcLength()
+            self.sketchTime = self.length / float(self.rate)
+        else:
+            self.sketchTime = 0.0
+            # self.setData(5,self.sketchTime)
+            for i in range(self.childCount()):
+                if self.child(i).checkState == 2:
+                    self.sketchTime += self.child(i).sketchTime
         self.setData(5,round(float(self.sketchTime),1))
 
 
@@ -85,6 +91,7 @@ class TreeItem(object):
         return len(self.itemData)
 
     def data(self, column=None):
+        self.calcTime()
         if column == None:
             return self.itemData[:]
         return self.itemData[column]
@@ -160,14 +167,17 @@ class TreeItem(object):
                 self.entity.is_closed = value
         elif self.model.rootData[column] == 'Time':
             value= float(value)
-            # return True
             if self.sketchTime != value:
                 self.sketchTime = value
+            if self.parent() == None:
+                value = 'Time'
 
         self.itemData[column] = value
         if self.model.rootData[column] in  ['Voltage', 'Angle', 'Rate', 'Step']:
             for ch in self.childItems:
                 ch.setData(column, value)
+        if (self.childCount() != 0) and (column != (0 or 5)):
+            self.itemData[column] = ''
         return True
 
 
@@ -313,15 +323,15 @@ class TreeModel(QtCore.QAbstractItemModel):
             cc = item.childCount()
             no_checked = 0
             if cc > 0:
-                item.sketchTime = 0.0
-                item.setData(5,item.sketchTime)
+                # item.sketchTime = 0.0
+                # item.setData(5,item.sketchTime)
                 for i in range(cc):
                     if item.child(i).checkState == 2:
                         no_checked+=1
 
-                        item.sketchTime += item.child(i).sketchTime
-                        if item.child(i).childCount() == 0:
-                            item.setData(5,item.sketchTime)
+                        # item.sketchTime += item.child(i).sketchTime
+                        # if item.child(i).childCount() == 0:
+                        #     item.setData(5,item.sketchTime)
                 if no_checked == cc:
                     item.setCheckState(2)
                 elif no_checked > 0:

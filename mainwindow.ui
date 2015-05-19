@@ -41,12 +41,18 @@
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
-      <widget class="QSplitter" name="splitter_2">
+      <widget class="QSplitter" name="tree_splitter">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>300</width>
+         <height>0</height>
+        </size>
        </property>
        <property name="orientation">
         <enum>Qt::Vertical</enum>
@@ -60,7 +66,7 @@
         </property>
         <property name="minimumSize">
          <size>
-          <width>0</width>
+          <width>50</width>
           <height>20</height>
          </size>
         </property>
@@ -415,7 +421,7 @@
        </widget>
       </widget>
       <widget class="QWidget" name="verticalLayoutWidget">
-       <layout class="QVBoxLayout" name="plotSplitter" stretch=""/>
+       <layout class="QVBoxLayout" name="plotSplitter"/>
       </widget>
      </widget>
     </item>
