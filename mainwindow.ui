@@ -70,6 +70,9 @@
           <height>20</height>
          </size>
         </property>
+        <property name="tabKeyNavigation">
+         <bool>true</bool>
+        </property>
         <property name="alternatingRowColors">
          <bool>true</bool>
         </property>
@@ -91,6 +94,16 @@
             <string>Plotting</string>
            </property>
            <layout class="QGridLayout" name="gridLayout_7">
+            <item row="3" column="0">
+             <widget class="QCheckBox" name="check_4pt">
+              <property name="text">
+               <string>4-point</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
             <item row="1" column="0">
              <widget class="QCheckBox" name="check_2pt">
               <property name="text">
@@ -101,17 +114,7 @@
               </property>
              </widget>
             </item>
-            <item row="2" column="0">
-             <widget class="QCheckBox" name="check_4pt">
-              <property name="text">
-               <string>4-point</string>
-              </property>
-              <property name="checked">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="0">
+            <item row="4" column="0">
              <widget class="QCheckBox" name="check_current">
               <property name="text">
                <string>Current</string>
@@ -121,7 +124,7 @@
               </property>
              </widget>
             </item>
-            <item row="4" column="0">
+            <item row="5" column="0">
              <widget class="QRadioButton" name="radio_plotR">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
@@ -137,7 +140,7 @@
               </property>
              </widget>
             </item>
-            <item row="5" column="0">
+            <item row="6" column="0">
              <widget class="QRadioButton" name="radio_plotC">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
@@ -150,7 +153,7 @@
               </property>
              </widget>
             </item>
-            <item row="6" column="0">
+            <item row="7" column="0">
              <widget class="QLabel" name="label_4">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
@@ -163,7 +166,7 @@
               </property>
              </widget>
             </item>
-            <item row="7" column="0">
+            <item row="8" column="0">
              <widget class="QSpinBox" name="plot_update_time">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
@@ -206,6 +209,9 @@
                <bool>true</bool>
               </property>
              </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QDoubleSpinBox" name="doubleSpinBox"/>
             </item>
            </layout>
           </widget>
@@ -419,6 +425,7 @@
          </item>
         </layout>
        </widget>
+       <widget class="QTreeView" name="tree_settings"/>
       </widget>
       <widget class="QWidget" name="verticalLayoutWidget">
        <layout class="QVBoxLayout" name="plotSplitter"/>

@@ -7,6 +7,25 @@ from PyQt4 import QtCore, QtGui, uic
 from source.dxf2shape import *
 import itertools
 
+class DoubleSpinBoxDelegate(QtGui.QItemDelegate):
+    def createEditor(self, parent, option, index):
+        editor = QtGui.QDoubleSpinBox(parent)
+        editor.setDecimals(4)
+        return editor
+
+    def setEditorData(self, spinBox, index):
+        value = index.model().data(index, QtCore.Qt.EditRole)
+        spinBox.setValue(value)
+
+    def setModelData(self, spinBox, model, index):
+        spinBox.interpretText()
+        value = spinBox.value()
+        model.setData(index, value, QtCore.Qt.EditRole)
+
+    def updateEditorGeometry(self, editor, option, index):
+        editor.setGeometry(option.rect)
+
+
 class TreeItem(object):
     def __init__(self, data, parent=None, model=None):
         self.model = model
@@ -348,6 +367,10 @@ class TreeModel(QtCore.QAbstractItemModel):
             return False
 
         item = self.getItem(index)
+
+        print '1: ', value
+        print '1: ', type(value)
+
         result = item.setData(index.column(), value)
         if result:
             self.emit(QtCore.SIGNAL('redraw(QModelIndex)'), index)

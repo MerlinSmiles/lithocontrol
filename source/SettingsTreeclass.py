@@ -41,7 +41,7 @@ class SetTreeItem(object):
 
         for row in range(count):
             data = [None for v in range(columns)]
-            item = SetTreeItem(data, self, self.parentItem)
+            item = SetTreeItem(data, self.parentItem)
             self.childItems.insert(position, item)
         return True
 
@@ -88,7 +88,7 @@ class SetTreeItem(object):
     def setData(self, column, value):
         if column < 0 or column >= len(self.itemData):
             return False
-        # if self.model.rootData[column] == 'Angle':
+        # if self.set_model.rootData[column] == 'Angle':
 
         self.itemData[column] = value
         return True
@@ -269,7 +269,7 @@ class SetTreeModel(QtCore.QAbstractItemModel):
                 node.setFlags(QtCore.Qt.NoItemFlags)
                 self.iterDict(data[x], node)
                 parent.appendRow(node)
-            else:
+            elif type(data[x]) in [float, int, str, bool]:
                 value =  data[x]
                 child0 = QtGui.QStandardItem(x)
                 child0.setFlags(QtCore.Qt.NoItemFlags | QtCore.Qt.ItemIsEnabled)
@@ -282,38 +282,38 @@ class SetTreeModel(QtCore.QAbstractItemModel):
 
 
 
-    def xxx(self, data, parent):
-        columns = self.getColumns()
-        parents = [parent]
-        indentations = [0]
+#     def xxx(self, data, parent):
+#         columns = self.getColumns()
+#         parents = [parent]
+#         indentations = [0]
 
-        number = 0
-        layers = {}
-        parent_dict = {}
-        while number < len(data.entities):
-            parent = parents[-1]
-            parent.insertChildren(parent.childCount(), 1,self.rootItem.columnCount())
+#         number = 0
+#         layers = {}
+#         parent_dict = {}
+#         while number < len(data.entities):
+#             parent = parents[-1]
+#             parent.insertChildren(parent.childCount(), 1,self.rootItem.columnCount())
 
-            thisChild = parent.child(parent.childCount() -1)
+#             thisChild = parent.child(parent.childCount() -1)
 
 
-            for column in range(len(columns)):
-                key = columns[column]
-                if key in layers[layer]:
-                    thisChild.setData(column, layers[layer][key])
+#             for column in range(len(columns)):
+#                 key = columns[column]
+#                 if key in layers[layer]:
+#                     thisChild.setData(column, layers[layer][key])
 
-            parent = parent_dict[layer]
+#             parent = parent_dict[layer]
 
-            parent.insertChildren(parent.childCount(), 1,
-                                self.rootItem.columnCount())
+#             parent.insertChildren(parent.childCount(), 1,
+#                                 self.rootItem.columnCount())
 
-            thisChild = parent.child(parent.childCount() -1)
+#             thisChild = parent.child(parent.childCount() -1)
 
-            for column in range(len(columns)):
-                if key in item_data:
-                    thisChild.setData(column, item_data[key])
+#             for column in range(len(columns)):
+#                 if key in item_data:
+#                     thisChild.setData(column, item_data[key])
 
-            number += 1
+#             number += 1
 
 class Example(QtGui.QWidget):
 
@@ -357,57 +357,32 @@ class Example(QtGui.QWidget):
 
 
         # Layout
-        self.tree = QtGui.QTreeView()
+        self.tree_settings = QtGui.QTreeView()
         hbox = QtGui.QHBoxLayout()
         hbox.addStretch(1)
         vbox = QtGui.QVBoxLayout()
         vbox.addLayout(hbox)
-        vbox.addWidget(self.tree)
+        vbox.addWidget(self.tree_settings)
         self.setLayout(vbox)
         self.setGeometry(300, 300, 600, 400)
 
         # Tree view
-        self.model = SetTreeModel(['Parameter', 'Value', 'type'], self.data)
-        self.tree.setModel(self.model)
-        self.tree.setAlternatingRowColors(True)
-        self.tree.setSortingEnabled(True)
-        self.tree.setHeaderHidden(False)
+        self.set_model = SetTreeModel(['Parameter', 'Value', 'type'], self.data)
+        self.tree_settings.setModel(self.set_model)
+        self.tree_settings.setAlternatingRowColors(True)
+        self.tree_settings.setSortingEnabled(True)
+        self.tree_settings.setHeaderHidden(False)
+        self.tree_settings.expandAll()
 
-        # self.model.setHorizontalHeaderLabels()
+        for column in range(self.set_model.columnCount()):
+            self.tree_settings.resizeColumnToContents(column)
 
-        # self.model.setupModelData(self.data)
-        # self.iterDict(self.data, self.model)
-        self.tree.expandAll()
-
-        for column in range(self.model.columnCount()):
-            self.tree.resizeColumnToContents(column)
-
-        QtCore.QObject.connect(self.model, QtCore.SIGNAL('itemChanged(QModelIndex)'), self.test)
-        QtCore.QObject.connect(self.tree, QtCore.SIGNAL('valueChanged(QModelIndex)'), self.test)
+        QtCore.QObject.connect(self.set_model, QtCore.SIGNAL('itemChanged(QModelIndex)'), self.test)
+        QtCore.QObject.connect(self.tree_settings, QtCore.SIGNAL('valueChanged(QModelIndex)'), self.test)
 
     @QtCore.pyqtSlot("QModelIndex")
     def test(self, bla =None):
         print bla
-
-    def iterDict(self, data, parent):
-        for x in data:
-            if not data[x]:
-                continue
-            if type(data[x]) == dict:
-                node = SetTreeItem(x)
-                # node.setFlags(QtCore.Qt.NoItemFlags)
-                self.iterDict(data[x], node)
-                parent.appendRow(node)
-            else:
-                value =  data[x]
-                child0 = SetTreeItem(x)
-                # child0.setFlags(QtCore.Qt.NoItemFlags | QtCore.Qt.ItemIsEnabled)
-                child1 = SetTreeItem(str(value))
-                # child1.setFlags(QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsEditable | ~ QtCore.Qt.ItemIsSelectable)
-                child2 = SetTreeItem(type(value).__name__)
-                # child2.setFlags(QtCore.Qt.ItemIsEnabled)
-
-                parent.appendRow([child0, child1, child2])
 
 
 if __name__ == '__main__':

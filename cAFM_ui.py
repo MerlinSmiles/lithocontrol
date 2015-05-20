@@ -38,6 +38,7 @@ from source.socketworker import *
 from source.ringbuffer import *
 from source.DataStore import *
 from source.treeclass import *
+from source.settreeclass import *
 from source.ni_measurement import *
 
 
@@ -204,9 +205,14 @@ class MainWindow(QtGui.QMainWindow):
         # self.tree_splitter.set
 
         self.show()
+        # Set delegate
+        self.tree_file.setItemDelegateForColumn(2,DoubleSpinBoxDelegate(self))
+        self.tree_file.setItemDelegateForColumn(4,DoubleSpinBoxDelegate(self))
 
         self.settings = {}
-        self.settings['time'] = QTime()
+        self.settings['measure'] = {}
+        self.settings['plot'] = {}
+        self.settings['measure']['time'] = QTime()
 
         self.s_time = str(QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss'))
 
@@ -224,7 +230,27 @@ class MainWindow(QtGui.QMainWindow):
         self.init_sketching()
         self.init_measurement()
 
+
+        # Tree view
+        self.set_model = SetTreeModel(headers = ['Parameter', 'Value', 'type'], data = self.settings)
+        self.tree_settings.setModel(self.set_model)
+        self.tree_settings.setAlternatingRowColors(True)
+        self.tree_settings.setSortingEnabled(True)
+        self.tree_settings.setHeaderHidden(False)
+        self.tree_settings.expandAll()
+
+        for column in range(self.set_model.columnCount()):
+            self.tree_settings.resizeColumnToContents(column)
+
+        QtCore.QObject.connect(self.set_model, QtCore.SIGNAL('itemChanged(QModelIndex)'), self.test)
+        QtCore.QObject.connect(self.tree_settings, QtCore.SIGNAL('valueChanged(QModelIndex)'), self.test)
+
+
         self.log('log', 'init')
+
+    @QtCore.pyqtSlot("QModelIndex")
+    def test(self, bla =None):
+        print bla
 
     def init_stores(self):
         c_time = str(QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss'))
@@ -241,7 +267,7 @@ class MainWindow(QtGui.QMainWindow):
         self.dht_store = RingBuffer(360000, filename=self.storeFolder+c_time +'_dht_data.h5',cols = self.dht_store_columns)
 
     def log(self, column, value):
-        tdelta = self.settings['time'].elapsed()/1000.0
+        tdelta = self.settings['measure']['time'].elapsed()/1000.0
         self.log_store.append([tdelta,value], ['time', column])
 
     def init_sketching(self):
@@ -292,24 +318,24 @@ class MainWindow(QtGui.QMainWindow):
         self.update_plotting()
         self.plot_counter = 0
 
-        self.settings['buffer_size'] = 10000000
-        self.settings['acq_rate'] = 30000          # samples/second
-        self.settings['acq_samples'] = 1000        # every n samples
-        self.settings['device_input'] = "PCI-6251"
-        self.settings['SR_sensitivity'] = 100e-9
-        self.settings['PAR_sensitivity'] = 1e-3
-        self.settings['plot_2pt'] = True
-        self.settings['plot_4pt'] = True
-        self.settings['plot_current'] = True
-        self.SRSensitivity.setText("%.0e" %(self.settings['SR_sensitivity']))
-        self.PARSensitivity.setText("%.0e" %(self.settings['PAR_sensitivity']))
-        self.settings['plotR'] = True
-        self.settings['DHTport'] = 6
+        self.settings['measure']['buffer_size'] = 10000000
+        self.settings['measure']['acq_rate'] = 30000          # samples/second
+        self.settings['measure']['acq_samples'] = 1000        # every n samples
+        self.settings['measure']['device_input'] = "PCI-6251"
+        self.settings['measure']['SR_sensitivity'] = 100e-9
+        self.settings['measure']['PAR_sensitivity'] = 1e-3
+        self.settings['plot']['plot_2pt'] = True
+        self.settings['plot']['plot_4pt'] = True
+        self.settings['plot']['plot_current'] = True
+        self.SRSensitivity.setText("%.0e" %(self.settings['measure']['SR_sensitivity']))
+        self.PARSensitivity.setText("%.0e" %(self.settings['measure']['PAR_sensitivity']))
+        self.settings['plot']['plotR'] = True
+        self.settings['measure']['DHTport'] = 6
         self.initSerial()
 
-        self.settings['in'] = {}
-        ch0 = self.settings['in'][0] = {}
-        ch1 = self.settings['in'][1] = {}
+        self.settings['measure']['in'] = {}
+        ch0 = self.settings['measure']['in'][0] = {}
+        ch1 = self.settings['measure']['in'][1] = {}
 
 
         ch0['channel'] = "ai0"
@@ -334,23 +360,23 @@ class MainWindow(QtGui.QMainWindow):
         ch1['plot_raw'] = True
         ch1['freq_chan'] = 0
         ch1['curr_amp'] = 0
-        self.spinCom.setValue( self.settings['DHTport'] )
-        # self.cAmpSpinBox.setValue(self.settings['in'][0]['curr_amp'])
+        self.spinCom.setValue( self.settings['measure']['DHTport'] )
+        # self.cAmpSpinBox.setValue(self.settings['measure']['in'][0]['curr_amp'])
         # (self._gen_meas_amplitude, self._normamplitudes, self._normphases)
-        print  ['time'] + self.settings['in'].keys()
+        print  ['time'] + self.settings['measure']['in'].keys()
 
-        self.ni_buff = RingBuffer(2000, cols = ['time'] + self.settings['in'].keys())
-        self.settings['buff'] = self.ni_buff
+        self.ni_buff = RingBuffer(2000, cols = ['time'] + self.settings['measure']['in'].keys())
+        self.settings['measure']['buff'] = self.ni_buff
 
         self.dht_buff = RingBuffer(2000, cols = self.dht_store_columns)
-        self.settings['dht_buff'] = self.dht_buff
+        self.settings['measure']['dht_buff'] = self.dht_buff
 
 
 
-        self.ni_worker = ni_Worker(self.settings)
+        self.ni_worker = ni_Worker(self.settings['measure'])
         self.ni_workerThread = None
 
-        self.dht_Worker = dht_Worker(self.settings)
+        self.dht_Worker = dht_Worker(self.settings['measure'])
         self.dht_WorkerThread = None
 
         self.ni_pi = self.plotFrame.measurePlot.getPlotItem()
@@ -367,7 +393,7 @@ class MainWindow(QtGui.QMainWindow):
         self.run()
 
     def saveSketch(self):
-        self.settings['time'].elapsed()
+        self.settings['measure']['time'].elapsed()
         self.sketchSubFolder = QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss')
 
         if not os.path.exists(self.storeFolder + self.sketchSubFolder):
@@ -897,14 +923,14 @@ class MainWindow(QtGui.QMainWindow):
 
     def initSerial(self):
         try:
-            self.settings['dht_serial'] = None
+            self.settings['measure']['dht_serial'] = None
             try:
                 self.dht_WorkerThread.quit()
             except:
                 pass
-            self.settings['dht_serial'] = serial.Serial(self.settings['DHTport']-1, baudrate=115200, timeout=5) # opens, too.
+            self.settings['measure']['dht_serial'] = serial.Serial(self.settings['measure']['DHTport']-1, baudrate=115200, timeout=5) # opens, too.
 
-            self.dht_Worker = dht_Worker(self.settings)
+            self.dht_Worker = dht_Worker(self.settings['measure'])
             self.dht_WorkerThread = QtCore.QThread()
             self.dht_Worker.terminate.connect(self.setterminate)
             self.dht_Worker.moveToThread(self.dht_WorkerThread)
@@ -914,7 +940,7 @@ class MainWindow(QtGui.QMainWindow):
             self.sig_measure_stop.connect(self.dht_Worker.stop)
         except:
             print 'dht failed'
-            self.settings['dht_serial'] = None
+            self.settings['measure']['dht_serial'] = None
             pass
 
     def closeEvent(self,event):
@@ -969,35 +995,35 @@ class MainWindow(QtGui.QMainWindow):
 
     def update_plotting(self):
         if self.check_plot.checkState() == 2:
-            self.settings['acq_plot'] = True
+            self.settings['plot']['acq_plot'] = True
         else:
-            self.settings['acq_plot'] = False
+            self.settings['plot']['acq_plot'] = False
 
         if self.check_2pt.checkState() == 2:
-            self.settings['plot_2pt'] = True
+            self.settings['plot']['plot_2pt'] = True
         else:
-            self.settings['plot_2pt'] = False
+            self.settings['plot']['plot_2pt'] = False
 
         if self.check_4pt.checkState() == 2:
-            self.settings['plot_4pt'] = True
+            self.settings['plot']['plot_4pt'] = True
         else:
-            self.settings['plot_4pt'] = False
+            self.settings['plot']['plot_4pt'] = False
 
         if self.check_current.checkState() == 2:
-            self.settings['plot_current'] = True
+            self.settings['plot']['plot_current'] = True
         else:
-            self.settings['plot_current'] = False
+            self.settings['plot']['plot_current'] = False
 
         for i in self.plotlist:
             i['plot'].clear()
 
-        self.settings['plot_timing'] = self.plot_update_time.value()
-        self.settings['SR_sensitivity'] = float(self.SRSensitivity.text ())
-        self.settings['PAR_sensitivity'] = float(self.PARSensitivity.text ())
-        self.settings['plotR'] = self.radio_plotR.isChecked()
-        self.settings['DHTport'] = self.spinCom.value()
-        self.SRSensitivity.setText("%.0e" %(self.settings['SR_sensitivity']))
-        self.PARSensitivity.setText("%.0e" %(self.settings['PAR_sensitivity']))
+        self.settings['plot']['plot_timing'] = self.plot_update_time.value()
+        self.settings['plot']['plotR'] = self.radio_plotR.isChecked()
+        self.settings['measure']['SR_sensitivity'] = float(self.SRSensitivity.text ())
+        self.settings['measure']['PAR_sensitivity'] = float(self.PARSensitivity.text ())
+        self.settings['measure']['DHTport'] = self.spinCom.value()
+        self.SRSensitivity.setText("%.0e" %(self.settings['measure']['SR_sensitivity']))
+        self.PARSensitivity.setText("%.0e" %(self.settings['measure']['PAR_sensitivity']))
 
     def measure_start(self):
         if self.newstores == True:
@@ -1035,23 +1061,23 @@ class MainWindow(QtGui.QMainWindow):
 
     def graficar(self):
 
-        if self.settings['buff'].size > 0:
-            raw_buffer = self.settings['buff'].get_partial_clear()
+        if self.settings['measure']['buff'].size > 0:
+            raw_buffer = self.settings['measure']['buff'].get_partial_clear()
 
             d_time = raw_buffer[0]
             d_ch0 = raw_buffer[1]
             d_ch1 = raw_buffer[2]
 
-            current = np.abs(d_ch0*self.settings['SR_sensitivity']/10.0)
-            r2pt = np.abs(self.settings['in'][0]['amplitude'] / current)
+            current = np.abs(d_ch0*self.settings['measure']['SR_sensitivity']/10.0)
+            r2pt = np.abs(self.settings['measure']['in'][0]['amplitude'] / current)
 
-            a_b = d_ch1*self.settings['PAR_sensitivity']/10
+            a_b = d_ch1*self.settings['measure']['PAR_sensitivity']/10
             r4pt = np.abs(a_b / current)
 
             self.ni_store.append([d_time, current, r2pt, r4pt])
 
-        if self.settings['dht_buff'].size > 0:
-            raw_buffer = self.settings['dht_buff'].get_partial_clear()
+        if self.settings['measure']['dht_buff'].size > 0:
+            raw_buffer = self.settings['measure']['dht_buff'].get_partial_clear()
             a = raw_buffer[0].mean()
             b = raw_buffer[1].mean()
             c = raw_buffer[2].mean()
@@ -1059,7 +1085,7 @@ class MainWindow(QtGui.QMainWindow):
             self.text_temp.setText('Tmp: %.1f\xb0C'%(raw_buffer[1].mean()))
             self.text_hum.setText('Hum: %.1f%%'%(raw_buffer[2].mean()))
 
-        if self.settings['acq_plot']:
+        if self.settings['plot']['acq_plot']:
             if self.ni_store.size>1:
                 n = 0
                 self.plot_counter +=1
@@ -1073,7 +1099,7 @@ class MainWindow(QtGui.QMainWindow):
                 if self.plot_counter>11:
                     self.ni_pi_legend.items = []
 
-                if self.settings['plot_current'] == True:
+                if self.settings['plot']['plot_current'] == True:
                     if self.plot_counter>11:
 
                         try:
@@ -1087,11 +1113,11 @@ class MainWindow(QtGui.QMainWindow):
                     self.plotlist[n]['plot'].setPen(color=kelly_colors[colors[n]])
                 n += 1
 
-                if self.settings['plotR']:
+                if self.settings['plot']['plotR']:
                     r2pt = raw_buffer[2]
                     r4pt = raw_buffer[3]
 
-                    if self.settings['plot_2pt'] == True:
+                    if self.settings['plot']['plot_2pt'] == True:
                         if self.plot_counter>11:
                             try:
                                 av_2pt = np.average(r2pt[av_len:])/1000.0
@@ -1104,7 +1130,7 @@ class MainWindow(QtGui.QMainWindow):
                         self.plotlist[n]['plot'].setPen(color=kelly_colors[colors[n]])
 
                     n += 1
-                    if self.settings['plot_4pt'] == True:
+                    if self.settings['plot']['plot_4pt'] == True:
                         if self.plot_counter>11:
 
                             self.plot_counter = 0
@@ -1118,11 +1144,11 @@ class MainWindow(QtGui.QMainWindow):
                         self.plotlist[n]['plot'].setData(x=d_time, y=r4pt/1000.0)
                         self.plotlist[n]['plot'].setPen(color=kelly_colors[colors[n]])
 
-                if not self.settings['plotR']:
+                if not self.settings['plot']['plotR']:
                     g2pt = 1.0/raw_buffer[2] *1e6
                     g4pt = 1.0/raw_buffer[3] *1e6
 
-                    if self.settings['plot_2pt'] == True:
+                    if self.settings['plot']['plot_2pt'] == True:
                         if self.plot_counter>11:
                             try:
                                 av_2pt = np.average(g2pt[av_len:])
@@ -1135,7 +1161,7 @@ class MainWindow(QtGui.QMainWindow):
                         self.plotlist[n]['plot'].setPen(color=kelly_colors[colors[n]])
 
                     n += 1
-                    if self.settings['plot_4pt'] == True:
+                    if self.settings['plot']['plot_4pt'] == True:
                         if self.plot_counter>11:
 
                             self.plot_counter = 0
@@ -1150,7 +1176,7 @@ class MainWindow(QtGui.QMainWindow):
                         self.plotlist[n]['plot'].setPen(color=kelly_colors[colors[n]])
 
         if not self.ni_terminate:
-            QtCore.QTimer.singleShot(self.settings['plot_timing'], self.graficar)
+            QtCore.QTimer.singleShot(self.settings['plot']['plot_timing'], self.graficar)
 
 
 if __name__ == '__main__':

@@ -17,7 +17,7 @@ def flatten(foo):
             yield x
 
 
-class TreeItem(object):
+class SetTreeItem(object):
     def __init__(self, data, parent=None, model=None):
         self.model = model
         self.parentItem = parent
@@ -50,7 +50,7 @@ class TreeItem(object):
 
         for row in range(count):
             data = [None for v in range(columns)]
-            item = TreeItem(data, self, self.model)
+            item = SetTreeItem(data, self, self.model)
             self.childItems.insert(position, item)
 
         return True
@@ -105,13 +105,13 @@ class TreeItem(object):
         # self.parentKeys = list(itertools.chain.from_iterable(self.parentKeys))
 
 
-class TreeModel(QtCore.QAbstractItemModel):
+class SetTreeModel(QtCore.QAbstractItemModel):
     def __init__(self, headers, data, parent=None):
-        super(TreeModel, self).__init__(parent)
+        super(SetTreeModel, self).__init__(parent)
         self.checks = {}
 
         self.rootData = [header for header in headers] # Header Names
-        self.rootItem = TreeItem(self.rootData, model=self)
+        self.rootItem = SetTreeItem(self.rootData, model=self)
         self.rootDict = data
         self.iterDict(data, self.rootItem)
         self.display()
@@ -252,7 +252,7 @@ class TreeModel(QtCore.QAbstractItemModel):
         return rows
 
     def clearData(self):
-        self.rootItem = TreeItem(self.rootData, model=self)
+        self.rootItem = SetTreeItem(self.rootData, model=self)
 
     def display(self):
         return self.g_dict(self.rootItem)[self.rootItem.data(0)]
@@ -283,7 +283,7 @@ class TreeModel(QtCore.QAbstractItemModel):
                 thisChild.appendKeys(parent.parentKeys)
                 thisChild.appendKeys(x)
                 self.iterDict(data[x], thisChild)
-            else:
+            elif type(data[x]) in [float, int, str, bool, list]:
                 value =  data[x]
                 parent.insertChildren(parent.childCount(), 1, self.rootItem.columnCount())
                 thisChild = parent.child(parent.childCount() -1)
@@ -337,28 +337,28 @@ class Example(QtGui.QWidget):
 
 
         # Layout
-        self.tree = QtGui.QTreeView()
+        self.settings_tree = QtGui.QTreeView()
         hbox = QtGui.QHBoxLayout()
         hbox.addStretch(1)
         vbox = QtGui.QVBoxLayout()
         vbox.addLayout(hbox)
-        vbox.addWidget(self.tree)
+        vbox.addWidget(self.settings_tree)
         self.setLayout(vbox)
         self.setGeometry(300, 300, 600, 400)
 
         # Tree view
-        self.model = TreeModel(['Parameter', 'Value', 'type'], self.data)
-        self.tree.setModel(self.model)
-        self.tree.setAlternatingRowColors(True)
-        self.tree.setSortingEnabled(True)
-        self.tree.setHeaderHidden(False)
+        self.settings_model = SetTreeModel(['Parameter', 'Value', 'type'], self.data)
+        self.settings_tree.setModel(self.settings_model)
+        self.settings_tree.setAlternatingRowColors(True)
+        self.settings_tree.setSortingEnabled(True)
+        self.settings_tree.setHeaderHidden(False)
 
-        self.tree.expandAll()
+        self.settings_tree.expandAll()
 
-        for column in range(self.model.columnCount()):
-            self.tree.resizeColumnToContents(column)
+        for column in range(self.settings_model.columnCount()):
+            self.settings_tree.resizeColumnToContents(column)
 
-        print self.model.display()
+        print self.settings_model.display()
 
 
 if __name__ == '__main__':
