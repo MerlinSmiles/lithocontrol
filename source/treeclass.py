@@ -44,6 +44,9 @@ class TreeItem(object):
         self.length = 0.0
         self.sketchTime = 0.0
 #     shape.type = None # [VirtualElectrode, line, area]
+    def index(self):
+        index = self.model.createIndex(self.parentItem.childNumber(), 0, self.parentItem)
+        return index
 
     def redraw(self):
         if self.entity != None:
@@ -165,6 +168,7 @@ class TreeItem(object):
     def setData(self, column, value):
         if column < 0 or column >= len(self.itemData):
             return False
+
         if self.model.rootData[column] == 'Angle':
             value= float(value)
             if self.fillAngle != value:
@@ -184,6 +188,7 @@ class TreeItem(object):
             value= bool(value)
             if self.entity.is_closed != value:
                 self.entity.is_closed = value
+                self.redraw()
         elif self.model.rootData[column] == 'Time':
             value= float(value)
             if self.sketchTime != value:
@@ -195,6 +200,9 @@ class TreeItem(object):
         if self.model.rootData[column] in  ['Voltage', 'Angle', 'Rate', 'Step']:
             for ch in self.childItems:
                 ch.setData(column, value)
+
+                self.model.emit(QtCore.SIGNAL('redraw(QModelIndex)'), ch.index())
+                self.model.emit(QtCore.SIGNAL('dataChanged(QModelIndex)'), ch.index)
         if (self.childCount() != 0) and (column != (0 or 5)):
             self.itemData[column] = ''
         return True
@@ -368,15 +376,10 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         item = self.getItem(index)
 
-        print '1: ', value
-        print '1: ', type(value)
-
         result = item.setData(index.column(), value)
         if result:
             self.emit(QtCore.SIGNAL('redraw(QModelIndex)'), index)
             self.emit(QtCore.SIGNAL('dataChanged(QModelIndex)'), index)
-                # , value
-
         return result
 
     def setHeaderData(self, section, orientation, value, role=QtCore.Qt.EditRole):

@@ -230,20 +230,21 @@ class MainWindow(QtGui.QMainWindow):
         self.init_sketching()
         self.init_measurement()
 
+        self.tree_settings.hide()
 
-        # Tree view
-        self.set_model = SetTreeModel(headers = ['Parameter', 'Value', 'type'], data = self.settings)
-        self.tree_settings.setModel(self.set_model)
-        self.tree_settings.setAlternatingRowColors(True)
-        self.tree_settings.setSortingEnabled(True)
-        self.tree_settings.setHeaderHidden(False)
-        self.tree_settings.expandAll()
+        # # Tree view
+        # self.set_model = SetTreeModel(headers = ['Parameter', 'Value', 'type'], data = self.settings)
+        # self.tree_settings.setModel(self.set_model)
+        # self.tree_settings.setAlternatingRowColors(True)
+        # self.tree_settings.setSortingEnabled(True)
+        # self.tree_settings.setHeaderHidden(False)
+        # self.tree_settings.expandAll()
 
-        for column in range(self.set_model.columnCount()):
-            self.tree_settings.resizeColumnToContents(column)
+        # for column in range(self.set_model.columnCount()):
+        #     self.tree_settings.resizeColumnToContents(column)
 
-        QtCore.QObject.connect(self.set_model, QtCore.SIGNAL('itemChanged(QModelIndex)'), self.test)
-        QtCore.QObject.connect(self.tree_settings, QtCore.SIGNAL('valueChanged(QModelIndex)'), self.test)
+        # QtCore.QObject.connect(self.set_model, QtCore.SIGNAL('itemChanged(QModelIndex)'), self.test)
+        # QtCore.QObject.connect(self.tree_settings, QtCore.SIGNAL('valueChanged(QModelIndex)'), self.test)
 
 
         self.log('log', 'init')
@@ -637,7 +638,6 @@ class MainWindow(QtGui.QMainWindow):
     @QtCore.pyqtSlot("QModelIndex")
     def redraw(self, index):
         model = self.model
-
         item = model.getItem(index)
 
         checked = item.checkState
@@ -790,6 +790,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def addToolbars(self):
         exitAction            = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_delete.png'), 'Exit', self)
+        closeConnectionAction = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_delete.png'), 'Close Connection', self)
         captureAction         = QtGui.QAction(QtGui.QIcon('icons/afm/a_0006_capture.png'), 'Capture', self)
         capture_abortAction   = QtGui.QAction(QtGui.QIcon('icons/afm/a_0008_capture_abort.png'), 'Capture Abort', self)
         capture_forceAction   = QtGui.QAction(QtGui.QIcon('icons/afm/a_0007_capture_force.png'), 'Capture Force', self)
@@ -810,7 +811,7 @@ class MainWindow(QtGui.QMainWindow):
         dxfReloadAction       = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/note_refresh.png'), 'Reload dxf', self)
         dxfClearAction        = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/note_deny.png'), 'Clear dxf', self)
 
-
+        QtCore.QObject.connect(closeConnectionAction, QtCore.SIGNAL('triggered()'), self.shutLithoNow )
 
         QtCore.QObject.connect(exitAction, QtCore.SIGNAL('triggered()'), self.close )
         exitAction.setShortcut('Ctrl+Q')
@@ -848,7 +849,8 @@ class MainWindow(QtGui.QMainWindow):
         iconSize = QtCore.QSize(32,32)
         toolbar = self.addToolBar('Exit')
         toolbar.setIconSize(iconSize)
-        toolbar.addAction(exitAction)
+        toolbar.addAction(closeConnectionAction)
+        # toolbar.addAction(exitAction)
 
         plttoolbar = self.addToolBar('Sketching')
         plttoolbar.setIconSize(iconSize)
@@ -881,24 +883,6 @@ class MainWindow(QtGui.QMainWindow):
         afmToolbar.addAction(frame_downAction)
         afmToolbar.addAction(frame_upAction)
 
-
-
-        # QtCore.QObject.connect(self.saveDirectory, QtCore.SIGNAL('clicked()'), self.pickDirectory)
-        # QtCore.QObject.connect(self.sketchThis, QtCore.SIGNAL('clicked()'), self.sketchNow)
-        # QtCore.QObject.connect(self.abortLitho, QtCore.SIGNAL('clicked()'), self.abortNow)
-        # QtCore.QObject.connect(self.shutLitho, QtCore.SIGNAL('clicked()'), self.shutLithoNow)
-        # QtCore.QObject.connect(self.butUnload, QtCore.SIGNAL('clicked()'), self.stageUnload)
-        # QtCore.QObject.connect(self.butLoad, QtCore.SIGNAL('clicked()'), self.stageLoad)
-        # QtCore.QObject.connect(self.butCapture, QtCore.SIGNAL('clicked()'), self.doCapture)
-        # QtCore.QObject.connect(self.fileOut, QtCore.SIGNAL('returnPressed()'), self.updateDirText)
-        # QtCore.QObject.connect(self.fileIn, QtCore.SIGNAL('returnPressed()'), self.updateFileInText)
-
-
-        # QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("finished()"), self.updateAFM)
-        # QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("terminated()"), self.updateAFM)
-        # QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("afmImage(QString)"), self.newafmImage)
-
-        # QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("AFMpos(float, float, float)"), self.updateAFMpos)
 
 
     def measure(self):
