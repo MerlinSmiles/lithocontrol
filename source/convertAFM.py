@@ -10,12 +10,14 @@ import cv2
 
 def convertAFM(filenamex, saveImg = True):
     filename = os.path.abspath(filenamex)
-    print 'Loading ', filename
-    for i in range(30):
+    # print 'Loading ', filename
+    for i in range(100):
         c = gwy.gwy_file_load(filename, gwy.RUN_NONINTERACTIVE)
         if c != None:
             break
         time.sleep(0.1)
+    if c == None:
+        return None, None
     gwy.gwy_app_data_browser_add(c)
     for key in c.keys_by_name():
         if re.match(r'^/0/data$', key):
@@ -24,7 +26,6 @@ def convertAFM(filenamex, saveImg = True):
             yres = field.get_yres()
             xreal = (field.get_xreal()*1e6)/2.0
             yreal = (field.get_yreal()*1e6)/2.0
-
             weights = gwy.DataLine(xres, 1.0, True)
             weights.part_fill(0, xres//3, 1.0)
             filtered = gwy.DataField.new_alike(field, False)
