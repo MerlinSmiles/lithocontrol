@@ -23,7 +23,7 @@ import sys
 
 sys.path.append(".\\source")
 
-filename = 'D:/lithography/DesignFiles/Untitled-1.dxf'
+filename = 'D:/lithography/DesignFiles/current.dxf'
 
 import os
 import time

@@ -39,7 +39,7 @@ class TreeItem(object):
         self.checkState = QtCore.Qt.Unchecked
         self.fillAngle = 0
         self.fillStep = 0.1
-        self.volt = 10
+        self.volt = 20.0
         self.rate = 1.0
         self.length = 0.0
         self.sketchTime = 0.0
