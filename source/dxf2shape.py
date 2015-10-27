@@ -33,7 +33,6 @@ def dxf2shape(i, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_directi
         print 'Path direction must be -1 or 1!'
         return 0
     pts  = get_points(i)[::path_direction]
-
     if not i.is_closed:
         return [pts]
     else:
