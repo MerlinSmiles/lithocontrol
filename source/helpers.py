@@ -64,13 +64,13 @@ def samedist(pa, pb, pc):
 #     v = bb1 - bb2
 #     w = aa1 - bb1
 #     D = perp(u,v)
-#     # print D
+#     # print( D )
 #     sI = perp(v,w) / D
 
 #     pp  = aa1 + sI * u
 #     # if not (np.isnan(np.sum([pp])) or np.isinf(abs(np.sum([pp])))):
 #     if samedist(aa1,aa2,pp) and samedist(bb1,bb2,pp):
-#         print pp
+#         print( pp )
 #         return pp[0],pp[1]
 #     return 0
 
@@ -101,7 +101,7 @@ def samedist(pa, pb, pc):
 #         return 1
 
 #     if samedist(aa1,aa2,pp) and samedist(bb1,bb2,pp):
-#         print pp
+#         print( pp )
 #         return pp[0],pp[1]
 #     return 0
 

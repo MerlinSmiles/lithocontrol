@@ -31,15 +31,15 @@ class SocketWorker(QtCore.QThread):
         try:
             #create an AF_INET, STREAM socket (TCP)
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        except socket.error, msg:
-            print 'Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + msg[1]
+        except socket.error as msg:
+            print( 'Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + msg[1] )
             self.init =  False
 
         try:
             self.remote_ip = socket.gethostbyname( self.host )
         except socket.gaierror:
             #could not resolve
-            print 'Hostname could not be resolved. Exiting'
+            print( 'Hostname could not be resolved. Exiting' )
             self.init =  False
         self.init =  True
 
@@ -51,7 +51,7 @@ class SocketWorker(QtCore.QThread):
             self.disconnectSocket()
         try:
             self.sock.connect((self.remote_ip , self.port))
-            print 'Socket Connected to ' + self.host + ' on ip ' + self.remote_ip
+            print( 'Socket Connected to ' + self.host + ' on ip ' + self.remote_ip )
             self.connected = True
         except:
             self.connected = False
@@ -60,7 +60,7 @@ class SocketWorker(QtCore.QThread):
     def disconnectSocket(self):
         try:
             self.sock.close()
-            print 'Socket disconnected'
+            print( 'Socket disconnected' )
             self.connected = False
         except:
             pass
@@ -70,20 +70,20 @@ class SocketWorker(QtCore.QThread):
             self.connectSocket()
         try :
             #Set the whole string
-            self.sock.sendall(message)
-            # print 'sending message'
+            self.sock.sendall(message.encode())
+            # print( 'sending message' )
         except socket.error:
             #Send failed
-            print 'Send failed trying again with reconnect'
+            print( 'Send failed trying again with reconnect' )
             self.initSocket()
             self.connectSocket()
             try :
                 #Set the whole string
-                # print 'sending message'
-                self.sock.sendall(message)
+                # print( 'sending message' )
+                self.sock.sendall(message.encode())
             except socket.error:
                 #Send failed
-                print 'Send failed: Serious error'
+                print( 'Send failed: Serious error' )
 
     def recv_message(self, timeout =0, buf = 4096):
         if not self.connected:
@@ -92,10 +92,10 @@ class SocketWorker(QtCore.QThread):
             self.sock.settimeout(timeout)
             msg = self.sock.recv(buf)
             return msg
-        except socket.error, e:
+        except socket.error as e:
             return False
         else:
-            print 'got a message, do something :)'
+            print( 'got a message, do something :)' )
             pass
 
     def monitor(self):

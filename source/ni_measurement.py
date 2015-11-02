@@ -58,7 +58,7 @@ class dht_Worker(QtCore.QObject):
         self.settings = settings
         self.running = False
         if self.settings['dht_serial'] != None:
-            print "Monitoring serial port " + self.settings['dht_serial'].name
+            print( "Monitoring serial port " + self.settings['dht_serial'].name )
             self.running = True
 
     def run(self):
@@ -107,7 +107,7 @@ class MeasureTask(Task):
         for i in self.ch_in_list:
             chan = self.settings['device_input']+ '/' + self.settings['in'][i]['channel']
             self.create_chan(chan, self.settings['in'][i]['min'], self.settings['in'][i]['max'])
-            print 'created ', chan
+            print( 'created ', chan )
 
         self.CfgSampClkTiming("", self.settings['acq_rate'], DAQmx_Val_Rising,
                               DAQmx_Val_ContSamps, self.settings['buffer_size'])
@@ -157,7 +157,7 @@ class MeasureTask(Task):
         return 0  # The function should return an integer
 
     def DoneCallback(self, status):
-        # print "Status", status.value
+        # print( "Status", status.value )
         return 0  # The function should return an integer
 
 

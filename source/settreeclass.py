@@ -358,7 +358,7 @@ class Example(QtGui.QWidget):
         for column in range(self.settings_model.columnCount()):
             self.settings_tree.resizeColumnToContents(column)
 
-        print self.settings_model.display()
+        print( self.settings_model.display() )
 
 
 if __name__ == '__main__':

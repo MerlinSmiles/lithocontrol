@@ -57,8 +57,8 @@ class RingBuffer(object):
     def save_data(self):
         if (self.filename != '') and (self.data_store_index>0):
             self.saving = True
-            print 'saving store: ' + self.filename
-            # print self.data_store_index, self.cols
+            print( 'saving store: ' + self.filename )
+            # print( self.data_store_index, self.cols )
             # try:
             data = self.get_partial()[:,-self.data_store_index:].reshape((self._num_cols,-1))
             # except:

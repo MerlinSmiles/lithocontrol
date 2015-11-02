@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+demo = True
 import sip
 sip.setapi('QVariant', 2)
 import numpy as np
@@ -24,6 +24,8 @@ import sys
 sys.path.append(".\\source")
 
 filename = 'D:/lithography/DesignFiles/current.dxf'
+if demo:
+    filename = './test.dxf'
 
 import os
 import time
@@ -33,13 +35,14 @@ from watchdog.events import PatternMatchingEventHandler
 
 from source.helpers import *
 from source.dxf2shape import *
-from source.convertAFM import *
+if not demo:
+    from source.convertAFM import *
+    from source.ni_measurement import *
 from source.socketworker import *
 from source.ringbuffer import *
 from source.DataStore import *
 from source.treeclass import *
 from source.settreeclass import *
-from source.ni_measurement import *
 
 
 
@@ -146,7 +149,7 @@ class MyHandler(PatternMatchingEventHandler):
             path/to/observed/file
         """
         # the file will be processed there
-        # print event.src_path, event.event_type  # print now only for degug
+        # print( event.src_path, event.event_type  # print( now only for degug )
 
         self.parent.emit(QtCore.SIGNAL("afmImage(QString)"), event.src_path)
 
@@ -180,7 +183,7 @@ class AFMWorker(QtCore.QThread):
     def run(self):
         observer = Observer()
         observer.schedule(MyHandler(self), path=self.foldername)
-        print self.foldername
+        print( self.foldername )
         observer.start()
         while True and not self.exiting:
             time.sleep(3)
@@ -216,17 +219,23 @@ class MainWindow(QtGui.QMainWindow):
 
         self.s_time = str(QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss'))
         self.timer = QTime.currentTime()
-        self.nextPosition = np.array([np.nan,np.nan])
+        self.currentPosition = np.array([np.nan,np.nan,np.nan])
+        self.nextPosition = np.array([np.nan,np.nan,np.nan])
         self.sketching = False
 
         self.outDir = 'U:/'
         self.afmImageFolder = 'D:/lithography/afmImages/'
         self.storeFolder = 'D:/lithography/sketches/' + self.s_time + '/'
         self.sketchSubFolder = './'
+        if demo:
+            self.outDir = './demo/'
+            self.afmImageFolder = './demo/afmImages/'
+            self.storeFolder = './demo/sketches/' + self.s_time + '/'
+            self.sketchSubFolder = './demo/sketches/'
 
 
-        print ''
-        print ''
+        print( '' )
+        print( '' )
 
         self.addToolbars()
         self.init_stores()
@@ -255,7 +264,7 @@ class MainWindow(QtGui.QMainWindow):
 
     @QtCore.pyqtSlot("QModelIndex")
     def test(self, bla =None):
-        print bla
+        print( bla )
 
     def init_stores(self):
         c_time = str(QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss'))
@@ -288,11 +297,12 @@ class MainWindow(QtGui.QMainWindow):
 
         self.afmPosition = pg.ScatterPlotItem(size=5, pen=pg.mkPen(None), brush=pg.mkBrush(255, 0, 0, 255))
         self.afmPosition.setZValue(100)
-
+        self.afmNow = pg.PlotDataItem(size=2, pen=bluePen, brush=pg.mkBrush(0, 0, 255, 255))
+        self.afmNow.setZValue(99)
 
         self.preservePlots = []
         self.preservePlots.append(self.afmPosition)
-
+        self.preservePlots.append(self.afmNow)
 
         self.dxffileName = filename
 
@@ -314,6 +324,7 @@ class MainWindow(QtGui.QMainWindow):
     def afmReady(self):
         self.log('sketch', 'end')
         self.afmPosition.clear()
+        self.afmNow.clear()
 
 
     def init_measurement(self):
@@ -368,21 +379,21 @@ class MainWindow(QtGui.QMainWindow):
         self.spinCom.setValue( self.settings['measure']['DHTport'] )
         # self.cAmpSpinBox.setValue(self.settings['measure']['in'][0]['curr_amp'])
         # (self._gen_meas_amplitude, self._normamplitudes, self._normphases)
-        print  ['time'] + self.settings['measure']['in'].keys()
+        print(  ['time'] + list(self.settings['measure']['in'].keys()) )
 
-        self.ni_buff = RingBuffer(2000, cols = ['time'] + self.settings['measure']['in'].keys())
+        self.ni_buff = RingBuffer(2000, cols = ['time'] + list(self.settings['measure']['in'].keys()))
         self.settings['measure']['buff'] = self.ni_buff
 
         self.dht_buff = RingBuffer(2000, cols = self.dht_store_columns)
         self.settings['measure']['dht_buff'] = self.dht_buff
 
 
+        if not demo:
+            self.ni_worker = ni_Worker(self.settings['measure'])
+            self.ni_workerThread = None
 
-        self.ni_worker = ni_Worker(self.settings['measure'])
-        self.ni_workerThread = None
-
-        self.dht_Worker = dht_Worker(self.settings['measure'])
-        self.dht_WorkerThread = None
+            self.dht_Worker = dht_Worker(self.settings['measure'])
+            self.dht_WorkerThread = None
 
         self.ni_pi = self.plotFrame.measurePlot.getPlotItem()
         # self.ni_pi = self.plotView.getPlotItem()
@@ -446,24 +457,49 @@ class MainWindow(QtGui.QMainWindow):
         self.plotFrame.setAfmImage(self.afmData,x,y)
 
     def updateAFM(self):
-        print 'updateAFM'
+        print( 'updateAFM' )
 
     def doCapture(self):
         self.SocketThread.send_message('Capture\n')
-        print 'Capture'
+        print( 'Capture' )
 
     def stageUnload(self):
         self.SocketThread.send_message('StageUnload\n')
-        print 'unload Stage'
+        print( 'unload Stage' )
 
     def stageLoad(self):
         self.SocketThread.send_message('StageLoad\n')
-        print 'Load Stage'
+        print( 'Load Stage' )
 
     @QtCore.pyqtSlot("float, float, float")
     def updateAFMpos(self,x,y,rate):
-        print 'afmpos: ', x,y,rate
+        # print( 'afmpos: ', x,y,rate )
+        self.nextPosition=np.array([x,y,rate])
         self.afmPosition.addPoints([{'pos': [x,y]}])
+
+        self.sketchicar()
+
+    def sketchicar(self):
+        a,b,c = self.currentPosition
+        x,y,r = self.nextPosition
+        dx = x - a
+        dy = y - b
+
+        dd = dx**2 + dy**2
+        t = np.sqrt(dd)/r
+
+        tt = self.timer.elapsed()/1000
+        dt = tt/t
+        dxx = dx*dt
+        dyy = dy*dt
+        ddd= dxx**2 + dyy**2
+
+        if(dd>=ddd):
+            self.afmNow.setData([a,a+dxx],[b,b+dyy])
+
+        if self.sketching:
+            QtCore.QTimer.singleShot(self.settings['plot']['plot_timing'], self.sketchicar)
+
 
     @QtCore.pyqtSlot("QString")
     def updateStatus(self,line):
@@ -473,13 +509,16 @@ class MainWindow(QtGui.QMainWindow):
             line = line.split( )
             volt = float(line[1])
             self.log('vtip', volt)
-            print 'VTIP ' , volt
+            print( 'VTIP ' , volt )
+            self.sketching = False
         elif line.startswith('Ready'):
             self.afmPosition.clear()
+            self.afmNow.clear()
             self.sketching = False
             self.afmReady()
-            print "\n\nREADY\n\n"
+            print( "\n\nREADY\n\n" )
         elif line.startswith('xyAbs'):
+            self.currentPosition = self.nextPosition
             self.timer.restart()
             self.sketching = True
             line = line.split( )
@@ -489,15 +528,30 @@ class MainWindow(QtGui.QMainWindow):
             # self.emit(QtCore.SIGNAL("AFMpos(float, float, float)"), x,y,r)
             self.updateAFMpos(x,y,r)
 
+    def doDemo(self):
+        data = self.sketchFile.split('\n')
+        for line in data:
+            if line.startswith('xyAbs'):
+                dx,dy,dr = self.nextPosition - self.currentPosition
+                r = self.nextPosition[2]
+                dt = np.sqrt(dx**2 + dy**2)/r
+                print(dt)
+                self.updateStatus(line)
+                # self.timer.restart()
+                self.sketching = True
+                line = line.split( )
+                r = float(line[3])
+
     def sketchNow(self, index=None):
         self.afmPosition.clear()
+        self.afmNow.clear()
         self.sketchFile = ''
         if index == None:
             index = self.model
         nfile = False
-        print "Sketching Now"
+        print( "Sketching Now" )
         for i in range(index.rowCount()):
-            # print '- ', i
+            # print( '- ', i )
             item = index.getItem(index.index(i))
             if item.checkState == 0:
                 continue
@@ -506,7 +560,7 @@ class MainWindow(QtGui.QMainWindow):
             self.sAdd('')
             self.sComment(item.data())
                 # continue
-            # print '- ' ,
+            # print( '- ' , )
             if len(chitems) != 0:
                 nfile = True
                 for child in item.childItems:
@@ -528,6 +582,8 @@ class MainWindow(QtGui.QMainWindow):
         if nfile:
             self.writeFile(self.sketchFile)
             self.saveSketch()
+            if demo:
+                self.doDemo()
 
     def sComment(self, stuff):
         adding = ''
@@ -536,12 +592,12 @@ class MainWindow(QtGui.QMainWindow):
             adding += str(i)+ '\t'
         adding += '\n'
         self.sketchFile += adding
-        # print adding
+        # print( adding )
 
     def sAdd(self, data):
         self.sketchFile += data
         self.sketchFile += '\n'
-        # print data
+        # print( data )
 
     def writeFile(self, data):
         self.outDir = str(self.outDir)
@@ -606,6 +662,8 @@ class MainWindow(QtGui.QMainWindow):
             pass
 
     def readDXFFile(self):
+        if demo:
+            pass
         self.clearDXFFile()
 
         # self.fileIn.setText(self.dxffileName)
@@ -627,6 +685,7 @@ class MainWindow(QtGui.QMainWindow):
         self.pi = self.plotFrame.sketchPlot.getPlotItem()
         self.plotFrame.clearSketchPlot()
         self.pi.addItem(self.afmPosition)
+        self.pi.addItem(self.afmNow)
 
         self.pi.enableAutoRange('x', True)
         self.pi.enableAutoRange('y', True)
@@ -662,7 +721,7 @@ class MainWindow(QtGui.QMainWindow):
 
             self.updateActions()
 
-        # print self.pi.listDataItems()
+        # print( self.pi.listDataItems() )
 
 
     @QtCore.pyqtSlot("QModelIndex")
@@ -696,7 +755,7 @@ class MainWindow(QtGui.QMainWindow):
         # self.tree_schedule.setCurrentIndex(index[0])
         deindex = deselected.indexes()
         model = self.tree_file.model()
-        # print 'bb', index[0], model.getItem(index[0])
+        # print( 'bb', index[0], model.getItem(index[0]) )
         for idx in index:
             item = model.getItem(idx)
             for i in item.pltHandle:
@@ -930,7 +989,7 @@ class MainWindow(QtGui.QMainWindow):
             self.sig_measure.connect(self.dht_Worker.run)
             self.sig_measure_stop.connect(self.dht_Worker.stop)
         except:
-            print 'dht failed'
+            print( 'dht failed' )
             self.settings['measure']['dht_serial'] = None
             pass
 
@@ -939,8 +998,9 @@ class MainWindow(QtGui.QMainWindow):
         if reply==QtGui.QMessageBox.Yes:
             self.measure_save()
             self.measure_stop()
-            self.ni_workerThread.quit()
-            self.dht_WorkerThread.quit()
+            if not demo:
+                self.ni_workerThread.quit()
+                self.dht_WorkerThread.quit()
 
             event.accept()
         else:
@@ -951,12 +1011,13 @@ class MainWindow(QtGui.QMainWindow):
         pass
 
     def run(self):
-        self.ni_workerThread = QtCore.QThread()
-        self.ni_worker.terminate.connect(self.setterminate)
-        self.ni_worker.moveToThread(self.ni_workerThread)
-        self.dht_WorkerThread = QtCore.QThread()
-        self.dht_Worker.terminate.connect(self.setterminate)
-        self.dht_Worker.moveToThread(self.dht_WorkerThread)
+        if not demo:
+            self.ni_workerThread = QtCore.QThread()
+            self.ni_worker.terminate.connect(self.setterminate)
+            self.ni_worker.moveToThread(self.ni_workerThread)
+            self.dht_WorkerThread = QtCore.QThread()
+            self.dht_Worker.terminate.connect(self.setterminate)
+            self.dht_Worker.moveToThread(self.dht_WorkerThread)
 
 
         self.check_plot.stateChanged.connect(self.update_plotting)
@@ -973,14 +1034,15 @@ class MainWindow(QtGui.QMainWindow):
 
 
 
-        self.sig_measure.connect(self.ni_worker.run)
-        self.sig_measure_stop.connect(self.ni_worker.stop)
+        if not demo:
+            self.sig_measure.connect(self.ni_worker.run)
+            self.sig_measure_stop.connect(self.ni_worker.stop)
 
-        self.sig_measure.connect(self.dht_Worker.run)
-        self.sig_measure_stop.connect(self.dht_Worker.stop)
+            self.sig_measure.connect(self.dht_Worker.run)
+            self.sig_measure_stop.connect(self.dht_Worker.stop)
 
-        self.ni_workerThread.start()
-        self.dht_WorkerThread.start()
+            self.ni_workerThread.start()
+            self.dht_WorkerThread.start()
 
         self.show()
 
@@ -1031,14 +1093,14 @@ class MainWindow(QtGui.QMainWindow):
             self.ni_store.clear()
             self.ni_buff.clear()
         except:
-            print 'Error clearing ni_store'
-            print sys.exc_info()
+            print( 'Error clearing ni_store' )
+            print( sys.exc_info() )
         try:
             self.dht_store.clear()
             self.dht_buff.clear()
         except:
-            print 'Error clearing dht_store'
-            print sys.exc_info()
+            print( 'Error clearing dht_store' )
+            print( sys.exc_info() )
         self.newstores = True
 
 

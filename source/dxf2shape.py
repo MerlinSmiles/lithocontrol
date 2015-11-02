@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 # %matplotlib inline
 import numpy as np
 # from scipy.interpolate import interp1d
-from helpers import *
+from source.helpers import *
 
 def get_points(entity, threshold = 1e-9):
     if entity.dxftype == 'LINE':
@@ -30,7 +30,7 @@ def Rotate2D(pts,angle=0):
 
 def dxf2shape(i, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_direction = 1):
     if path_direction not in [-1,1]:
-        print 'Path direction must be -1 or 1!'
+        print( 'Path direction must be -1 or 1!' )
         return 0
     pts  = get_points(i)[::path_direction]
     if not i.is_closed:
@@ -60,7 +60,7 @@ def dxf2shape(i, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_directi
     #     plt.plot(u[0], u[1])
     lines = []
     ll = np.array(ll)
-    # print pts[:,1]
+    # print( pts[:,1] )
     for i in ll:
         a1 = np.array([i[0][0], i[1][0]])
         a2 = np.array([i[0][1], i[1][1]])
@@ -69,12 +69,12 @@ def dxf2shape(i, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_directi
         for b2 in pts[1:]:
             inter = intersect( a1,a2, b1, b2 )
 
-            # print a1,a2, b1, b2
+            # print( a1,a2, b1, b2 )
             if inter != 0:
                 ints.append(inter)
-                # print inter,  a1,a2, b1, b2
+                # print( inter,  a1,a2, b1, b2 )
             b1 = b2
-        # print ints
+        # print( ints )
         if ints != []:
             ints = np.array(ints)
             ints.view('f32,f32').sort(order=['f1'], axis=0)
@@ -121,7 +121,7 @@ def dxf2shape(i, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_directi
     # next_group = [0,1,1e9]
     # while len(collection)<0:
     #     next_group = [0,1,1e9]
-    # #     print len(collection)
+    # #     print( len(collection) )
     #     if len(sorted_collection) == 0:
     #         sorted_collection.append(collection[0])
     #         collection = np.delete(collection,0,0)

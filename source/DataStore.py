@@ -11,16 +11,16 @@ class DataStore(object):
 
     def append(self, value, column):
         """append an element"""
-        print value, column
+        # print( value, column )
         ds = pd.Series(value, column)
-        print ds
+        # print( ds )
         self.data = self.data.append(ds,ignore_index=True)
 
     def keys(self):
         return self.data.keys()
 
     def save_data(self):
-        print 'saving store: ' + self.filename
+        print( 'saving store: ' + self.filename )
         self.data_store = pd.HDFStore(self.filename)
 
         df = pd.DataFrame(self.data[self.data_store_index:])
