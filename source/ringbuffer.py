@@ -78,7 +78,7 @@ class RingBuffer(object):
 
     def __getitem__(self, key):
         """get element"""
-        return(self._data[-key])
+        return(self._data[:,key])
 
     def __repr__(self):
         """return string representation"""

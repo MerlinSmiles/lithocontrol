@@ -114,7 +114,7 @@ class SocketWorker(QtCore.QThread):
             self.connectSocket()
 
         while not self.exiting:
-            time.sleep(1)
+            # time.sleep(0.0001)
             msg = self.recv_message(timeout = 0.05)
             if msg:
                 lines = msg.splitlines()

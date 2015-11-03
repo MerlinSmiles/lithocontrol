@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-demo = True
+demo = False
 import sip
 sip.setapi('QVariant', 2)
 import numpy as np
@@ -70,7 +70,7 @@ kelly_colors = dict(vivid_yellow=(255, 179, 0),
 
 # mkPen for selected
 orangePen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
-bluePen = pg.mkPen(color='0000FF')  #, style=QtCore.Qt.DotLine
+bluePen = pg.mkPen(color='0000FF',width=2)  #, style=QtCore.Qt.DotLine
 greenPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine , width=
 
 class PlotFrame(QtGui.QWidget):
@@ -90,6 +90,7 @@ class PlotFrame(QtGui.QWidget):
 
         data = pg.gaussianFilter(np.random.normal(size=(256, 256)), (20, 20))
         self.afmIm = pg.ImageItem(data)
+        self.afmIm.setRect(pg.QtCore.QRectF(-20,-20,40,40))
         self.afmIm.setZValue(-1000)
 
         self.sketchPlot = pg.PlotWidget()
@@ -110,9 +111,10 @@ class PlotFrame(QtGui.QWidget):
         self.measureDock.addWidget(self.measurePlot)
 
     def setAfmImage(self, image_data, x= None, y=None):
+        self.afmIm.clear()
+        self.afmIm.setImage(image_data)
         if not (x==None or y == None):
             self.afmIm.setRect(pg.QtCore.QRectF(-x/2.0, -y/2.0, x, y))
-        self.afmIm.setImage(image_data)
         self.histWidget.setImageItem(self.afmIm)
 
     def clearSketchPlot(self):
@@ -245,6 +247,11 @@ class MainWindow(QtGui.QMainWindow):
 
         self.tree_settings.hide()
 
+
+        self.afmPoints_columns = ['x', 'y', 'rate']
+        self.afmPoints = RingBuffer(36000, cols = self.afmPoints_columns)
+        self.vtip = 0
+
         # # Tree view
         # self.set_model = SetTreeModel(headers = ['Parameter', 'Value', 'type'], data = self.settings)
         # self.tree_settings.setModel(self.set_model)
@@ -295,10 +302,10 @@ class MainWindow(QtGui.QMainWindow):
 
         self.centerCoord = np.array([0,0])
 
-        self.afmPosition = pg.ScatterPlotItem(size=5, pen=pg.mkPen(None), brush=pg.mkBrush(255, 0, 0, 255))
+        self.afmPosition = pg.PlotDataItem(size=5, pen=bluePen, brush=pg.mkBrush(255, 0, 0, 255))
         self.afmPosition.setZValue(100)
         self.afmNow = pg.PlotDataItem(size=2, pen=bluePen, brush=pg.mkBrush(0, 0, 255, 255))
-        self.afmNow.setZValue(99)
+        self.afmNow.setZValue(110)
 
         self.preservePlots = []
         self.preservePlots.append(self.afmPosition)
@@ -413,7 +420,7 @@ class MainWindow(QtGui.QMainWindow):
         self.sketchSubFolder = QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss')
 
         if not os.path.exists(self.storeFolder + self.sketchSubFolder):
-            os.makedirs(self.storeFolder + self.sketchSubFolder)
+            os.makedirs(str(self.storeFolder + self.sketchSubFolder))
 
 
         data = self.sketchFile
@@ -474,42 +481,58 @@ class MainWindow(QtGui.QMainWindow):
     @QtCore.pyqtSlot("float, float, float")
     def updateAFMpos(self,x,y,rate):
         # print( 'afmpos: ', x,y,rate )
-        self.nextPosition=np.array([x,y,rate])
-        self.afmPosition.addPoints([{'pos': [x,y]}])
-
+        # self.nextPosition=np.array([x,y,rate])
+        # self.afmPoints.get_partial()
+        # self.afmPosition.addPoints([{'pos': [x,y]}])
+        # self.afmPoints.append([x,y,rate])
         self.sketchicar()
 
     def sketchicar(self):
-        a,b,c = self.currentPosition
-        x,y,r = self.nextPosition
-        dx = x - a
-        dy = y - b
+        try:
+            xl,yl,rl = np.copy(self.afmPoints.get_partial())
+            # a,b,c = self.currentPosition
+            a,b,c = self.afmPoints[-2]
+            # x,y,r = self.nextPosition
+            x,y,r = self.afmPoints[-1]
+            dx = x - a
+            dy = y - b
 
-        dd = dx**2 + dy**2
-        t = np.sqrt(dd)/r
+            dd = dx**2 + dy**2
+            t = np.sqrt(dd)/r
 
-        tt = self.timer.elapsed()/1000
-        dt = tt/t
-        dxx = dx*dt
-        dyy = dy*dt
-        ddd= dxx**2 + dyy**2
+            tt = self.timer.elapsed()/float(1000)
+            dt = tt/t
+            dxx = dx*dt
+            dyy = dy*dt
+            ddd= dxx**2 + dyy**2
 
-        if(dd>=ddd):
-            self.afmNow.setData([a,a+dxx],[b,b+dyy])
+
+            if(dd>=ddd):
+                xl[-1] = a+dxx
+                yl[-1] = b+dyy
+                # print(xl)
+                # print([a,a+dxx],[b,b+dyy])
+                self.afmNow.setData(xl,yl)
+                # self.afmNow.setPen(bluePen)
+            else:
+                return
+        except:
+            pass
 
         if self.sketching:
-            QtCore.QTimer.singleShot(self.settings['plot']['plot_timing'], self.sketchicar)
+            QtCore.QTimer.singleShot(self.settings['plot']['plot_timing']/5.0, self.sketchicar)
 
 
     @QtCore.pyqtSlot("QString")
     def updateStatus(self,line):
         line = str(line)
+        print(line)
         self.statusBar().showMessage(line)
         if line.startswith('vtip'):
             line = line.split( )
-            volt = float(line[1])
-            self.log('vtip', volt)
-            print( 'VTIP ' , volt )
+            self.vtip = float(line[1])
+            self.log('vtip', self.vtip)
+            print( 'VTIP ' , self.vtip )
             self.sketching = False
         elif line.startswith('Ready'):
             self.afmPosition.clear()
@@ -525,8 +548,24 @@ class MainWindow(QtGui.QMainWindow):
             x = float(line[1])
             y = float(line[2])
             r = float(line[3])
+            # print(x,y,r)
+            if self.vtip == 0:
+                self.afmPoints.clear()
+            self.afmPoints.append([x,y,r])
+
+            # try:
+            #     self.afmPoints.get_partial()
+            #     self.afmPosition.setData(self.afmPoints.get_partial()[:2,:-1])
+            # except:
+            #     pass
+
             # self.emit(QtCore.SIGNAL("AFMpos(float, float, float)"), x,y,r)
-            self.updateAFMpos(x,y,r)
+            # self.updateAFMpos(x,y,r)
+            self.sketchicar()
+
+        # if self.sketching == False:
+        #     self.afmPoints.clear()
+        #     self.afmNow.clear()
 
     def doDemo(self):
         data = self.sketchFile.split('\n')
@@ -610,7 +649,14 @@ class MainWindow(QtGui.QMainWindow):
         except:
             pass
         os.rename(fname, fname[:-3] + 'txt')
-        self.SocketThread.send_message('sketch out.txt\n')
+        # self.SocketThread.send_message('sketch out.txt\n')
+        transmit = 'SketchScript %i \n' % len(data)
+
+        self.SocketThread.send_message(transmit + data)
+        # time.sleep(1)
+        # self.SocketThread.send_message(data)
+        # self.SocketThread.send_message('\n')
+        # print('did send this thing')
         self.log('sketch', 'start')
 
     def abortNow(self):
@@ -618,6 +664,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def shutLithoNow(self):
         self.SocketThread.send_message('shutdown\n')
+        time.sleep(1)
         self.SocketThread.stop()
 
 
@@ -974,10 +1021,12 @@ class MainWindow(QtGui.QMainWindow):
     def initSerial(self):
         try:
             self.settings['measure']['dht_serial'] = None
+
             try:
                 self.dht_WorkerThread.quit()
             except:
                 pass
+            self.settings['measure']['DHTport'] = self.spinCom.value()
             self.settings['measure']['dht_serial'] = serial.Serial(self.settings['measure']['DHTport']-1, baudrate=115200, timeout=5) # opens, too.
 
             self.dht_Worker = dht_Worker(self.settings['measure'])
@@ -996,6 +1045,7 @@ class MainWindow(QtGui.QMainWindow):
     def closeEvent(self,event):
         reply=QtGui.QMessageBox.question(self,'Message',"Are you sure to quit?",QtGui.QMessageBox.Yes,QtGui.QMessageBox.No)
         if reply==QtGui.QMessageBox.Yes:
+            self.SocketThread.send_message('ClientClose\n')
             self.measure_save()
             self.measure_stop()
             if not demo:
