@@ -119,6 +119,7 @@ class SocketWorker(QtCore.QThread):
             if msg:
                 lines = msg.splitlines()
                 for line in lines:
+                    # print(line)
                     # self.statusBar().showMessage(line)
                     self.emit(QtCore.SIGNAL("AFMStatus(QString)"), line)
 

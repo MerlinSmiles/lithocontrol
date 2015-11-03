@@ -13,6 +13,9 @@ Json settings file
     with open('config.json', 'w') as f:
         json.dump(config, f)
 
+Console output should be captured
+    - http://stackoverflow.com/questions/8356336/how-to-capture-output-of-pythons-interpreter-and-show-in-a-text-widget
+
 Logging store should add timestamps by itself
     - just use system time
     - use an initial starting time, but init it during creation.

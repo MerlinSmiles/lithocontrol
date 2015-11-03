@@ -69,9 +69,9 @@ kelly_colors = dict(vivid_yellow=(255, 179, 0),
             dark_olive_green=(35, 44, 22))
 
 # mkPen for selected
-orangePen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
-bluePen = pg.mkPen(color='0000FF',width=2)  #, style=QtCore.Qt.DotLine
-greenPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine , width=
+selectPen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
+sketchPen = pg.mkPen(color='FF0000',width=3)  #, style=QtCore.Qt.DotLine
+showPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine , width=
 
 class PlotFrame(QtGui.QWidget):
     def __init__( self, parent=None):
@@ -250,6 +250,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.afmPoints_columns = ['x', 'y', 'rate']
         self.afmPoints = RingBuffer(36000, cols = self.afmPoints_columns)
+        self.sketchPoints = []
         self.vtip = 0
 
         # # Tree view
@@ -302,14 +303,17 @@ class MainWindow(QtGui.QMainWindow):
 
         self.centerCoord = np.array([0,0])
 
-        self.afmPosition = pg.PlotDataItem(size=5, pen=bluePen, brush=pg.mkBrush(255, 0, 0, 255))
+        self.afmPosition = pg.PlotDataItem(size=5, pen=sketchPen, brush=pg.mkBrush(255, 0, 0, 255))
         self.afmPosition.setZValue(100)
-        self.afmNow = pg.PlotDataItem(size=2, pen=bluePen, brush=pg.mkBrush(0, 0, 255, 255))
+        self.afmNow = pg.PlotDataItem(size=2, pen=sketchPen, brush=pg.mkBrush(0, 0, 255, 255))
+        self.afmAll = pg.PlotDataItem(size=2, pen=sketchPen, brush=pg.mkBrush(0, 0, 255, 255))
         self.afmNow.setZValue(110)
+        self.afmAll.setZValue(110)
 
         self.preservePlots = []
         self.preservePlots.append(self.afmPosition)
         self.preservePlots.append(self.afmNow)
+        self.preservePlots.append(self.afmAll)
 
         self.dxffileName = filename
 
@@ -332,6 +336,7 @@ class MainWindow(QtGui.QMainWindow):
         self.log('sketch', 'end')
         self.afmPosition.clear()
         self.afmNow.clear()
+        self.afmAll.clear()
 
 
     def init_measurement(self):
@@ -480,11 +485,6 @@ class MainWindow(QtGui.QMainWindow):
 
     @QtCore.pyqtSlot("float, float, float")
     def updateAFMpos(self,x,y,rate):
-        # print( 'afmpos: ', x,y,rate )
-        # self.nextPosition=np.array([x,y,rate])
-        # self.afmPoints.get_partial()
-        # self.afmPosition.addPoints([{'pos': [x,y]}])
-        # self.afmPoints.append([x,y,rate])
         self.sketchicar()
 
     def sketchicar(self):
@@ -506,66 +506,82 @@ class MainWindow(QtGui.QMainWindow):
             dyy = dy*dt
             ddd= dxx**2 + dyy**2
 
-
             if(dd>=ddd):
                 xl[-1] = a+dxx
                 yl[-1] = b+dyy
-                # print(xl)
-                # print([a,a+dxx],[b,b+dyy])
                 self.afmNow.setData(xl,yl)
-                # self.afmNow.setPen(bluePen)
             else:
-                return
+                pass
+        except:
+            pass
+
+        try:
+            for sk in self.sketchPoints:
+                xl,yl,rl = sk
+                self.afmAll.setData(xl,yl)
+
         except:
             pass
 
         if self.sketching:
             QtCore.QTimer.singleShot(self.settings['plot']['plot_timing']/5.0, self.sketchicar)
 
+    def afmReady(self):
+        self.log('sketch', 'end')
+        self.afmPosition.clear()
+        self.afmNow.clear()
+        self.afmAll.clear()
+        for i in self.sketchPoints:
+            self.pi.removeItem(i)
+        self.sketchPoints = []
+        self.afmPoints.clear()
 
     @QtCore.pyqtSlot("QString")
     def updateStatus(self,line):
         line = str(line)
-        print(line)
+        # print(line)
         self.statusBar().showMessage(line)
         if line.startswith('vtip'):
             line = line.split( )
             self.vtip = float(line[1])
             self.log('vtip', self.vtip)
-            print( 'VTIP ' , self.vtip )
-            self.sketching = False
+            # print( 'VTIP ' , self.vtip )
+
+        elif line.startswith('# Id'):
+            self.sketching = True
+            self.sketchicar()
+            line = line.split( )
+            print('Started '+line[1])
+
+        elif line.startswith('# end'):
+            line = line.split( )
+
+
+            xl,yl,rl = np.copy(self.afmPoints.get_partial())
+
+            ti = pg.PlotDataItem(xl,yl, size=2, pen=sketchPen, brush=pg.mkBrush(0, 0, 255, 255))
+            self.sketchPoints.append(ti)
+            self.pi = self.plotFrame.sketchPlot.getPlotItem()
+            self.pi.addItem(ti)
+
+
+            self.afmPoints.clear()
+            print('Finished '+line[2])
+
         elif line.startswith('Ready'):
-            self.afmPosition.clear()
-            self.afmNow.clear()
             self.sketching = False
             self.afmReady()
-            print( "\n\nREADY\n\n" )
+            print( "\nREADY\n" )
+
         elif line.startswith('xyAbs'):
-            self.currentPosition = self.nextPosition
-            self.timer.restart()
             self.sketching = True
+            self.timer.restart()
             line = line.split( )
             x = float(line[1])
             y = float(line[2])
             r = float(line[3])
-            # print(x,y,r)
-            if self.vtip == 0:
-                self.afmPoints.clear()
+
             self.afmPoints.append([x,y,r])
-
-            # try:
-            #     self.afmPoints.get_partial()
-            #     self.afmPosition.setData(self.afmPoints.get_partial()[:2,:-1])
-            # except:
-            #     pass
-
-            # self.emit(QtCore.SIGNAL("AFMpos(float, float, float)"), x,y,r)
-            # self.updateAFMpos(x,y,r)
-            self.sketchicar()
-
-        # if self.sketching == False:
-        #     self.afmPoints.clear()
-        #     self.afmNow.clear()
 
     def doDemo(self):
         data = self.sketchFile.split('\n')
@@ -584,6 +600,7 @@ class MainWindow(QtGui.QMainWindow):
     def sketchNow(self, index=None):
         self.afmPosition.clear()
         self.afmNow.clear()
+        self.afmAll.clear()
         self.sketchFile = ''
         if index == None:
             index = self.model
@@ -618,6 +635,7 @@ class MainWindow(QtGui.QMainWindow):
                                 self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,r))
 
                             self.sAdd('vtip\t%f' %(0.0))
+                            self.sComment(['end',child.data(0)])
         if nfile:
             self.writeFile(self.sketchFile)
             self.saveSketch()
@@ -733,6 +751,7 @@ class MainWindow(QtGui.QMainWindow):
         self.plotFrame.clearSketchPlot()
         self.pi.addItem(self.afmPosition)
         self.pi.addItem(self.afmNow)
+        self.pi.addItem(self.afmAll)
 
         self.pi.enableAutoRange('x', True)
         self.pi.enableAutoRange('y', True)
@@ -763,7 +782,7 @@ class MainWindow(QtGui.QMainWindow):
             data = model.getItem(index).pltData
             if data:
                 for i in data:
-                    pdi = self.pi.plot(i, pen = greenPen)
+                    pdi = self.pi.plot(i, pen = showPen)
                     item.pltHandle.append(pdi)
 
             self.updateActions()
@@ -790,7 +809,7 @@ class MainWindow(QtGui.QMainWindow):
         data = model.getItem(index).pltData
         if data and checked != 0:
             for i in data:
-                pdi = self.pi.plot(i, pen = greenPen)
+                pdi = self.pi.plot(i, pen = showPen)
                 item.pltHandle.append(pdi)
         self.updateActions()
 
@@ -806,11 +825,11 @@ class MainWindow(QtGui.QMainWindow):
         for idx in index:
             item = model.getItem(idx)
             for i in item.pltHandle:
-                i.setPen(orangePen)
+                i.setPen(selectPen)
         for idx in deindex:
             item = model.getItem(idx)
             for i in item.pltHandle:
-                i.setPen(greenPen)
+                i.setPen(showPen)
 
 
         self.updateActions()
@@ -915,6 +934,8 @@ class MainWindow(QtGui.QMainWindow):
         acceptMeasureAction   = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_accept_merlin.png'), 'Save Measurement', self)
         favoriteMeasureAction = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_favourite_merlin.png'), 'Save as Favorite', self)
         stopMeasureAction     = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_deny.png'), 'Stop Measure', self)
+        unloadStageAction     = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/arrow_up_red.png'), 'Unload stage', self)
+        loadStageAction       = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/arrow_down.png'), 'Load stage', self)
         sketchAction          = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_accept.png'), 'Sketch Now', self)
         abortSketchAction     = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_deny.png'), 'Abort Lithography', self)
         sketchFolderAction    = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/folder_edit.png'), 'Sketch Folder', self)
@@ -947,6 +968,9 @@ class MainWindow(QtGui.QMainWindow):
         QtCore.QObject.connect(favoriteMeasureAction,  QtCore.SIGNAL('triggered()'), self.measure_save )
         QtCore.QObject.connect(acceptMeasureAction,    QtCore.SIGNAL('triggered()'), self.measure_save )
         QtCore.QObject.connect(stopMeasureAction,      QtCore.SIGNAL('triggered()'), self.measure_stop )
+
+        QtCore.QObject.connect(loadStageAction,        QtCore.SIGNAL('triggered()'), self.stageLoad )
+        QtCore.QObject.connect(unloadStageAction,      QtCore.SIGNAL('triggered()'), self.stageUnload )
 
         QtCore.QObject.connect(sketchAction,           QtCore.SIGNAL('triggered()'), self.sketchNow )
         QtCore.QObject.connect(abortSketchAction,      QtCore.SIGNAL('triggered()'), self.abortNow )
@@ -983,6 +1007,9 @@ class MainWindow(QtGui.QMainWindow):
         plttoolbar.addAction(favoriteMeasureAction)
         plttoolbar.addAction(acceptMeasureAction)
         plttoolbar.addAction(stopMeasureAction)
+        plttoolbar.addSeparator()
+        plttoolbar.addAction(loadStageAction)
+        plttoolbar.addAction(unloadStageAction)
 
         afmToolbar = self.addToolBar('AFM')
         afmToolbar.setIconSize(iconSize)

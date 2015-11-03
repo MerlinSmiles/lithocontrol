@@ -15,7 +15,11 @@ class DoubleSpinBoxDelegate(QtGui.QItemDelegate):
 
     def setEditorData(self, spinBox, index):
         value = index.model().data(index, QtCore.Qt.EditRole)
-        spinBox.setValue(value)
+        try:
+            spinBox.setValue(value)
+        except:
+            pass
+            spinBox.clear()
 
     def setModelData(self, spinBox, model, index):
         spinBox.interpretText()
