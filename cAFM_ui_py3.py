@@ -84,9 +84,13 @@ class PlotFrame(QtGui.QWidget):
 
         self.sketchDock = pg_dock.Dock("Skecthing", size=(500, 500))     ## give this dock the minimum possible size
         self.measureDock = pg_dock.Dock("Measuring", size=(500,200))
+        self.dhtDock = pg_dock.Dock("DHT", size=(500,200))
+
 
         self.area.addDock(self.sketchDock, 'top')
-        self.area.addDock(self.measureDock, 'bottom')
+        self.area.addDock(self.dhtDock, 'bottom')
+        self.area.addDock(self.measureDock, 'above',self.dhtDock)
+
 
         data = pg.gaussianFilter(np.random.normal(size=(256, 256)), (20, 20))
         self.afmIm = pg.ImageItem(data)
@@ -109,6 +113,9 @@ class PlotFrame(QtGui.QWidget):
 
         self.measurePlot = pg.PlotWidget()
         self.measureDock.addWidget(self.measurePlot)
+
+        self.dhtPlot = pg.PlotWidget()
+        self.dhtDock.addWidget(self.dhtPlot)
 
     def setAfmImage(self, image_data, x= None, y=None):
         self.afmIm.clear()
@@ -195,6 +202,7 @@ class AFMWorker(QtCore.QThread):
 class MainWindow(QtGui.QMainWindow):
 
     sig_measure = pyqtSignal(int)
+    sig_dhtmeasure = pyqtSignal(int)
     sig_measure_stop = pyqtSignal(int)
 
     def __init__(self, parent=None):
@@ -244,6 +252,7 @@ class MainWindow(QtGui.QMainWindow):
         self.newstores = False
         self.init_sketching()
         self.init_measurement()
+        self.dht_WorkerThread.run()
 
         self.tree_settings.hide()
 
@@ -269,6 +278,8 @@ class MainWindow(QtGui.QMainWindow):
 
 
         self.log('log', 'init')
+
+
 
     @QtCore.pyqtSlot("QModelIndex")
     def test(self, bla =None):
@@ -358,8 +369,8 @@ class MainWindow(QtGui.QMainWindow):
         self.SRSensitivity.setText("%.0e" %(self.settings['measure']['SR_sensitivity']))
         self.PARSensitivity.setText("%.0e" %(self.settings['measure']['PAR_sensitivity']))
         self.settings['plot']['plotR'] = True
-        self.settings['measure']['DHTport'] = 6
-        self.initSerial()
+        self.settings['measure']['DHTport'] = 5
+        self.spinCom.setValue( self.settings['measure']['DHTport'] )
 
         self.settings['measure']['in'] = {}
         ch0 = self.settings['measure']['in'][0] = {}
@@ -388,10 +399,8 @@ class MainWindow(QtGui.QMainWindow):
         ch1['plot_raw'] = True
         ch1['freq_chan'] = 0
         ch1['curr_amp'] = 0
-        self.spinCom.setValue( self.settings['measure']['DHTport'] )
         # self.cAmpSpinBox.setValue(self.settings['measure']['in'][0]['curr_amp'])
         # (self._gen_meas_amplitude, self._normamplitudes, self._normphases)
-        print(  ['time'] + list(self.settings['measure']['in'].keys()) )
 
         self.ni_buff = RingBuffer(2000, cols = ['time'] + list(self.settings['measure']['in'].keys()))
         self.settings['measure']['buff'] = self.ni_buff
@@ -399,6 +408,8 @@ class MainWindow(QtGui.QMainWindow):
         self.dht_buff = RingBuffer(2000, cols = self.dht_store_columns)
         self.settings['measure']['dht_buff'] = self.dht_buff
 
+        self.initSerial()
+        self.init_dht_plot()
 
         if not demo:
             self.ni_worker = ni_Worker(self.settings['measure'])
@@ -419,6 +430,7 @@ class MainWindow(QtGui.QMainWindow):
         for i in range(5):
             self.plotlist.append({'plot': self.ni_pi.plot(name=self.ni_pi_names[i]), 'channel': i})
         self.run()
+
 
     def saveSketch(self):
         self.settings['measure']['time'].elapsed()
@@ -515,13 +527,12 @@ class MainWindow(QtGui.QMainWindow):
         except:
             pass
 
-        try:
-            for sk in self.sketchPoints:
-                xl,yl,rl = sk
-                self.afmAll.setData(xl,yl)
-
-        except:
-            pass
+        # try:
+        #     for sk in self.sketchPoints:
+        #         xl,yl,rl = sk
+        #         self.afmAll.setData(xl,yl)
+        # except:
+        #     pass
 
         if self.sketching:
             QtCore.QTimer.singleShot(self.settings['plot']['plot_timing']/5.0, self.sketchicar)
@@ -627,6 +638,7 @@ class MainWindow(QtGui.QMainWindow):
                     if child.checkState == 2:
                         for path in child.pltData:
                             x,y = np.add(path[0],-self.centerCoord)
+                            self.sAdd('vtip\t%f' %(0.0))
                             self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
                             self.sAdd('vtip\t%f' %((float(child.data(1))/self.tip_gain)-self.tip_offset))
                             r = child.data(2)
@@ -669,7 +681,7 @@ class MainWindow(QtGui.QMainWindow):
         os.rename(fname, fname[:-3] + 'txt')
         # self.SocketThread.send_message('sketch out.txt\n')
         transmit = 'SketchScript %i \n' % len(data)
-
+        # print(transmit + data)
         self.SocketThread.send_message(transmit + data)
         # time.sleep(1)
         # self.SocketThread.send_message(data)
@@ -965,6 +977,7 @@ class MainWindow(QtGui.QMainWindow):
 
         QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.measure_start )
         QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.graficar )
+        QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.dhticar )
         QtCore.QObject.connect(favoriteMeasureAction,  QtCore.SIGNAL('triggered()'), self.measure_save )
         QtCore.QObject.connect(acceptMeasureAction,    QtCore.SIGNAL('triggered()'), self.measure_save )
         QtCore.QObject.connect(stopMeasureAction,      QtCore.SIGNAL('triggered()'), self.measure_stop )
@@ -1055,15 +1068,16 @@ class MainWindow(QtGui.QMainWindow):
                 pass
             self.settings['measure']['DHTport'] = self.spinCom.value()
             self.settings['measure']['dht_serial'] = serial.Serial(self.settings['measure']['DHTport']-1, baudrate=115200, timeout=5) # opens, too.
-
             self.dht_Worker = dht_Worker(self.settings['measure'])
             self.dht_WorkerThread = QtCore.QThread()
             self.dht_Worker.terminate.connect(self.setterminate)
             self.dht_Worker.moveToThread(self.dht_WorkerThread)
             self.dht_WorkerThread.start()
 
-            self.sig_measure.connect(self.dht_Worker.run)
-            self.sig_measure_stop.connect(self.dht_Worker.stop)
+            self.sig_dhtmeasure.connect(self.dht_Worker.run)
+            self.sig_dhtmeasure.connect(self.dhticar)
+            # self.sig_measure_stop.connect(self.dht_Worker.stop)
+
         except:
             print( 'dht failed' )
             self.settings['measure']['dht_serial'] = None
@@ -1078,6 +1092,11 @@ class MainWindow(QtGui.QMainWindow):
             if not demo:
                 self.ni_workerThread.quit()
                 self.dht_WorkerThread.quit()
+                try:
+                    self.settings['measure']['dht_serial'].close()
+                except:
+                    pass
+
 
             event.accept()
         else:
@@ -1115,11 +1134,15 @@ class MainWindow(QtGui.QMainWindow):
             self.sig_measure.connect(self.ni_worker.run)
             self.sig_measure_stop.connect(self.ni_worker.stop)
 
-            self.sig_measure.connect(self.dht_Worker.run)
-            self.sig_measure_stop.connect(self.dht_Worker.stop)
+            self.sig_dhtmeasure.connect(self.dht_Worker.run)
+            self.sig_dhtmeasure.connect(self.dhticar)
+            # self.sig_measure_stop.connect(self.dht_Worker.stop)
 
             self.ni_workerThread.start()
             self.dht_WorkerThread.start()
+
+
+        self.sig_dhtmeasure.emit(500)
 
         self.show()
 
@@ -1159,7 +1182,6 @@ class MainWindow(QtGui.QMainWindow):
         if self.newstores == True:
             self.init_stores()
             self.newstores = False
-
         self.ni_terminate = False
         self.sig_measure.emit(500)
 
@@ -1173,8 +1195,9 @@ class MainWindow(QtGui.QMainWindow):
             print( 'Error clearing ni_store' )
             print( sys.exc_info() )
         try:
-            self.dht_store.clear()
-            self.dht_buff.clear()
+            # self.dht_store.clear()
+            # self.dht_buff.clear()
+            pass
         except:
             print( 'Error clearing dht_store' )
             print( sys.exc_info() )
@@ -1188,6 +1211,40 @@ class MainWindow(QtGui.QMainWindow):
 
     def setterminate(self):
         self.ni_terminate = True
+
+    def init_dht_plot(self):
+        self.dht_pi = self.plotFrame.dhtPlot.getPlotItem()
+        self.dht_pi.clear()
+        self.dht_pi.addLegend()
+        self.dht_pi.enableAutoRange('x', True)
+        self.dht_pi.enableAutoRange('y', True)
+
+        self.hplot = pg.PlotDataItem()
+        self.tplot = pg.PlotDataItem()
+        self.tplot.setPen(color=kelly_colors['vivid_orange'])
+        self.hplot.setPen(color=kelly_colors['vivid_green'])
+        self.dht_pi.addItem(self.hplot)
+        self.dht_pi.addItem(self.tplot)
+        self.dht_pi.legend.addItem(self.tplot, 'Temperature')
+        self.dht_pi.legend.addItem(self.hplot, 'Humidity')
+
+    def dhticar(self):
+        if self.settings['measure']['dht_buff'].size > 0:
+            raw_buffer = self.settings['measure']['dht_buff'].get_partial_clear()
+            dtime = raw_buffer[0]
+            dtmp = raw_buffer[1]
+            dhum = raw_buffer[2]
+            self.dht_store.append([dtime,dtmp,dhum])
+            self.text_temp.setText('Tmp: %.1f\xb0C'%(dtmp.mean()))
+            self.text_hum.setText('Hum: %.1f%%'%(dhum.mean()))
+
+            self.hplot.setData(x=self.dht_store.get_partial()[0], y=self.dht_store.get_partial()[1])
+            self.tplot.setData(x=self.dht_store.get_partial()[0], y=self.dht_store.get_partial()[2])
+
+        if not self.ni_terminate:
+            QtCore.QTimer.singleShot(500, self.dhticar)
+
+
 
     def graficar(self):
 
@@ -1205,15 +1262,6 @@ class MainWindow(QtGui.QMainWindow):
             r4pt = np.abs(a_b / current)
 
             self.ni_store.append([d_time, current, r2pt, r4pt])
-
-        if self.settings['measure']['dht_buff'].size > 0:
-            raw_buffer = self.settings['measure']['dht_buff'].get_partial_clear()
-            a = raw_buffer[0].mean()
-            b = raw_buffer[1].mean()
-            c = raw_buffer[2].mean()
-            self.dht_store.append([a,b,c])
-            self.text_temp.setText('Tmp: %.1f\xb0C'%(raw_buffer[1].mean()))
-            self.text_hum.setText('Hum: %.1f%%'%(raw_buffer[2].mean()))
 
         if self.settings['plot']['acq_plot']:
             if self.ni_store.size>1:
