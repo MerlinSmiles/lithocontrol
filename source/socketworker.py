@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 
 import sip
-sip.setapi('QVariant', 2)
+API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
+API_VERSION = 2
+for name in API_NAMES:
+    sip.setapi(name, API_VERSION)
 
 from PyQt4 import QtCore, QtGui, uic
 import socket

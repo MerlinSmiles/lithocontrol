@@ -1,8 +1,14 @@
 #!/usr/bin/env python
 demo = False
+
 import sip
-sip.setapi('QVariant', 2)
+API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
+API_VERSION = 2
+for name in API_NAMES:
+    sip.setapi(name, API_VERSION)
+
 import numpy as np
+from pprint import pprint
 
 
 from PyQt4 import QtCore, QtGui, uic
@@ -29,9 +35,8 @@ if demo:
 
 import os
 import time
+from time import sleep
 import socket
-from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler
 
 from source.helpers import *
 from source.dxf2shape import *
@@ -42,7 +47,8 @@ from source.socketworker import *
 from source.ringbuffer import *
 from source.DataStore import *
 from source.treeclass import *
-from source.settreeclass import *
+from source.PlotFrame import *
+from source.afmHandler import AFMWorker
 
 
 
@@ -71,133 +77,10 @@ kelly_colors = dict(vivid_yellow=(255, 179, 0),
 # mkPen for selected
 selectPen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
 sketchPen = pg.mkPen(color='FF0000',width=3)  #, style=QtCore.Qt.DotLine
+movePen = pg.mkPen(color='1E4193',width=2, style=QtCore.Qt.DotLine)  #, style=QtCore.Qt.DotLine
 showPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine , width=
 
-class PlotFrame(QtGui.QWidget):
-    def __init__( self, parent=None):
-        super(PlotFrame, self).__init__(parent)
-        self.area = pg_dock.DockArea()
 
-        layout = QtGui.QHBoxLayout()
-        layout.addWidget(self.area)
-        self.setLayout(layout)
-
-        self.sketchDock = pg_dock.Dock("Skecthing", size=(500, 500))     ## give this dock the minimum possible size
-        self.measureDock = pg_dock.Dock("Measuring", size=(500,200))
-        self.dhtDock = pg_dock.Dock("DHT", size=(500,200))
-
-
-        self.area.addDock(self.sketchDock, 'top')
-        self.area.addDock(self.dhtDock, 'bottom')
-        self.area.addDock(self.measureDock, 'above',self.dhtDock)
-
-
-        data = pg.gaussianFilter(np.random.normal(size=(256, 256)), (20, 20))
-        self.afmIm = pg.ImageItem(data)
-        self.afmIm.setRect(pg.QtCore.QRectF(-20,-20,40,40))
-        self.afmIm.setZValue(-1000)
-
-        self.sketchPlot = pg.PlotWidget()
-        self.sketchPlot.enableAutoRange('x', True)
-        self.sketchPlot.enableAutoRange('y', True)
-        self.sketchPlot.setAspectLocked(lock=True, ratio=1)
-        self.sketchPlot.showGrid(x=1, y=1, alpha=0.8)
-        self.sketchDock.addWidget(self.sketchPlot, 0, 0)
-
-
-        self.histWidget = pg.HistogramLUTWidget()
-        self.sketchDock.addWidget(self.histWidget, 0, 1)
-
-        self.histWidget.setImageItem(self.afmIm)
-        self.sketchPlot.addItem(self.afmIm)
-
-        self.measurePlot = pg.PlotWidget()
-        self.measureDock.addWidget(self.measurePlot)
-
-        self.dhtPlot = pg.PlotWidget()
-        self.dhtDock.addWidget(self.dhtPlot)
-
-    def setAfmImage(self, image_data, x= None, y=None):
-        self.afmIm.clear()
-        self.afmIm.setImage(image_data)
-        if not (x==None or y == None):
-            self.afmIm.setRect(pg.QtCore.QRectF(-x/2.0, -y/2.0, x, y))
-        self.histWidget.setImageItem(self.afmIm)
-
-    def clearSketchPlot(self):
-        # return
-        self.sketchPlot.clear()
-        # self.histWidget.setImageItem(self.afmIm)
-        self.sketchPlot.addItem(self.afmIm)
-
-    def savePlot(self, fileName):
-        # create an exporter instance, as an argument give it
-        # the item you wish to export
-        exporter = pg.exporters.ImageExporter(self.sketchPlot.getPlotItem())
-
-        # set export parameters if needed
-        exporter.parameters()['width'] = 2048
-
-        # save to file
-        exporter.export(fileName)
-
-
-class MyHandler(PatternMatchingEventHandler):
-    def __init__(self, parent = None):
-        super( MyHandler, self ).__init__()
-        self.parent = parent
-        patterns = ["*.*"]
-
-    def process(self, event):
-        """
-        event.event_type
-            'modified' | 'created' | 'moved' | 'deleted'
-        event.is_directory
-            True | False
-        event.src_path
-            path/to/observed/file
-        """
-        # the file will be processed there
-        # print( event.src_path, event.event_type  # print( now only for degug )
-
-        self.parent.emit(QtCore.SIGNAL("afmImage(QString)"), event.src_path)
-
-    # def on_modified(self, event):
-    #     self.process(event)
-
-    def on_created(self, event):
-        self.process(event)
-
-class AFMWorker(QtCore.QThread):
-
-    def __init__(self, parent = None):
-
-        QtCore.QThread.__init__(self, parent)
-        self.exiting = False
-        self.foldername = None
-
-    def __del__(self):
-        self.exiting = True
-        self.wait()
-
-    def monitor(self, foldername):
-        self.exiting = False
-        self.foldername = foldername
-        self.start()
-
-    def stop(self):
-        self.exiting = True
-        self.wait()
-
-    def run(self):
-        observer = Observer()
-        observer.schedule(MyHandler(self), path=self.foldername)
-        print( self.foldername )
-        observer.start()
-        while True and not self.exiting:
-            time.sleep(3)
-        observer.stop()
-        observer.join()
 
 class MainWindow(QtGui.QMainWindow):
 
@@ -208,20 +91,39 @@ class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
 
         super(MainWindow, self).__init__(parent)
+
+
+        splash_pix = QtGui.QPixmap(r'./source/splash2.png')
+        self.splash = QtGui.QSplashScreen(splash_pix)
+        # adding progress bar
+        # progressBar = QProgressBar(self.splash)
+        self.splash.setMask(splash_pix.mask())
+        self.splash.show()
+        self.splash.showMessage("Loading GUI",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+
+
         uic.loadUi('mainwindow.ui', self)
         self.setWindowTitle('Merlins AFM sketching tool')
-        self.setGeometry(500,100,1200,1000)
+
+        screen = QtGui.QDesktopWidget().screenGeometry()
+        self.setGeometry(0, 0, screen.width(), screen.height())
+
+        self.setWindowState(self.windowState() & QtCore.Qt.WindowMaximized)
+
+        # self.setGeometry(200,100,900,800)
         self.plotFrame = PlotFrame()
         self.plotSplitter.addWidget(self.plotFrame)
         # self.splitter.setStretch(1,1)
         self.splitter.setStretchFactor(1,1)
         # self.tree_splitter.set
-
-        self.show()
+        self.addToolbars()
+        # self.show()
         # Set delegate
+        self.splash.showMessage("Loading DXF-storage",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
         self.tree_file.setItemDelegateForColumn(2,DoubleSpinBoxDelegate(self))
         self.tree_file.setItemDelegateForColumn(4,DoubleSpinBoxDelegate(self))
 
+        self.splash.showMessage("Loading Settings",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
         self.settings = {}
         self.settings['measure'] = {}
         self.settings['plot'] = {}
@@ -238,6 +140,7 @@ class MainWindow(QtGui.QMainWindow):
         self.storeFolder = 'D:/lithography/sketches/' + self.s_time + '/'
         self.sketchSubFolder = './'
         if demo:
+            self.splash.showMessage("Loading DemoMode",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
             self.outDir = './demo/'
             self.afmImageFolder = './demo/afmImages/'
             self.storeFolder = './demo/sketches/' + self.s_time + '/'
@@ -247,14 +150,17 @@ class MainWindow(QtGui.QMainWindow):
         print( '' )
         print( '' )
 
-        self.addToolbars()
+        self.splash.showMessage("Loading Stores",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
         self.init_stores()
         self.newstores = False
-        self.init_sketching()
-        self.init_measurement()
-        self.dht_WorkerThread.run()
 
-        self.tree_settings.hide()
+        # self.splash.finish(self)
+
+        self.splash.showMessage("Initialize Sketching",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        self.init_sketching()
+        self.splash.showMessage("Initialize Measurement",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        self.init_measurement()
+        # self.dht_WorkerThread.run()
 
 
         self.afmPoints_columns = ['x', 'y', 'rate']
@@ -262,22 +168,18 @@ class MainWindow(QtGui.QMainWindow):
         self.sketchPoints = []
         self.vtip = 0
 
-        # # Tree view
-        # self.set_model = SetTreeModel(headers = ['Parameter', 'Value', 'type'], data = self.settings)
-        # self.tree_settings.setModel(self.set_model)
-        # self.tree_settings.setAlternatingRowColors(True)
-        # self.tree_settings.setSortingEnabled(True)
-        # self.tree_settings.setHeaderHidden(False)
-        # self.tree_settings.expandAll()
-
-        # for column in range(self.set_model.columnCount()):
-        #     self.tree_settings.resizeColumnToContents(column)
-
-        # QtCore.QObject.connect(self.set_model, QtCore.SIGNAL('itemChanged(QModelIndex)'), self.test)
-        # QtCore.QObject.connect(self.tree_settings, QtCore.SIGNAL('valueChanged(QModelIndex)'), self.test)
-
-
         self.log('log', 'init')
+
+        # sleep(2)
+        self.splash.showMessage("Showing GUI",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        self.showMaximized()
+        # self.show()
+        self.newafmImage()
+        self.readDXFFile()
+        # pprint(self.settings)
+        self.splash.showMessage("Starting Program",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        self.run()
+        self.splash.finish(self)
 
 
 
@@ -301,7 +203,20 @@ class MainWindow(QtGui.QMainWindow):
 
     def log(self, column, value):
         tdelta = self.settings['measure']['time'].elapsed()/1000.0
-        self.log_store.append([tdelta,value], ['time', column])
+
+        if type(column) not in [list,tuple]:
+            column = [column]
+        if type(value) not in [list,tuple]:
+            value = [value]
+
+        values=[[tdelta],value]
+        values=[item for sublist in values for item in sublist]
+
+        columns=[['time'],column]
+        columns=[item for sublist in columns for item in sublist]
+
+        self.log_store.append(values,columns)
+        print('LOG:\t' + str(column) + '\t' + str(value))
 
     def init_sketching(self):
         self.inFile = ''
@@ -341,13 +256,6 @@ class MainWindow(QtGui.QMainWindow):
         QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("AFMStatus(QString)"), self.updateStatus)
         self.AFMthread.monitor(self.afmImageFolder)
         self.SocketThread.monitor()
-        self.readDXFFile()
-
-    def afmReady(self):
-        self.log('sketch', 'end')
-        self.afmPosition.clear()
-        self.afmNow.clear()
-        self.afmAll.clear()
 
 
     def init_measurement(self):
@@ -429,35 +337,7 @@ class MainWindow(QtGui.QMainWindow):
         self.ni_pi_names = ['ch0','ch1','ch2','ch3','ch4','ch5','ch6','ch7','ch8','ch9',]
         for i in range(5):
             self.plotlist.append({'plot': self.ni_pi.plot(name=self.ni_pi_names[i]), 'channel': i})
-        self.run()
 
-
-    def saveSketch(self):
-        self.settings['measure']['time'].elapsed()
-        self.sketchSubFolder = QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss')
-
-        if not os.path.exists(self.storeFolder + self.sketchSubFolder):
-            os.makedirs(str(self.storeFolder + self.sketchSubFolder))
-
-
-        data = self.sketchFile
-        self.sketchOutDir = str(self.storeFolder + self.sketchSubFolder+'/')
-        fname = self.sketchOutDir + 'out.txt'
-        f = open(fname, 'w')
-        f.write(data)
-        f.close()
-        try:
-            self.plotFrame.savePlot(self.sketchOutDir+'currentSketchView.png')
-        except:
-            pass
-        try:
-            filename = sorted(os.listdir(self.afmImageFolder))[-1]
-            shutil.copy2(self.afmImageFolder + filename,self.sketchOutDir+filename)
-            shutil.copy2('D:/lithography/current.png',self.sketchOutDir+'currentAFMImage.png')
-        except:
-            pass
-
-        self.log('sketch', str(self.storeFolder + self.sketchSubFolder))
 
     @QtCore.pyqtSlot("QString")
     def newafmImage(self, filename=None):
@@ -555,7 +435,7 @@ class MainWindow(QtGui.QMainWindow):
         if line.startswith('vtip'):
             line = line.split( )
             self.vtip = float(line[1])
-            self.log('vtip', self.vtip)
+            self.log(['sketch','vtip'],['vtip', self.vtip])
             # print( 'VTIP ' , self.vtip )
 
         elif line.startswith('# Id'):
@@ -563,6 +443,7 @@ class MainWindow(QtGui.QMainWindow):
             self.sketchicar()
             line = line.split( )
             print('Started '+line[1])
+            self.log(['sketch','ID'],['start', line[1]])
 
         elif line.startswith('# end'):
             line = line.split( )
@@ -578,6 +459,7 @@ class MainWindow(QtGui.QMainWindow):
 
             self.afmPoints.clear()
             print('Finished '+line[2])
+            self.log(['sketch','ID'],['end', line[2]])
 
         elif line.startswith('Ready'):
             self.sketching = False
@@ -591,7 +473,7 @@ class MainWindow(QtGui.QMainWindow):
             x = float(line[1])
             y = float(line[2])
             r = float(line[3])
-
+            self.log(['sketch','x','y','r'], ['xyAbs', x, y, r])
             self.afmPoints.append([x,y,r])
 
     def doDemo(self):
@@ -616,7 +498,6 @@ class MainWindow(QtGui.QMainWindow):
         if index == None:
             index = self.model
         nfile = False
-        print( "Sketching Now" )
         for i in range(index.rowCount()):
             # print( '- ', i )
             item = index.getItem(index.index(i))
@@ -649,10 +530,43 @@ class MainWindow(QtGui.QMainWindow):
                             self.sAdd('vtip\t%f' %(0.0))
                             self.sComment(['end',child.data(0)])
         if nfile:
-            self.writeFile(self.sketchFile)
             self.saveSketch()
+
+            self.log(['sketch','dir'], ['start', str(self.sketchSubFolder)])
+            transmit = 'SketchScript %i \n' % len(self.sketchFile)
+            self.SocketThread.send_message(transmit + self.sketchFile)
+
             if demo:
                 self.doDemo()
+
+    def saveSketch(self):
+        self.sketchSubFolder = QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss')
+
+        if not os.path.exists(self.storeFolder + self.sketchSubFolder):
+            os.makedirs(str(self.storeFolder + self.sketchSubFolder))
+
+        self.sketchOutDir = str(self.storeFolder + self.sketchSubFolder+'/')
+        fname = self.sketchOutDir + 'out.txt'
+        f = open(fname, 'w')
+        f.write(self.sketchFile)
+        f.close()
+        try:
+            self.plotFrame.savePlot(self.sketchOutDir+'currentSketchView.png')
+        except:
+            pass
+        try:
+            filename = sorted(os.listdir(self.afmImageFolder))[-1]
+            shutil.copy2(self.afmImageFolder + filename,self.sketchOutDir+filename)
+        except:
+            pass
+        try:
+            shutil.copy2('D:/lithography/current.png',self.sketchOutDir+'currentAFMImage.png')
+        except:
+            pass
+        try:
+            shutil.copy2(self.dxffileName,self.sketchOutDir+self.dxffileName.split('/')[-1])
+        except:
+            pass
 
     def sComment(self, stuff):
         adding = ''
@@ -668,33 +582,12 @@ class MainWindow(QtGui.QMainWindow):
         self.sketchFile += '\n'
         # print( data )
 
-    def writeFile(self, data):
-        self.outDir = str(self.outDir)
-        fname = str(self.outDir + 'out.tmp')
-        f = open(fname, 'w')
-        f.write(data)
-        f.close()
-        try:
-            os.remove(fname[:-3] + 'txt')
-        except:
-            pass
-        os.rename(fname, fname[:-3] + 'txt')
-        # self.SocketThread.send_message('sketch out.txt\n')
-        transmit = 'SketchScript %i \n' % len(data)
-        # print(transmit + data)
-        self.SocketThread.send_message(transmit + data)
-        # time.sleep(1)
-        # self.SocketThread.send_message(data)
-        # self.SocketThread.send_message('\n')
-        # print('did send this thing')
-        self.log('sketch', 'start')
-
     def abortNow(self):
         self.SocketThread.send_message('Abort\n')
 
     def shutLithoNow(self):
         self.SocketThread.send_message('shutdown\n')
-        time.sleep(1)
+        sleep(1)
         self.SocketThread.stop()
 
 
@@ -1060,22 +953,25 @@ class MainWindow(QtGui.QMainWindow):
 
     def initSerial(self):
         try:
-            self.settings['measure']['dht_serial'] = None
+            # self.settings['measure']['dht_serial'] = None
 
-            try:
-                self.dht_WorkerThread.quit()
-            except:
-                pass
+            # try:
+            #     self.dht_WorkerThread.quit()
+            # except:
+            #     pass
             self.settings['measure']['DHTport'] = self.spinCom.value()
             self.settings['measure']['dht_serial'] = serial.Serial(self.settings['measure']['DHTport']-1, baudrate=115200, timeout=5) # opens, too.
-            self.dht_Worker = dht_Worker(self.settings['measure'])
-            self.dht_WorkerThread = QtCore.QThread()
-            self.dht_Worker.terminate.connect(self.setterminate)
-            self.dht_Worker.moveToThread(self.dht_WorkerThread)
-            self.dht_WorkerThread.start()
+            self.sig_dhtmeasure.emit(500)
 
-            self.sig_dhtmeasure.connect(self.dht_Worker.run)
-            self.sig_dhtmeasure.connect(self.dhticar)
+            # print(self.dht_Worker)#.running
+            # self.dht_Worker = dht_Worker(self.settings['measure'])
+            # self.dht_WorkerThread = QtCore.QThread()
+            # self.dht_Worker.terminate.connect(self.setterminate)
+            # self.dht_Worker.moveToThread(self.dht_WorkerThread)
+            # self.dht_WorkerThread.start()
+
+            # self.sig_dhtmeasure.connect(self.dht_Worker.run)
+            # self.sig_dhtmeasure.connect(self.dhticar)
             # self.sig_measure_stop.connect(self.dht_Worker.stop)
 
         except:
@@ -1144,7 +1040,8 @@ class MainWindow(QtGui.QMainWindow):
 
         self.sig_dhtmeasure.emit(500)
 
-        self.show()
+
+        # self.show()
 
     def update_plotting(self):
         if self.check_plot.checkState() == 2:
@@ -1238,8 +1135,13 @@ class MainWindow(QtGui.QMainWindow):
             self.text_temp.setText('Tmp: %.1f\xb0C'%(dtmp.mean()))
             self.text_hum.setText('Hum: %.1f%%'%(dhum.mean()))
 
-            self.hplot.setData(x=self.dht_store.get_partial()[0], y=self.dht_store.get_partial()[1])
-            self.tplot.setData(x=self.dht_store.get_partial()[0], y=self.dht_store.get_partial()[2])
+            self.tplot.setData(x=self.dht_store.get_partial()[0], y=self.dht_store.get_partial()[1])
+            self.hplot.setData(x=self.dht_store.get_partial()[0], y=self.dht_store.get_partial()[2])
+
+
+            self.dht_pi.legend.items = []
+            self.dht_pi.legend.addItem(self.hplot, 'Humidity' + ' = ' + '%.1f %%RH' % dhum.mean())
+            self.dht_pi.legend.addItem(self.tplot, 'Temperature' + ' = ' + '%.1f ' % dtmp.mean() +u"\u00b0"+'C')
 
         if not self.ni_terminate:
             QtCore.QTimer.singleShot(500, self.dhticar)
@@ -1360,5 +1262,5 @@ class MainWindow(QtGui.QMainWindow):
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
     window = MainWindow()
-    window.show()
+    # window.show()
     sys.exit(app.exec_())

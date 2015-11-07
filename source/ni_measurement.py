@@ -10,6 +10,7 @@ import datetime
 from datetime import datetime as dt
 
 import time
+from time import sleep
 
 import sys
 
@@ -63,18 +64,32 @@ class dht_Worker(QtCore.QObject):
 
     def run(self):
         data = ''
-        while (self.running == True) and (self.settings['dht_serial'] != None):
-            self.settings['dht_serial'].write('READ:HUM:TEMP')
-            ch = self.settings['dht_serial'].readline()
-            if len(ch) != 0:
-                data = ch
-                if data.startswith('DHT:'):
-                    data = data.split()
-                    humidity = float(data[1])
-                    temperature = float(data[2])
-                    if (humidity>9) and (temperature>9 ):
-                        tdelta = self.settings['time'].elapsed()/1000.0
-                        self.settings['dht_buff'].append([tdelta, temperature, humidity])
+        while (self.running == True):
+            if (self.settings['dht_serial'] == None):
+                sleep(3)
+            else:
+                try:
+                    self.settings['dht_serial'].write('READ:HUM:TEMP')
+                    ch = self.settings['dht_serial'].readline()
+                    if len(ch) != 0:
+                        data = ch
+                        if data.startswith('DHT:'):
+                            data = data.split()
+                            humidity = float(data[1])
+                            temperature = float(data[2])
+                            if (humidity>9) and (temperature>9 ):
+                                tdelta = self.settings['time'].elapsed()/1000.0
+                                self.settings['dht_buff'].append([tdelta, temperature, humidity])
+                except:
+                    pass
+
+    def update(self,settings):
+        self.settings = settings
+        # self.running = False
+        # if self.settings['dht_serial'] != None:
+        #     print( "Monitoring serial port " + self.settings['dht_serial'].name )
+            # self.running = True
+
 
     def stop(self):
         self.running = False
@@ -107,7 +122,7 @@ class MeasureTask(Task):
         for i in self.ch_in_list:
             chan = self.settings['device_input']+ '/' + self.settings['in'][i]['channel']
             self.create_chan(chan, self.settings['in'][i]['min'], self.settings['in'][i]['max'])
-            print( 'created ', chan )
+            # print( 'created ', chan )
 
         self.CfgSampClkTiming("", self.settings['acq_rate'], DAQmx_Val_Rising,
                               DAQmx_Val_ContSamps, self.settings['buffer_size'])

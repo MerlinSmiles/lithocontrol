@@ -16,6 +16,8 @@ Json settings file
 Console output should be captured
     - http://stackoverflow.com/questions/8356336/how-to-capture-output-of-pythons-interpreter-and-show-in-a-text-widget
 
+Buttons to activate and deactivate plots (DHT, measure)
+
 Logging store should add timestamps by itself
     - just use system time
     - use an initial starting time, but init it during creation.

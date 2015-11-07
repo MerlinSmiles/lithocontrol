@@ -50,7 +50,7 @@
        </property>
        <property name="minimumSize">
         <size>
-         <width>300</width>
+         <width>350</width>
          <height>0</height>
         </size>
        </property>
@@ -425,7 +425,6 @@
          </item>
         </layout>
        </widget>
-       <widget class="QTreeView" name="tree_settings"/>
       </widget>
       <widget class="QWidget" name="verticalLayoutWidget">
        <layout class="QVBoxLayout" name="plotSplitter"/>
