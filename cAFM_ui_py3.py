@@ -29,7 +29,7 @@ import sys
 
 sys.path.append(".\\source")
 
-filename = 'D:/lithography/DesignFiles/current.dxf'
+filename = 'F:/lithography/DesignFiles/current.dxf'
 if demo:
     filename = './test.dxf'
 
@@ -136,8 +136,8 @@ class MainWindow(QtGui.QMainWindow):
         self.sketching = False
 
         self.outDir = 'U:/'
-        self.afmImageFolder = 'D:/lithography/afmImages/'
-        self.storeFolder = 'D:/lithography/sketches/' + self.s_time + '/'
+        self.afmImageFolder = 'D:/afmImages/'
+        self.storeFolder = 'F:/lithography/sketches/' + self.s_time + '/'
         self.sketchSubFolder = './'
         if demo:
             self.splash.showMessage("Loading DemoMode",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
@@ -530,6 +530,8 @@ class MainWindow(QtGui.QMainWindow):
                             self.sAdd('vtip\t%f' %(0.0))
                             self.sComment(['end',child.data(0)])
         if nfile:
+            # make sure the afm moves away from the device
+            self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(0,0,self.freerate))
             self.saveSketch()
 
             self.log(['sketch','dir'], ['start', str(self.sketchSubFolder)])
