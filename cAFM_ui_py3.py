@@ -29,9 +29,9 @@ import sys
 
 sys.path.append(".\\source")
 
-filename = 'F:/lithography/DesignFiles/current.dxf'
+def_dxf_file = 'F:/lithography/DesignFiles/current.dxf'
 if demo:
-    filename = './test.dxf'
+    def_dxf_file = './test.dxf'
 
 import os
 import time
@@ -135,7 +135,6 @@ class MainWindow(QtGui.QMainWindow):
         self.nextPosition = np.array([np.nan,np.nan,np.nan])
         self.sketching = False
 
-        self.outDir = 'U:/'
         self.afmImageFolder = 'D:/afmImages/'
         self.storeFolder = 'F:/lithography/sketches/' + self.s_time + '/'
         self.sketchSubFolder = './'
@@ -241,7 +240,7 @@ class MainWindow(QtGui.QMainWindow):
         self.preservePlots.append(self.afmNow)
         self.preservePlots.append(self.afmAll)
 
-        self.dxffileName = filename
+        self.dxffileName = def_dxf_file
 
         self.headers = ('Name', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Closed', 'Type')
         self.AFMthread = AFMWorker()
@@ -342,9 +341,11 @@ class MainWindow(QtGui.QMainWindow):
     @QtCore.pyqtSlot("QString")
     def newafmImage(self, filename=None):
         if filename == None:
-            filename = self.afmImageFolder+'/'+sorted(os.listdir(self.afmImageFolder))[-1]
+            filename = list_directory(self.afmImageFolder)[-1]
+            # filename = self.afmImageFolder+'/'+sorted(os.listdir(self.afmImageFolder))[-1]
 
         filename = os.path.abspath(filename)
+        print(filename)
 
         ret = convertAFM(filename)
         if ret == False:
@@ -1047,9 +1048,9 @@ class MainWindow(QtGui.QMainWindow):
 
     def update_plotting(self):
         if self.check_plot.checkState() == 2:
-            self.settings['plot']['acq_plot'] = True
+            self.settings['plot']['plot_measurement'] = True
         else:
-            self.settings['plot']['acq_plot'] = False
+            self.settings['plot']['plot_measurement'] = False
 
         if self.check_2pt.checkState() == 2:
             self.settings['plot']['plot_2pt'] = True
@@ -1167,7 +1168,7 @@ class MainWindow(QtGui.QMainWindow):
 
             self.ni_store.append([d_time, current, r2pt, r4pt])
 
-        if self.settings['plot']['acq_plot']:
+        if self.settings['plot']['plot_measurement']:
             if self.ni_store.size>1:
                 n = 0
                 self.plot_counter +=1

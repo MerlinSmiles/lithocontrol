@@ -1,0 +1,211 @@
+{"key3": "value4",
+
+
+def_dxf_file = 'F:/lithography/DesignFiles/current.dxf',
+self.outDir = 'U:/'
+self.afmImageFolder = 'D:/afmImages/'
+self.storeFolder = 'F:/lithography/sketches/' + self.s_time + '/'
+self.sketchSubFolder = './'
+self.settings['measure']['DHTport']
+
+        self.settings['measure']['buffer_size'] = 10000000
+        self.settings['measure']['acq_rate'] = 30000          # samples/second
+        self.settings['measure']['acq_samples'] = 1000        # every n samples
+        self.settings['measure']['device_input'] = "PCI-6251"
+        self.settings['measure']['SR_sensitivity'] = 100e-9
+        self.settings['measure']['PAR_sensitivity'] = 1e-3
+        self.settings['plot']['plot_2pt'] = True
+        self.settings['plot']['plot_4pt'] = True
+        self.settings['plot']['plot_current'] = True
+        self.SRSensitivity.setText("%.0e" %(self.settings['measure']['SR_sensitivity']))
+        self.PARSensitivity.setText("%.0e" %(self.settings['measure']['PAR_sensitivity']))
+        self.settings['plot']['plotR'] = True
+        self.settings['measure']['DHTport'] = 5
+        self.spinCom.setValue( self.settings['measure']['DHTport'] )
+
+        self.settings['measure']['in'] = {}
+        ch0 = self.settings['measure']['in'][0] = {}
+        ch1 = self.settings['measure']['in'][1] = {}
+
+
+        ch0['channel'] = "ai0"
+        ch0['name'] = 'Current'
+        ch0['curr_amp'] = 0
+        ch0['amplitude'] = 1e-3
+        # amplification = 200mV / 10V
+        amplification = 10e-9/10.0
+        ch0['multiplier'] = amplification
+        ch0['min'] = -10 # +/- 100 mV is the minimum bipolar range
+        ch0['max'] = 10
+        ch0['plot_raw'] = True
+        ch0['freq_chan'] = 0
+
+        ch1['channel'] = "ai1"
+        ch1['name'] = 'A-B'
+        ch1['amplitude'] = 1*1e-3
+        amplification = 0.001/10.0
+        ch1['multiplier'] = amplification
+        ch1['min'] = -10
+        ch1['max'] = 10
+        ch1['plot_raw'] = True
+        ch1['freq_chan'] = 0
+        ch1['curr_amp'] = 0
+
+        if self.check_plot.checkState() == 2:
+            self.settings['plot']['acq_plot'] = True
+        else:
+            self.settings['plot']['acq_plot'] = False
+
+        if self.check_2pt.checkState() == 2:
+            self.settings['plot']['plot_2pt'] = True
+        else:
+            self.settings['plot']['plot_2pt'] = False
+
+        if self.check_4pt.checkState() == 2:
+            self.settings['plot']['plot_4pt'] = True
+        else:
+            self.settings['plot']['plot_4pt'] = False
+
+        if self.check_current.checkState() == 2:
+            self.settings['plot']['plot_current'] = True
+        else:
+            self.settings['plot']['plot_current'] = False
+
+        self.settings['plot']['plot_timing'] = self.plot_update_time.value()
+        self.settings['plot']['plotR'] = self.radio_plotR.isChecked()
+        self.settings['measure']['SR_sensitivity'] = float(self.SRSensitivity.text ())
+        self.settings['measure']['PAR_sensitivity'] = float(self.PARSensitivity.text ())
+        self.settings['measure']['DHTport'] = self.spinCom.value()
+        self.SRSensitivity.setText("%.0e" %(self.settings['measure']['SR_sensitivity']))
+        self.PARSensitivity.setText("%.0e" %(self.settings['measure']['PAR_sensitivity']))
+
+        self.tplot.setPen(color=kelly_colors['vivid_orange'])
+        self.hplot.setPen(color=kelly_colors['vivid_green'])
+
+
+  "colors": [
+    "vivid_yellow",
+    "strong_purple",
+    "vivid_orange",
+    "very_light_blue",
+    "vivid_red",
+    "grayish_yellow",
+    "medium_gray",
+    "vivid_green",
+    "strong_purplish_pink",
+    "strong_blue",
+    "strong_yellowish_pink",
+    "strong_violet",
+    "vivid_orange_yellow",
+    "strong_purplish_red",
+    "vivid_greenish_yellow",
+    "strong_reddish_brown",
+    "vivid_yellowish_green",
+    "deep_yellowish_brown",
+    "vivid_reddish_orange",
+    "dark_olive_green"
+  ],
+
+"kelly_colors": {
+    "grayish_yellow": [
+      206,
+      162,
+      98
+    ],
+    "strong_purplish_pink": [
+      246,
+      118,
+      142
+    ],
+    "dark_olive_green": [
+      35,
+      44,
+      22
+    ],
+    "vivid_reddish_orange": [
+      241,
+      58,
+      19
+    ],
+    "vivid_yellow": [
+      255,
+      179,
+      0
+    ],
+    "strong_reddish_brown": [
+      127,
+      24,
+      13
+    ],
+    "deep_yellowish_brown": [
+      89,
+      51,
+      21
+    ],
+    "vivid_orange_yellow": [
+      255,
+      142,
+      0
+    ],
+    "strong_violet": [
+      83,
+      55,
+      122
+    ],
+    "vivid_green": [
+      0,
+      125,
+      52
+    ],
+    "vivid_yellowish_green": [
+      147,
+      170,
+      0
+    ],
+    "strong_purple": [
+      128,
+      62,
+      117
+    ],
+    "strong_purplish_red": [
+      179,
+      40,
+      81
+    ],
+    "vivid_greenish_yellow": [
+      244,
+      200,
+      0
+    ],
+    "strong_yellowish_pink": [
+      255,
+      122,
+      92
+    ],
+    "vivid_red": [
+      193,
+      0,
+      32
+    ],
+    "strong_blue": [
+      0,
+      83,
+      138
+    ],
+    "vivid_orange": [
+      255,
+      104,
+      0
+    ],
+    "medium_gray": [
+      129,
+      112,
+      102
+    ],
+    "very_light_blue": [
+      166,
+      189,
+      215
+    ]
+  }
+}

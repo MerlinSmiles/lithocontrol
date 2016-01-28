@@ -8,6 +8,27 @@ import dxfgrabber
 import numpy as np
 # from scipy.interpolate import interp1d
 
+from stat import S_ISREG, ST_CTIME, ST_MODE
+import os, sys, time
+
+def list_directory(dirpath):
+    # path to the directory (relative or absolute)
+    # dirpath = 'D:\\afmImages\\'
+
+    # get all entries in the directory w/ stats
+    entries = (os.path.join(dirpath, fn) for fn in os.listdir(dirpath))
+    entries = ((os.stat(path), path) for path in entries)
+
+    # leave only regular files, insert creation date
+    entries = ((stat[ST_CTIME], path)
+               for stat, path in entries if S_ISREG(stat[ST_MODE]))
+    #NOTE: on Windows `ST_CTIME` is a creation date
+    #  but on Unix it could be something else
+    #NOTE: use `ST_MTIME` to sort by a modification date
+    return [path for cdate,path in sorted(entries,reverse=0)]
+    # for cdate, path in sorted(entries,reverse=1):
+    #     print time.ctime(cdate), os.path.basename(path)
+
 def print_layers(counter):
     print("used Layers: {}".format(len(counter)))
     for item in sorted(counter.items()):
