@@ -41,6 +41,7 @@ class TreeItem(object):
         self.childItems = []
         self.dxfData = None
         self.pltData = None
+        self.show = False
         self.entity = None
         self.pltHandle = []
         self.checkState = QtCore.Qt.Unchecked
@@ -236,6 +237,12 @@ class TreeModel(QtCore.QAbstractItemModel):
         if role == QtCore.Qt.CheckStateRole:
             if index.column() == 0:
                 return self.checkState(index)
+            if index.column() == 6:
+                item = self.getItem(index)
+                try:
+                    return item.entity.is_closed
+                except:
+                    pass
 
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
             return None
@@ -467,8 +474,9 @@ class TreeModel(QtCore.QAbstractItemModel):
             # print str(entity.is_closed)
             item_data = {'Name': 'Id'+str(number),
                          'Type': entity.dxftype,
-                         'Closed': entity.is_closed,
+                         'Closed': 0,
                          'Voltage': thisChild.volt,
+                         'show': thisChild.show,
                          'Angle': thisChild.fillAngle,
                          'Rate': thisChild.rate,
                          'Step': thisChild.fillStep,

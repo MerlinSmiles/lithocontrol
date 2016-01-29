@@ -77,7 +77,7 @@ def dxf2shape(i, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_directi
         # print( ints )
         if ints != []:
             ints = np.array(ints)
-            ints.view('f32,f32').sort(order=['f1'], axis=0)
+            ints.view('float32,float32').sort(order=['f1'], axis=0)
             # it actually might happen, that there is an uneven number of points, so if there are two points very close
             if len(ints)%2 !=0:
                 pt = 0

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-demo = False
+demo = 1
 
 import sip
 API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
@@ -180,7 +180,47 @@ class MainWindow(QtGui.QMainWindow):
         self.run()
         self.splash.finish(self)
 
+        # self.btnExit.clicked.connect(self.close)
+        # self.actionExit.triggered.connect(self.close)
 
+        # sc = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Q"), self, self.actionExit)
+
+        # shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Q"), self)
+        # shortcut.activated.connect(self.close)
+
+        # self.connect(shortcut, QtCore.SIGNAL("triggered()"), self, QtCore.SLOT("quit()"))
+
+        # print(QtGui.QKeySequence.StandardKey())
+        # shortcut = QtGui.QShortcut(self)
+        # shortcut.setKey("Ctrl+D")
+
+        # QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Q"), self, self.close)
+
+        # self.actionExit = QtGui.QAction('E&xit',self)
+        # self.actionExit.setShortcutContext(QtCore.Qt.ApplicationShortcut)
+        # self.actionExit.setShortcut(QtGui.QKeySequence("Ctrl+Q"))
+        # # shortcut.setKey(QtGui.QKeySequence.Quit)
+        # self.connect(shortcut, QtCore.SIGNAL("activated()"), QtCore.SLOT("close()"))
+
+
+        exitAction = QtGui.QAction('&Exit', self)
+        exitAction.setShortcut('Ctrl+Q')
+        # exitAction.setStatusTip('Exit application')
+        exitAction.triggered.connect(self.close)
+
+
+        menubar = self.menuBar()
+        mainMenu = menubar.addMenu('&Main')
+        mainMenu.addAction(exitAction)
+
+        # QtGui.QShortcut(QtGui.QKeySequence("Cmd+Q"), self, self.closeEvent)
+        # QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Return"), self, self.closeEvent)
+
+
+
+    # def keyPressEvent(self, event):
+    #     print ('key: %s -' % hex(event.key()))
+    #     print ('modifiers:', hex(int(event.modifiers())))
 
     @QtCore.pyqtSlot("QModelIndex")
     def test(self, bla =None):
@@ -242,7 +282,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.dxffileName = def_dxf_file
 
-        self.headers = ('Name', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Closed', 'Type')
+        self.headers = ('Name', 'Show', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Closed', 'Type')
         self.AFMthread = AFMWorker()
         self.SocketThread = SocketWorker()
 
@@ -340,6 +380,8 @@ class MainWindow(QtGui.QMainWindow):
 
     @QtCore.pyqtSlot("QString")
     def newafmImage(self, filename=None):
+        if demo:
+            return
         if filename == None:
             filename = list_directory(self.afmImageFolder)[-1]
             # filename = self.afmImageFolder+'/'+sorted(os.listdir(self.afmImageFolder))[-1]
@@ -743,70 +785,70 @@ class MainWindow(QtGui.QMainWindow):
         self.updateActions()
 
 
-    def insertChild(self):
-        index = self.tree_file.selectionModel().currentIndex()
-        model = self.tree_file.model()
+    # def insertChild(self):
+    #     index = self.tree_file.selectionModel().currentIndex()
+    #     model = self.tree_file.model()
 
-        if model.columnCount(index) == 0:
-            if not model.insertColumn(0, index):
-                return
+    #     if model.columnCount(index) == 0:
+    #         if not model.insertColumn(0, index):
+    #             return
 
-        if not model.insertRow(0, index):
-            return
+    #     if not model.insertRow(0, index):
+    #         return
 
-        for column in range(model.columnCount(index)):
-            child = model.index(0, column, index)
-            model.setData(child, "[No data]", QtCore.Qt.EditRole)
-            if model.headerData(column, QtCore.Qt.Horizontal) is None:
-                model.setHeaderData(column, QtCore.Qt.Horizontal,
-                        "[No header]", QtCore.Qt.EditRole)
+    #     for column in range(model.columnCount(index)):
+    #         child = model.index(0, column, index)
+    #         model.setData(child, "[No data]", QtCore.Qt.EditRole)
+    #         if model.headerData(column, QtCore.Qt.Horizontal) is None:
+    #             model.setHeaderData(column, QtCore.Qt.Horizontal,
+    #                     "[No header]", QtCore.Qt.EditRole)
 
-        self.tree_file.selectionModel().setCurrentIndex(model.index(0, 0, index),
-                QtGui.QItemSelectionModel.ClearAndSelect)
-        self.updateActions()
+    #     self.tree_file.selectionModel().setCurrentIndex(model.index(0, 0, index),
+    #             QtGui.QItemSelectionModel.ClearAndSelect)
+    #     self.updateActions()
 
-    def insertColumn(self):
-        model = self.tree_file.model()
-        column = self.tree_file.selectionModel().currentIndex().column()
+    # def insertColumn(self):
+    #     model = self.tree_file.model()
+    #     column = self.tree_file.selectionModel().currentIndex().column()
 
-        changed = model.insertColumn(column + 1)
-        if changed:
-            model.setHeaderData(column + 1, QtCore.Qt.Horizontal,
-                    "[No header]", QtCore.Qt.EditRole)
+    #     changed = model.insertColumn(column + 1)
+    #     if changed:
+    #         model.setHeaderData(column + 1, QtCore.Qt.Horizontal,
+    #                 "[No header]", QtCore.Qt.EditRole)
 
-        self.updateActions()
+    #     self.updateActions()
 
-        return changed
+    #     return changed
 
-    def insertRow(self):
-        index = self.tree_file.selectionModel().currentIndex()
-        model = self.tree_file.model()
+    # def insertRow(self):
+    #     index = self.tree_file.selectionModel().currentIndex()
+    #     model = self.tree_file.model()
 
-        if not model.insertRow(index.row()+1, index.parent()):
-            return
+    #     if not model.insertRow(index.row()+1, index.parent()):
+    #         return
 
-        self.updateActions()
+    #     self.updateActions()
 
-        for column in range(model.columnCount(index.parent())):
-            child = model.index(index.row()+1, column, index.parent())
-            model.setData(child, "[No data]", QtCore.Qt.EditRole)
+    #     for column in range(model.columnCount(index.parent())):
+    #         child = model.index(index.row()+1, column, index.parent())
+    #         model.setData(child, "[No data]", QtCore.Qt.EditRole)
 
-    def removeColumn(self):
-        model = self.tree_file.model()
-        column = self.tree_file.selectionModel().currentIndex().column()
+    # def removeColumn(self):
+    #     model = self.tree_file.model()
+    #     column = self.tree_file.selectionModel().currentIndex().column()
 
-        changed = model.removeColumn(column)
-        if changed:
-            self.updateActions()
+    #     changed = model.removeColumn(column)
+    #     if changed:
+    #         self.updateActions()
 
-        return changed
+    #     return changed
 
-    def removeRow(self):
-        index = self.tree_file.selectionModel().currentIndex()
-        model = self.tree_file.model()
+    # def removeRow(self):
+    #     index = self.tree_file.selectionModel().currentIndex()
+    #     model = self.tree_file.model()
 
-        if (model.removeRow(index.row(), index.parent())):
-            self.updateActions()
+    #     if (model.removeRow(index.row(), index.parent())):
+    #         self.updateActions()
 
     def updateActions(self):
         hasSelection = not self.tree_file.selectionModel().selection().isEmpty()
@@ -855,9 +897,15 @@ class MainWindow(QtGui.QMainWindow):
 
         QtCore.QObject.connect(closeConnectionAction, QtCore.SIGNAL('triggered()'), self.shutLithoNow )
 
-        QtCore.QObject.connect(exitAction, QtCore.SIGNAL('triggered()'), self.close )
-        exitAction.setShortcut('Ctrl+Q')
-        exitAction.setStatusTip('Exit application')
+        # QtCore.QObject.connect(exitAction, QtCore.SIGNAL('triggered()'), self.close )
+        # exitAction.setShortcut('Ctrl+Q')
+        # exitAction.setStatusTip('Exit application')
+
+        # scClose = QtGui.QShortcut(QtGui.QKeySequence(("Ctrl+Q", "Quit")))
+        # scClose2 = QtGui.QShortcut(QtGui.QKeySequence(("Cmd+Q", "Quit")))
+        # QtCore.QObject.connect(scClose, QtCore.SIGNAL('triggered()'), self.close)
+        # QtCore.QObject.connect(scClose2, QtCore.SIGNAL('triggered()'), self.close)
+
 
         QtCore.QObject.connect(captureAction,          QtCore.SIGNAL('triggered()'), self.doCapture )
         QtCore.QObject.connect(capture_abortAction,    QtCore.SIGNAL('triggered()'), self.doCaptureAbort )
@@ -983,7 +1031,7 @@ class MainWindow(QtGui.QMainWindow):
             pass
 
     def closeEvent(self,event):
-        reply=QtGui.QMessageBox.question(self,'Message',"Are you sure to quit?",QtGui.QMessageBox.Yes,QtGui.QMessageBox.No)
+        reply=QtGui.QMessageBox.question(self,'Message',"Are you sure to quit?",QtGui.QMessageBox.Yes | QtGui.QMessageBox.No , QtGui.QMessageBox.Yes)
         if reply==QtGui.QMessageBox.Yes:
             self.SocketThread.send_message('ClientClose\n')
             self.measure_save()
@@ -995,8 +1043,6 @@ class MainWindow(QtGui.QMainWindow):
                     self.settings['measure']['dht_serial'].close()
                 except:
                     pass
-
-
             event.accept()
         else:
             event.ignore()
