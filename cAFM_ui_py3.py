@@ -268,7 +268,7 @@ class MainWindow(QtGui.QMainWindow):
         self.settings['measure']['acq_rate'] = 30000          # samples/second
         self.settings['measure']['acq_samples'] = 1000        # every n samples
         self.settings['measure']['device_input'] = "PCI-6251"
-        self.settings['measure']['SR_sensitivity'] = 100e-9
+        self.settings['measure']['SR_sensitivity'] = 10e-9
         self.settings['measure']['PAR_sensitivity'] = 1e-3
         self.settings['plot']['plot_2pt'] = True
         self.settings['plot']['plot_4pt'] = True
