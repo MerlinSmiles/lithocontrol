@@ -1,89 +1,54 @@
-{"key3": "value4",
+{
+  "plot": {
+    "selectPen": {
+      "color": "FF750A"
+    },
+    "showPen": {
+      "color": "00FF00"
+    },
+    "temp_color": {
+      "color": "vivid_orange"
+    },
+    "plot_timing": 100,
+    "current_color": {
+      "color": "strong_purple"
+    },
+    "plot_4pt": true,
+    "4pt_color": {
+      "color": "very_light_blue"
+    },
+    "plot_current": true,
+    "hum_color": {
+      "color": "vivid_green"
+    },
+    "sketchPen": {
+      "color": "FF0000",
+      "width": 3
+    },
+    "plotR": true,
+    "2pt_color": {
+      "color": "vivid_orange"
+    },
+    "plot_measurement": true,
+    "plot_2pt": true,
+    "movePen": {
+      "color": "1E4193",
+      "width": 2,
+      "style": 3
+    }
+  },
+  "storage": {
+    "storeFolder": "F:/lithography/sketches/",
+    "def_dxf_file": "F:/lithography/DesignFiles/current.dxf",
+    "afmImageFolder": "D:/afmImages/"
+  },
+  "measure": {
+    "PAR_sensitivity": 0.001,
+    "DHTport": 5,
+    "SR_sensitivity": 10e-09,
+  },
 
-
-def_dxf_file = 'F:/lithography/DesignFiles/current.dxf',
-self.outDir = 'U:/'
-self.afmImageFolder = 'D:/afmImages/'
-self.storeFolder = 'F:/lithography/sketches/' + self.s_time + '/'
-self.sketchSubFolder = './'
-self.settings['measure']['DHTport']
-
-        self.settings['measure']['buffer_size'] = 10000000
-        self.settings['measure']['acq_rate'] = 30000          # samples/second
-        self.settings['measure']['acq_samples'] = 1000        # every n samples
-        self.settings['measure']['device_input'] = "PCI-6251"
-        self.settings['measure']['SR_sensitivity'] = 100e-9
-        self.settings['measure']['PAR_sensitivity'] = 1e-3
-        self.settings['plot']['plot_2pt'] = True
-        self.settings['plot']['plot_4pt'] = True
-        self.settings['plot']['plot_current'] = True
-        self.SRSensitivity.setText("%.0e" %(self.settings['measure']['SR_sensitivity']))
-        self.PARSensitivity.setText("%.0e" %(self.settings['measure']['PAR_sensitivity']))
-        self.settings['plot']['plotR'] = True
-        self.settings['measure']['DHTport'] = 5
-        self.spinCom.setValue( self.settings['measure']['DHTport'] )
-
-        self.settings['measure']['in'] = {}
-        ch0 = self.settings['measure']['in'][0] = {}
-        ch1 = self.settings['measure']['in'][1] = {}
-
-
-        ch0['channel'] = "ai0"
-        ch0['name'] = 'Current'
-        ch0['curr_amp'] = 0
-        ch0['amplitude'] = 1e-3
-        # amplification = 200mV / 10V
-        amplification = 10e-9/10.0
-        ch0['multiplier'] = amplification
-        ch0['min'] = -10 # +/- 100 mV is the minimum bipolar range
-        ch0['max'] = 10
-        ch0['plot_raw'] = True
-        ch0['freq_chan'] = 0
-
-        ch1['channel'] = "ai1"
-        ch1['name'] = 'A-B'
-        ch1['amplitude'] = 1*1e-3
-        amplification = 0.001/10.0
-        ch1['multiplier'] = amplification
-        ch1['min'] = -10
-        ch1['max'] = 10
-        ch1['plot_raw'] = True
-        ch1['freq_chan'] = 0
-        ch1['curr_amp'] = 0
-
-        if self.check_plot.checkState() == 2:
-            self.settings['plot']['acq_plot'] = True
-        else:
-            self.settings['plot']['acq_plot'] = False
-
-        if self.check_2pt.checkState() == 2:
-            self.settings['plot']['plot_2pt'] = True
-        else:
-            self.settings['plot']['plot_2pt'] = False
-
-        if self.check_4pt.checkState() == 2:
-            self.settings['plot']['plot_4pt'] = True
-        else:
-            self.settings['plot']['plot_4pt'] = False
-
-        if self.check_current.checkState() == 2:
-            self.settings['plot']['plot_current'] = True
-        else:
-            self.settings['plot']['plot_current'] = False
-
-        self.settings['plot']['plot_timing'] = self.plot_update_time.value()
-        self.settings['plot']['plotR'] = self.radio_plotR.isChecked()
-        self.settings['measure']['SR_sensitivity'] = float(self.SRSensitivity.text ())
-        self.settings['measure']['PAR_sensitivity'] = float(self.PARSensitivity.text ())
-        self.settings['measure']['DHTport'] = self.spinCom.value()
-        self.SRSensitivity.setText("%.0e" %(self.settings['measure']['SR_sensitivity']))
-        self.PARSensitivity.setText("%.0e" %(self.settings['measure']['PAR_sensitivity']))
-
-        self.tplot.setPen(color=kelly_colors['vivid_orange'])
-        self.hplot.setPen(color=kelly_colors['vivid_green'])
-
-
-  "colors": [
+  "color_list": [
     "vivid_yellow",
     "strong_purple",
     "vivid_orange",
