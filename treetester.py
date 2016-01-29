@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-demo = 1
+demo = 0
 print('\n\n')
 import sip
 API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
@@ -75,8 +75,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.headers = ('Name', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Closed', 'Type', 'Color', 'Show')
 
-        self.dxf = ezdxf.readfile('/Users/Merlin/Google Drive/Projects/ezdxf/current.dxf')
-        self.model = TreeModel(self.headers, self.dxf)
+        self.model = TreeModel(self.headers, self.dxf, parent=self)
 
         self.tree_file.setModel(self.model)
         self.tree_file.expandAll()
@@ -88,7 +87,7 @@ class MainWindow(QtGui.QMainWindow):
             self.tree_file.resizeColumnToContents(column)
 
         screen = QtGui.QDesktopWidget().screenGeometry()
-        self.setGeometry(int(screen.width()/2), 0, screen.width(), screen.height())
+        self.setGeometry(int(screen.width()/3), int(screen.height()/3), screen.width()/2, screen.height()/2)
 
         for col in [self.headers.index(col) for col in ['Voltage', 'Rate', 'Angle', 'Step']]:
             self.tree_file.setItemDelegateForColumn(col,DoubleSpinBoxDelegate(self))

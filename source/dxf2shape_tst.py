@@ -28,15 +28,20 @@ def Rotate2D(pts,angle=0):
                           [np.sin(theta),  np.cos(theta)]])
     return np.dot(pts, rotMatrix)
 
-def dxf2shape(i, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_direction = 1):
+def dxf2shape(item, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_direction = 1):
     if path_direction not in [-1,1]:
         print( 'Path direction must be -1 or 1!' )
         return 0
-    pts  = get_points(i)[::path_direction]
-    if not i.is_closed:
-        return np.array([pts])
-    else:
-        pts = np.append(pts,[pts[0]],axis = 0)
+
+    data = np.array(list(item.entity.points()))[:,:2]
+    pts  = data[::path_direction]
+
+    # return
+    if not item.is_closed:
+        item.pltData = [pts.reshape((-1,2))]
+        return [pts.reshape((-1,2))]
+    # else:
+    #     pts = np.append(pts,[pts[0]],axis = 0)
     if fill_step<=0 :
         self.error('Tools diameter must be greater than 0!', 'error')
 
@@ -115,7 +120,8 @@ def dxf2shape(i, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_directi
     for i in range(len(collection)):
         collection[i] = Rotate2D(collection[i], fill_angle)
 
-    return collection
+    item.pltData = [k.reshape((-1,2)) for k in collection]
+    return item.pltData
 
     # sorted_collection = []
     # next_group = [0,1,1e9]

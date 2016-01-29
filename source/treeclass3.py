@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-demo = 1
+demo = False
 print('\n\n')
 import sip
 API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
@@ -236,6 +236,7 @@ class TreeItem(object):
         self.show = False
         self.entity = None
         self.pltHandle = []
+        self.pltData = []
         self.checkState = QtCore.Qt.Unchecked
         self.fillAngle = 0
         self.fillStep = 0.1
@@ -380,6 +381,7 @@ class TreeItem(object):
         return True
 
     def redraw(self):
+        print (redraw)
         return
 
 
@@ -435,8 +437,10 @@ class TreeItem(object):
 class TreeModel(QtCore.QAbstractItemModel):
     def __init__(self, headers, data, parent=None):
         super(TreeModel, self).__init__(parent)
+        print(parent)
         self.checks = {}
         self.par = parent
+        print(self.par)
 
         self.header = [header for header in headers] # Header Names
         self.rootItem = TreeItem(self.header, model=self)
@@ -864,9 +868,6 @@ class MainWindow(QtGui.QMainWindow):
 
         super(MainWindow, self).__init__(parent)
 
-
-        self.setCentralWidget(table)
-        self.show()
         self.tree_file = QtGui.QTreeView()
         self.setCentralWidget(self.tree_file)
         self.show()
@@ -880,7 +881,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.headers = ('Name','Show', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Closed', 'Color', 'Type')
 
-        self.dxf = ezdxf.readfile('/Users/Merlin/Google Drive/Projects/ezdxf/current.dxf')
+        self.dxf = ezdxf.readfile('F:/lithography/DesignFiles/current.dxf')
         self.model = TreeModel(self.headers, self.dxf, parent=self)
 
         self.tree_file.setModel(self.model)
@@ -902,7 +903,7 @@ class MainWindow(QtGui.QMainWindow):
 
         screen = QtGui.QDesktopWidget().screenGeometry()
         print('(set to minimum expanding?)')
-        self.setGeometry(int(screen.width()/2), 0, int(screen.width()/2), screen.height())
+        self.setGeometry(int(screen.width()/3), int(screen.height()/3), screen.width()/2, screen.height()/2)
 
 
         # for col in [self.headers.index(col) for col in ['Color']]:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-demo = 0
+demo = False
 
 import sip
 API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
@@ -21,7 +21,6 @@ import pyqtgraph.dockarea as pg_dock
 
 import shutil
 
-
 # %load_ext autoreload
 # %autoreload 2
 
@@ -39,14 +38,16 @@ from time import sleep
 import socket
 
 from source.helpers import *
-from source.dxf2shape import *
+from source.dxf2shape_tst import *
 if not demo:
     from source.convertAFM import *
     from source.ni_measurement import *
 from source.socketworker import *
 from source.ringbuffer import *
 from source.DataStore import *
-from source.treeclass import *
+
+# from source.treeclass import *
+from source.treeclass3 import *
 from source.PlotFrame import *
 from source.afmHandler import AFMWorker
 
@@ -106,7 +107,9 @@ class MainWindow(QtGui.QMainWindow):
         self.setWindowTitle('Merlins AFM sketching tool')
 
         screen = QtGui.QDesktopWidget().screenGeometry()
-        self.setGeometry(0, 0, screen.width(), screen.height())
+        # self.setGeometry(0, 0, screen.width(), screen.height())
+        self.setGeometry(int(screen.width()/3), int(screen.height()/3), screen.width()/2, screen.height()/2)
+
 
         self.setWindowState(self.windowState() & QtCore.Qt.WindowMaximized)
 
@@ -124,6 +127,11 @@ class MainWindow(QtGui.QMainWindow):
         self.tree_file.setItemDelegateForColumn(4,DoubleSpinBoxDelegate(self))
 
         self.splash.showMessage("Loading Settings",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+
+        self.colorModel = ColorModel()
+        self.colorDict = kelly_colors
+        self.colorModel.addColors(self.colorDict)
+
         self.settings = {}
         self.settings['measure'] = {}
         self.settings['plot'] = {}
@@ -138,7 +146,9 @@ class MainWindow(QtGui.QMainWindow):
         self.afmImageFolder = 'D:/afmImages/'
         self.storeFolder = 'F:/lithography/sketches/' + self.s_time + '/'
         self.sketchSubFolder = './'
+
         if demo:
+            print("DDDDDDDDDDDDDDDDDDDDD")
             self.splash.showMessage("Loading DemoMode",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
             self.outDir = './demo/'
             self.afmImageFolder = './demo/afmImages/'
@@ -282,7 +292,8 @@ class MainWindow(QtGui.QMainWindow):
 
         self.dxffileName = def_dxf_file
 
-        self.headers = ('Name', 'Show', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Closed', 'Type')
+        self.headers = ('Name','Show', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Closed', 'Color', 'Type')
+
         self.AFMthread = AFMWorker()
         self.SocketThread = SocketWorker()
 
@@ -565,10 +576,11 @@ class MainWindow(QtGui.QMainWindow):
                             self.sAdd('vtip\t%f' %(0.0))
                             self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
                             self.sAdd('vtip\t%f' %((float(child.data(1))/self.tip_gain)-self.tip_offset))
-                            r = child.data(2)
+                            r = child.rate
+                            print (r)
                             for x,y in np.add(path,-self.centerCoord):
                             # Maybe go from [1:] but going to the startpoint twice should reduce vtip lag
-                                self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,r))
+                                self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,1.0))
 
                             self.sAdd('vtip\t%f' %(0.0))
                             self.sComment(['end',child.data(0)])
@@ -682,21 +694,33 @@ class MainWindow(QtGui.QMainWindow):
         self.clearDXFFile()
 
         # self.fileIn.setText(self.dxffileName)
-        self.dxf = dxfgrabber.readfile(self.dxffileName)
+        self.dxf = ezdxf.readfile('F:/lithography/DesignFiles/current.dxf')
+        self.model = TreeModel(self.headers, self.dxf, parent=self)
 
-        self.model = TreeModel(self.headers, self.dxf)
         # self.tree_file.setSizes([20, 300])
         self.tree_file.setModel(self.model)
-        self.tree_file.expandAll()
-        # self.tree_schedule.setModel(self.model)
-        # self.tree_schedule.expandAll()
 
+        self.tree_file.setDragDropMode( QtGui.QAbstractItemView.InternalMove )
+        self.tree_file.setSelectionMode( QtGui.QAbstractItemView.ExtendedSelection )
+
+        for col in [self.headers.index(col) for col in ['Closed', 'Show']]:
+            self.tree_file.setItemDelegateForColumn(col,CheckBoxDelegate(self))
+
+        for col in [self.headers.index(col) for col in ['Voltage', 'Rate', 'Angle', 'Step']]:
+            self.tree_file.setItemDelegateForColumn(col,DoubleSpinBoxDelegate(self))
+
+        self.tree_file.setItemDelegateForColumn(self.model.col('Color'),ColorDelegate(self))
+
+        self.tree_file.expandAll()
         for column in range(self.model.columnCount()):
             self.tree_file.resizeColumnToContents(column)
-            # self.tree_schedule.resizeColumnToContents(column)
 
 
+        self.tree_file.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.connect(self.tree_file, QtCore.SIGNAL("customContextMenuRequested(const QPoint &)"), self.doMenu)
+        print('make last column just as wide as needed')
 
+        ####################
         self.pi = self.plotFrame.sketchPlot.getPlotItem()
         self.plotFrame.clearSketchPlot()
         self.pi.addItem(self.afmPosition)
@@ -716,6 +740,18 @@ class MainWindow(QtGui.QMainWindow):
         QtCore.QObject.connect(self.model, QtCore.SIGNAL('redraw(QModelIndex)'), self.redraw)
 
         self.updateActions()
+
+    def clicked(self):
+        print('point')
+
+    def doMenu(self, point):
+        index=self.tree_file.indexAt(point)
+        model = index.model()
+        headers = model.header
+        column = index.column()
+        colname = headers[column]
+        item = self.tree_file.model().getItem(index)
+        print(colname,item)
 
     @QtCore.pyqtSlot("QModelIndex")
     def redraw(self, index):
@@ -746,21 +782,57 @@ class MainWindow(QtGui.QMainWindow):
         item = model.getItem(index)
         checked = item.checkState
 
+        if item.type == 'LAYER':
+            return
+
         # clear plot from item
         for i in item.pltHandle:
             self.pi.removeItem(i)
         item.pltHandle = []
 
+
+        # print( 'Color',         item.color)
+        # print( 'Closed',        item.is_closed)
+        # print( 'parentItem',    item.parentItem)
+        # print( 'itemData',      item.itemData)
+        # print( 'childItems',    item.childItems)
+        # print( 'Show',          item.show)
+        # print( 'entity',        item.entity)
+        # print( 'pltHandle',     item.pltHandle)
+        # print( 'checkState',    item.checkState)
+        # print( 'Angle',         item.fillAngle)
+        # print( 'Step',          item.fillStep)
+        # print( 'Voltage',       item.volt)
+        # print( 'Rate',          item.rate)
+        # print( 'length',        item.length)
+        # print( 'Time',          item.sketchTime)
+        # print( 'Name',          item.name)
+        # print( 'Type',          item.type)
         # if checked == 0:
             # hide item if unchecked
             # self.tree_schedule.setRowHidden(index.row(),index.parent(), True)
         # else:
             # self.tree_schedule.setRowHidden(index.row(),index.parent(), False)
-        data = model.getItem(index).pltData
-        if data and checked != 0:
-            for i in data:
+
+        #     ename = self.entity.dxf.name
+        # else:
+        #     self.name  = self.entity.dxf.handle
+        #     self.color = (255,0,255)
+        #     # self.color = self.entity.get_rgb_color()
+
+        data = dxf2shape(item, fill_step = item.fillStep, fill_angle=item.fillAngle)
+
+        showPen.setColor(pg.QtGui.QColor(*item.color))
+
+        if checked != 0:
+            for i in item.pltData:
+                # print(i)
+                # print(i.shape)
+                # print(data.shape)
                 pdi = self.pi.plot(i, pen = showPen)
                 item.pltHandle.append(pdi)
+
+        print('need updateActions here?')
         self.updateActions()
 
 
