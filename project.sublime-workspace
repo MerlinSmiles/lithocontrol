@@ -1,0 +1,1418 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"QList",
+				"QListWidget	class"
+			],
+			[
+				"Insert",
+				"insertChildren"
+			],
+			[
+				"output",
+				"output_p"
+			],
+			[
+				"DMX",
+				"DmxAlive"
+			],
+			[
+				"fluc",
+				"fluctuation"
+			],
+			[
+				"anal",
+				"analyze"
+			],
+			[
+				"accomp",
+				"accompanying	(Abbreviations.tex)"
+			],
+			[
+				"t",
+				"tbl	New table"
+			],
+			[
+				"Jeremy",
+				"Jeremy's"
+			],
+			[
+				"rep",
+				"reproducible	(Pittsburgh.tex)"
+			],
+			[
+				"Aharono",
+				"Aharonov-Bohm"
+			],
+			[
+				"tab",
+				"table	Table"
+			],
+			[
+				"Levy",
+				"Levy's"
+			],
+			[
+				"cite",
+				"cite{keylist}	latex-document"
+			],
+			[
+				"room",
+				"room-temperature"
+			],
+			[
+				"lock",
+				"lock-ins"
+			],
+			[
+				"dynam",
+				"dynamically"
+			],
+			[
+				"fig",
+				"fig	New figure"
+			],
+			[
+				"SI",
+				"SI{value}{unit commands}	siunitx"
+			],
+			[
+				"fi",
+				"fig	New figure"
+			],
+			[
+				"sect",
+				"section	Section"
+			],
+			[
+				"cref",
+				"cref	cref"
+			],
+			[
+				"par",
+				"par	Paragraph"
+			],
+			[
+				"sec",
+				"sec	Section"
+			],
+			[
+				"ledgre",
+				"ledGreenOn"
+			],
+			[
+				"commadn",
+				"command_in"
+			],
+			[
+				"command",
+				"command_in"
+			],
+			[
+				"uart1p",
+				"uart1_puts"
+			],
+			[
+				"ledy",
+				"ledYellowToggle"
+			],
+			[
+				"ledgreen",
+				"ledGreenToggle"
+			],
+			[
+				"ledGr",
+				"ledGreenOn"
+			],
+			[
+				"led",
+				"ledGreenToggle"
+			],
+			[
+				"ledgr",
+				"ledGreenOn"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "cAFM_ui_py3.py",
+			"settings":
+			{
+				"buffer_size": 51500,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "treetester.py",
+			"settings":
+			{
+				"buffer_size": 3654,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"contents": "#!/usr/bin/env python\ndemo = 1\nprint('\\n\\n')\nimport sip\nAPI_NAMES = [\"QDate\", \"QDateTime\", \"QString\", \"QTextStream\", \"QTime\", \"QUrl\", \"QVariant\"]\nAPI_VERSION = 2\nfor name in API_NAMES:\n    sip.setapi(name, API_VERSION)\n\nimport numpy as np\nfrom pprint import pprint\n\n\nfrom PyQt4 import QtCore, QtGui, uic\nfrom PyQt4.QtCore import QTime, QTimer, QDate\nfrom PyQt4.QtCore import pyqtSignal\n\nimport pyqtgraph as pg\n\nimport ezdxf\n\nimport sys\n\nsys.path.append(\".\\\\source\")\n\nfilename = './test.dxf'\n\nimport os\nimport pickle as pickle\n\ncolors = ['vivid_yellow','strong_purple','vivid_orange','very_light_blue','vivid_red','grayish_yellow','medium_gray','vivid_green','strong_purplish_pink','strong_blue','strong_yellowish_pink','strong_violet','vivid_orange_yellow','strong_purplish_red','vivid_greenish_yellow','strong_reddish_brown','vivid_yellowish_green','deep_yellowish_brown','vivid_reddish_orange','dark_olive_green']\nkelly_colors = dict(\n            black=(0, 0, 0),\n            white=(255, 255, 255),\n            vivid_yellow=(255, 179, 0),\n            strong_purple=(128, 62, 117),\n            vivid_orange=(255, 104, 0),\n            very_light_blue=(166, 189, 215),\n            vivid_red=(193, 0, 32),\n            grayish_yellow=(206, 162, 98),\n            medium_gray=(129, 112, 102),\n            vivid_green=(0, 125, 52),\n            strong_purplish_pink=(246, 118, 142),\n            strong_blue=(0, 83, 138),\n            strong_yellowish_pink=(255, 122, 92),\n            strong_violet=(83, 55, 122),\n            vivid_orange_yellow=(255, 142, 0),\n            strong_purplish_red=(179, 40, 81),\n            vivid_greenish_yellow=(244, 200, 0),\n            strong_reddish_brown=(127, 24, 13),\n            vivid_yellowish_green=(147, 170, 0),\n            deep_yellowish_brown=(89, 51, 21),\n            vivid_reddish_orange=(241, 58, 19),\n            dark_olive_green=(35, 44, 22))\n\n# mkPen for selected\nselectPen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine\nsketchPen = pg.mkPen(color='FF0000',width=3)  #, style=QtCore.Qt.DotLine\nmovePen = pg.mkPen(color='1E4193',width=2, style=QtCore.Qt.DotLine)  #, style=QtCore.Qt.DotLine\nshowPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine , width=\n\n\nimport sip\nAPI_NAMES = [\"QDate\", \"QDateTime\", \"QString\", \"QTextStream\", \"QTime\", \"QUrl\", \"QVariant\"]\nAPI_VERSION = 2\nfor name in API_NAMES:\n    sip.setapi(name, API_VERSION)\n\n\nclass DoubleSpinBoxDelegate(QtGui.QItemDelegate):\n    def createEditor(self, parent, option, index):\n        editor = QtGui.QDoubleSpinBox(parent)\n        editor.setButtonSymbols(QtGui.QAbstractSpinBox.NoButtons)\n\n        spin_vars = index.model().getSpinVars(index)\n        if spin_vars != False:\n            spin_range = spin_vars[0]\n            spin_decimals = spin_vars[1]\n            spin_steps = spin_vars[2]\n            editor.setDecimals(spin_decimals)\n            editor.setRange(*spin_range)\n            editor.setSingleStep(spin_steps)\n\n        return editor\n\n    def setEditorData(self, spinBox, index):\n        value = index.model().data(index, QtCore.Qt.EditRole)\n        try:\n            spinBox.setValue(value)\n        except:\n            pass\n            spinBox.clear()\n\n    def setModelData(self, spinBox, model, index):\n        spinBox.interpretText()\n        value = spinBox.value()\n        model.setData(index, value, QtCore.Qt.EditRole)\n\n    def updateEditorGeometry(self, editor, option, index):\n        editor.setGeometry(option.rect)\n\n# Mainly from here : https://gist.github.com/MarshallChris/6029919\nclass CheckBoxDelegate(QtGui.QStyledItemDelegate):\n\n    def __init__(self, parent = None):\n        QtGui.QGraphicsWidget.__init__(self)\n\n    def flags(self, index):\n        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled\n\n\n    def createEditor(self, parent, option, index):\n        '''\n        Important, otherwise an editor is created if the user clicks in this cell.\n        ** Need to hook up a signal to the model\n        '''\n        return None\n\n    def paint(self, painter, option, index):\n        '''\n        Paint a checkbox without the label.\n        '''\n        checked = bool(index.model().data(index, QtCore.Qt.EditRole))\n        print(checked)\n        check_box_style_option = QtGui.QStyleOptionButton()\n\n        # if (index.flags() & QtCore.Qt.ItemIsEditable) > 0:\n        #     check_box_style_option.state |= QtGui.QStyle.State_Enabled\n        # else:\n        #     check_box_style_option.state |= QtGui.QStyle.State_ReadOnly\n\n        if checked:\n            check_box_style_option.state |= QtGui.QStyle.State_On\n        else:\n            check_box_style_option.state |= QtGui.QStyle.State_Off\n\n        check_box_style_option.rect = self.getCheckBoxRect(option)\n\n        # this will not run - hasFlag does not exist\n        #if not index.model().hasFlag(index, QtCore.Qt.ItemIsEditable):\n            #check_box_style_option.state |= QtGui.QStyle.State_ReadOnly\n\n        check_box_style_option.state |= QtGui.QStyle.State_Enabled\n\n        QtGui.QApplication.style().drawControl(QtGui.QStyle.CE_CheckBox, check_box_style_option, painter)\n\n    def editorEvent(self, event, model, option, index):\n        '''\n        Change the data in the model and the state of the checkbox\n        if the user presses the left mousebutton or presses\n        Key_Space or Key_Select and this cell is editable. Otherwise do nothing.\n        '''\n        print( 'Check Box editor Event detected : ')\n        # if not (index.flags() & QtCore.Qt.ItemIsEditable) > 0:\n        #     return False\n\n        print ('Check Box edior Event detected : passed first check')\n        # Do not change the checkbox-state\n        if event.type() != QtCore.QEvent.MouseButtonRelease:\n            return False\n\n        # Change the checkbox-state\n        self.setModelData(None, model, index)\n        return True\n\n    def setModelData (self, editor, model, index):\n        '''\n        The user wanted to change the old state in the opposite.\n        '''\n        print( 'SetModelData')\n        newValue = not model.data(index, QtCore.Qt.EditRole)\n        print(not newValue, newValue)\n        model.setData(index, newValue, QtCore.Qt.EditRole)\n\n    def getCheckBoxRect(self, option):\n        check_box_style_option = QtGui.QStyleOptionButton()\n        check_box_rect = QtGui.QApplication.style().subElementRect(QtGui.QStyle.SE_CheckBoxIndicator, check_box_style_option, None)\n        check_box_point = QtCore.QPoint (option.rect.x() +\n                             option.rect.width() / 2 -\n                             check_box_rect.width() / 2,\n                             option.rect.y() +\n                             option.rect.height() / 2 -\n                             check_box_rect.height() / 2)\n        return QtCore.QRect(check_box_point, check_box_rect.size())\n\n\nclass ColorDelegate(QtGui.QItemDelegate):\n    def createEditor(self, parent, option, index):\n        # print()\n        self.editor = QtGui.QComboBox(parent)\n        model = index.model().par.colorModel\n        self.editor.setModel(model)\n\n        self.connect(self.editor, QtCore.SIGNAL(\"currentIndexChanged(int)\"), self, QtCore.SLOT(\"currentIndexChanged()\"))\n        QtCore.QTimer.singleShot(100,self.editor.showPopup)\n        # self.editor.showPopup()\n        return self.editor\n\n    def setModelData(self, editor, model, index):\n        color = editor.model().getColor(editor.currentIndex())[1]\n        model.setData(index, color,QtCore.Qt.EditRole)\n\n    @QtCore.pyqtSlot()\n    def currentIndexChanged(self):\n        self.commitData.emit(self.editor)\n        self.closeEditor.emit(self.editor,QtGui.QAbstractItemDelegate.NoHint) #EditNextItem, EditPreviousItem, NoHint\n        # print('changed')\n\n        # self.commitData.emit(self.sender())\n\n    def paint(self, parent, option, index):\n        # data = index.model().data(index, QtCore.Qt.DecorationRole)\n        color = index.model().data(index, QtCore.Qt.DisplayRole)\n\n        pixmap = QtGui.QPixmap(QtCore.QSize(option.decorationSize))\n        pixmap.fill(QtGui.QColor(*color))\n        w = option.decorationSize.width()\n        h = option.decorationSize.height()\n        iconRect = QtCore.QRect(option.rect.x(), option.rect.y(), w, h)\n\n        painter = QtGui.QPainter(pixmap)\n        painter.setPen(QtGui.QColor(0,0,0))\n        painter.drawRect(0,0, w-1, h-1)\n        del painter\n\n        viewCenter = option.rect.center()\n        iconRect.moveCenter(viewCenter)\n        parent.drawPixmap(iconRect, pixmap)\n\nclass TreeItem(object):\n    def __init__(self, data, parent=None, model=None):\n        self.model = model\n        self.color = (255,255,255)\n        self.is_closed = False\n        self.parentItem = parent\n        self.itemData = data\n        self.childItems = []\n        self.show = False\n        self.entity = None\n        self.pltHandle = []\n        self.checkState = QtCore.Qt.Unchecked\n        self.fillAngle = 0\n        self.fillStep = 0.1\n        self.volt = 20.0\n        self.rate = 1.0\n        self.length = 0.0\n        self.sketchTime = 0.0\n        self.name = 'Item'\n        self.type = 'Dummy'\n\n#     shape.type = None # [VirtualElectrode, line, area]\n\n    def setEntity(self, entity):\n        self.entity = entity\n        self.initData()\n\n    def initData(self):\n        # 'Name', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Closed', 'Type', 'Color', 'Show'\n        self.type = self.entity.dxftype()\n        if self.type == 'LAYER':\n            self.name = self.entity.dxf.name\n            self.show = self.entity.is_on()\n        else:\n            self.name  = self.entity.dxf.handle\n            self.color = self.entity.get_rgb_color()\n\n        self.is_closed = False\n        if self.entity.dxftype()=='POLYLINE':\n            data = np.array(list(self.entity.points()))\n            if(all(data[0] == data[-1])):\n                self.is_closed = True\n        if self.entity.dxftype()=='LINE':\n            self.is_closed = False\n            # data = np.array([self.entity.dxf.start, self.entity.dxf.end])\n\n\n        item_data = {'Color':        self.color,\n                     'Closed':       self.is_closed,\n                     'parentItem':   self.parentItem,\n                     'itemData':     self.itemData,\n                     'childItems':   self.childItems,\n                     'Show':         self.show,\n                     'entity':       self.entity,\n                     'pltHandle':    self.pltHandle,\n                     'checkState':   self.checkState,\n                     'Angle':        self.fillAngle,\n                     'Step':         self.fillStep,\n                     'Voltage':      self.volt,\n                     'Rate':         self.rate,\n                     'length':       self.length,\n                     'Time':         self.sketchTime,\n                     'Name':         self.name,\n                     'Type':         self.type}\n\n        for column, key in enumerate(self.model.rootData):\n            if key in item_data:\n                self.setData(column, item_data[key])\n\n    def index(self):\n        index = self.model.createIndex(self.parentItem.childNumber(), 0, self.parentItem)\n        return index\n\n    def setCheckState(self, value):\n        if value == 2:\n            self.checkState = QtCore.Qt.Checked\n        elif value == 1:\n            self.checkState = QtCore.Qt.PartiallyChecked\n        else:\n            self.checkState = QtCore.Qt.Unchecked\n        return self.checkState\n\n    def child(self, row):\n        return self.childItems[row]\n\n    def childCount(self):\n        return len(self.childItems)\n\n    def childNumber(self):\n        if self.parentItem != None:\n            return self.parentItem.childItems.index(self)\n        return 0\n\n    def columnCount(self):\n        return len(self.itemData)\n\n    def data(self, column=None):\n        if column == None:\n            return self.itemData[:]\n        return self.itemData[column]\n\n    def insertChildren(self, position, count, columns):\n        # print('insertChildren')\n        if position < 0 or position > len(self.childItems):\n            return False\n\n        for row in range(count):\n            data = [None for v in range(columns)]\n            item = TreeItem(data, self, self.model)\n            self.childItems.insert(position, item)\n\n        return True\n\n    def insertColumns(self, position, columns):\n        if position < 0 or position > len(self.itemData):\n            return False\n\n        for column in range(columns):\n            self.itemData.insert(position, None)\n\n        for child in self.childItems:\n            child.insertColumns(position, columns)\n\n        return True\n\n    def parent(self):\n        return self.parentItem\n\n    def removeChildren(self, position, count):\n        # print('removeChildren')\n        if position < 0 or position + count > len(self.childItems):\n            return False\n\n        for row in range(count):\n            self.childItems.pop(position)\n\n        return True\n\n    def removeColumns(self, position, columns):\n        if position < 0 or position + columns > len(self.itemData):\n            return False\n\n        for column in range(columns):\n            self.itemData.pop(position)\n\n        for child in self.childItems:\n            child.removeColumns(position, columns)\n\n        return True\n\n    def redraw(self):\n        return\n\n\n    def setData(self, column, value, index=None):\n        if column < 0 or column >= len(self.itemData):\n            return False\n\n#         print(self.model.rootData[column],column, value)\n        colname = self.model.rootData[column]\n        if colname == 'Angle':\n            value= float(value)\n            if self.fillAngle != value:\n                self.fillAngle = value\n                self.redraw()\n        elif colname == 'Rate':\n            value= float(value)\n            if self.rate != value:\n                self.rate = value\n                self.calcTime()\n        elif colname == 'Step':\n            value= float(value)\n            if self.fillStep != value:\n                self.fillStep = value\n                self.redraw()\n        elif colname == 'Closed':\n            value= bool(value)\n            if self.is_closed != value:\n                self.is_closed = value\n                self.redraw()\n        elif colname == 'Show':\n            value= bool(value)\n            if self.show != value:\n                self.show = value\n                self.redraw()\n        elif colname == 'Time':\n            value= float(value)\n            if self.sketchTime != value:\n                self.sketchTime = value\n            if self.parent() == None:\n                value = 'Time'\n        elif colname == 'Color':\n            self.color = value\n\n        self.itemData[column] = value\n        return True\n\n\nclass TreeModel(QtCore.QAbstractItemModel):\n    def __init__(self, headers, data, parent=None):\n        super(TreeModel, self).__init__(parent)\n        self.checks = {}\n        self.par = parent\n\n        self.rootData = [header for header in headers] # Header Names\n        self.rootItem = TreeItem(self.rootData, model=self)\n        self.dxf = data\n        self.setupModelData(data, self.rootItem)\n\n\n        self._checked=[[False for i in range(self.columnCount())] for j in range(self.rowCount())]\n\n    def columnCount(self, parent=QtCore.QModelIndex()):\n        return self.rootItem.columnCount()\n\n    def getSpinVars(self,index):\n        column = index.column()\n        # range decimals steps\n        colname = self.rootData[column]\n        if colname == 'Angle':\n            return [(-3600,3600), 1, 1.0]\n        elif colname == 'Voltage':\n            return [(-210,210), 1, 0.1]\n        elif colname == 'Step':\n            return [(0.001,1000), 3, 0.01]\n        elif colname == 'Rate':\n            return [(0.01,1000), 2, 0.1]\n        else:\n            return False\n\n    def data(self, index, role):\n        if not index.isValid():\n            return None\n\n        if role == QtCore.Qt.CheckStateRole:\n            if index.column() == 0:\n                return self.checkState(index)\n            # if index.column() == 6:\n            #     item = self.getItem(index)\n            #     try:\n            #         return item.entity.is_closed\n            #     except:\n            #         pass\n            # if index.column() == 9:\n            #     item = self.getItem(index)\n            #     return item.show\n\n        item = self.getItem(index)\n\n        # if (role == QtCore.Qt.BackgroundRole) & (self.rootData[index.column()] == 'Color'):\n        #     return QtGui.QColor(*item.color)\n\n        # if (role == QtCore.Qt.DisplayRole) & (self.rootData[index.column()] == 'Color'):\n        #     return QtGui.QComboBox()\n\n        # if (role == QtCore.Qt.DecorationRole) & (self.rootData[index.column()] == 'Color'):\n        #     pixmap = QtGui.QPixmap(16, 16)\n        #     pixmap.fill(QtGui.QColor(255,0,0))\n        #     icon = QtGui.QIcon(pixmap)\n\n        #     return icon\n\n        if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:\n            return None\n\n        return item.data(index.column())\n\n    def flags(self, index):\n        if not index.isValid():\n            return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsDropEnabled\n\n        colname = self.rootData[index.column()]\n\n        flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsUserCheckable\n\n        if colname not in ['Name', 'Time', 'Type', 'Closed', 'Show']:\n            flags = flags | QtCore.Qt.ItemIsEditable\n\n        item = self.getItem(index)\n        if item.childCount() == 0:\n            flags = flags | QtCore.Qt.ItemIsDragEnabled\n        else:\n            flags = flags | QtCore.Qt.ItemIsDropEnabled #| QtCore.Qt.ItemIsDragEnabled\n\n        return  flags\n\n    def supportedDropActions( self ):\n        return QtCore.Qt.MoveAction # | QtCore.Qt.CopyAction\n\n    def getItem(self, index):\n        if index.isValid():\n            item = index.internalPointer()\n            if item:\n                return item\n        return self.rootItem\n\n    def checkState(self, index):\n        return self.getItem(index).checkState\n\n    def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):\n        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:\n            return self.rootItem.data(section)\n\n        return None\n\n    def index(self, row, column=0, parent=QtCore.QModelIndex()):\n        if parent.isValid() and parent.column() != 0:\n            return QtCore.QModelIndex()\n\n        parentItem = self.getItem(parent)\n        childItem = parentItem.child(row)\n        if childItem:\n            return self.createIndex(row, column, childItem)\n        else:\n            return QtCore.QModelIndex()\n\n    def insertColumns(self, position, columns, parent=QtCore.QModelIndex()):\n        self.beginInsertColumns(parent, position, position + columns - 1)\n        success = self.rootItem.insertColumns(position, columns)\n        self.endInsertColumns()\n\n        return success\n\n    def insertRows(self, position, rows, parent=QtCore.QModelIndex()):\n        # print('insert rows')\n        parentItem = self.getItem(parent)\n        self.beginInsertRows(parent, position, position + rows - 1)\n        success = parentItem.insertChildren(position, rows,\n                self.rootItem.columnCount())\n        self.endInsertRows()\n\n        return success\n\n    def parent(self, index):\n        if not index.isValid():\n            return QtCore.QModelIndex()\n\n        childItem = self.getItem(index)\n        parentItem = childItem.parent()\n\n        if parentItem == self.rootItem:\n            return QtCore.QModelIndex()\n\n        return self.createIndex(parentItem.childNumber(), 0, parentItem)\n\n    def removeColumns(self, position, columns, parent=QtCore.QModelIndex()):\n        self.beginRemoveColumns(parent, position, position + columns - 1)\n        success = self.rootItem.removeColumns(position, columns)\n        self.endRemoveColumns()\n\n        if self.rootItem.columnCount() == 0:\n            self.removeRows(0, self.rowCount())\n\n        return success\n\n    def removeRows(self, position, rows, parent=QtCore.QModelIndex()):\n        # print('remove rows')\n        parentItem = self.getItem(parent)\n\n        self.beginRemoveRows(parent, position, position + rows - 1)\n        success = parentItem.removeChildren(position, rows)\n        self.endRemoveRows()\n\n        return success\n\n    def rowCount(self, parent=QtCore.QModelIndex()):\n        parentItem = self.getItem(parent)\n\n        return parentItem.childCount()\n\n    def childCount(self, parent=QtCore.QModelIndex()):\n        return self.rowCount(parent)\n\n    def are_parent_and_child(self, parent, child):\n        while child.isValid():\n            if child == parent:\n                return True\n            child = child.parent()\n        return False\n\n    def setData(self, index, value, role=QtCore.Qt.EditRole):\n        if (role == QtCore.Qt.CheckStateRole and index.column() == 0):\n            self.layoutAboutToBeChanged.emit()\n            item = self.getItem(index)\n\n            item.setCheckState(value)\n            self.emit(QtCore.SIGNAL('checkChanged(QModelIndex)'), index)\n\n            cc = item.childCount()\n            if cc > 0:\n                for i in range(cc):\n                    chindex =  self.createIndex(i, 0, item.child(i))\n                    self.setData(chindex,value,role)\n\n\n            item = self.getItem(index.parent())\n            cc = item.childCount()\n            no_checked = 0\n            if cc > 0:\n                for i in range(cc):\n                    if item.child(i).checkState == 2:\n                        no_checked+=1\n                if no_checked == cc:\n                    item.setCheckState(2)\n                elif no_checked > 0:\n                    item.setCheckState(1)\n                else:\n                    item.setCheckState(0)\n\n            self.layoutChanged.emit()\n            return True\n\n        if role != QtCore.Qt.EditRole:\n            return False\n\n        item = self.getItem(index)\n        colname = self.rootData[index.column()]\n        if colname in ['Voltage', 'Angle', 'Rate', 'Step', 'Color', 'Closed', 'Show']:\n            cc = item.childCount()\n            if cc > 0:\n                for i in range(cc):\n                    chindex =  self.createIndex(i, index.column(), item.child(i))\n                    self.setData(chindex,value,role)\n\n        result = item.setData(index.column(), value, index)\n        if result:\n            self.emit(QtCore.SIGNAL('redraw(QModelIndex,QModelIndex)'), index,index)\n            self.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), index,index)\n\n        return result\n\n    def setHeaderData(self, section, orientation, value, role=QtCore.Qt.EditRole):\n        if role != QtCore.Qt.EditRole or orientation != QtCore.Qt.Horizontal:\n            return False\n\n        result = self.rootItem.setData(section, value)\n        if result:\n            self.headerDataChanged.emit(orientation, section, section)\n\n        return result\n\n    def getColumns(self):\n        columns = []\n        for i in range(self.columnCount()):\n            columns.append(self.headerData(i,QtCore.Qt.Horizontal))\n        return columns\n\n    def getRows(self):\n        rows = []\n        for i in range(self.rowCount()):\n            rows.append(self.getItem(self.index(i)))\n        return rows\n\n    def clearData(self):\n        self.rootItem = TreeItem(self.rootData, model=self)\n\n    def layers(self):\n        if self.dxf == None:\n            return []\n        layers = []\n        for layer in self.dxf.layers:\n            eee = self.layerquery(layer.dxf.name)\n            if len(eee.entities) > 0:\n                layers.append(layer)\n        layers = {layer.dxf.name:{'entity': layer} for layer in layers}\n        return layers\n\n    def get_dxf_entity(self, handle):\n        return self.dxf.get_dxf_entity(handle)\n\n    def query(self,q):\n        return self.dxf.modelspace().query(q)\n\n    def layerquery(self,layer):\n        return self.dxf.modelspace().query('*[layer==\"%s\"]'%layer)\n\n    def setupModelData(self, data, parent):\n        self.dxf = data\n        layers = self.layers()\n        # layers = {layer.dxf.name:{'entity': layer} for layer in layers}\n#         print([layer.dxf.name for layer in self.dxf.layers if layer.dxf.name!='0'])\n        columns = self.getColumns()\n        for ll in layers:\n            layer = layers[ll]\n            entity = layer['entity']\n#             print(ll, layer['entity'].is_on(), layer['entity'].is_locked())\n            parent.insertChildren(parent.childCount(), 1, self.rootItem.columnCount())\n            thisChild = parent.child(parent.childCount() -1)\n            thisChild.setEntity(entity)\n\n            thisChild.initData()\n            layer['parent'] = thisChild\n\n        ms = data.modelspace()\n        for entity in ms:\n            ll = entity.dxf.layer\n            # if ll not in layers:\n            #     continue\n            # print(entity.dxftype())\n            if entity.dxftype()=='IMAGE':\n                continue\n\n            parent = layers[ll]['parent']\n            parent.insertChildren(parent.childCount(), 1, self.rootItem.columnCount())\n\n            thisChild = parent.child(parent.childCount() -1)\n            thisChild.setEntity(entity)\n            thisChild.initData()\n\n\n    def mimeTypes(self):\n        # types = QtCore.QStringList()\n        types = ['QByteArray']\n        return types\n\n    def mimeData(self, index):\n        # print(index)\n        item = [self.getItem(i) for i in index]\n        dxfentity = []\n        for i in item:\n            handle = i.entity.dxf.handle\n            if handle not in dxfentity:\n                dxfentity.append(handle)\n\n        mimedata = QtCore.QMimeData()\n        mimedata.setData('QByteArray', QtCore.QByteArray(pickle.dumps(dxfentity)))\n        # mimedata.setData('text/plain', pickle.dump(dxfhandle))\n        return mimedata\n\n    def dropMimeData(self, mimedata, action, row, column, parentIndex):\n        # print (mimedata, action, row, column, parentIndex)\n        # print(action,row,column,parentIndex)\n        if action == QtCore.Qt.IgnoreAction:\n            return True\n        data = pickle.loads(mimedata.data('QByteArray').data())\n\n        entities = [self.get_dxf_entity(dd) for dd in data]\n        for entity in entities[::-1]:\n            # print(self.getItem(parentIndex))\n            # print(self.parent(parentIndex))\n            # parentNode = self.nodeFromIndex(parentIndex)\n\n            # newNode.setParent(parentNode)\n            parent = self.getItem(parentIndex)\n\n            self.insertRow(row, parentIndex)\n            # parent.insertChildren(row, 1, self.rootItem.columnCount())\n            thisChild = parent.child(row)\n            thisChild.setEntity(entity)\n            thisChild.initData()\n        # self.emit(QtCore.SIGNAL(\"dataChanged(QtCore.QModelIndex,QtCore.QModelIndex)\"), parentIndex, parentIndex)\n        return True\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nclass ColorModel(QtCore.QAbstractListModel):\n    def __init__(self, *args, **kwargs):\n        QtCore.QAbstractListModel.__init__(self, *args, **kwargs)\n        self.items=[]\n\n    def rowCount(self, parent=QtCore.QModelIndex()):\n        return len(self.items)\n\n    def data(self, index, role=QtCore.Qt.DisplayRole):\n        if index.isValid() is True:\n            if role == QtCore.Qt.DisplayRole:\n                return self.items[index.row()]\n            elif role == QtCore.Qt.ItemDataRole:\n                return self.items[index.row()]\n            elif role==QtCore.Qt.DecorationRole:\n                # print(self.items[index.row()])\n                k = self.items[index.row()]\n                pixmap = QtGui.QPixmap(16, 16)\n                pixmap.fill(QtGui.QColor(*kelly_colors[k]))\n                icon = QtGui.QIcon(pixmap)\n                return icon\n            # print(role)\n        return None\n\n    def addColors(self,colors):\n        self.colors = colors\n        for k in sorted(colors):\n            self.addItem(k)\n\n    def getColor(self, index):\n        if type(index) == int:\n            cname = self.items[index]\n            return [cname, self.colors[cname]]\n        if type(index) == str:\n            return [index, self.colors[index]]\n\n    def addItem(self, item):\n        # index=QtCore.QModelIndex()\n        self.beginInsertRows(QtCore.QModelIndex(), 0, 0)\n        self.items.append(item)\n        self.endInsertRows()\n\nclass ColorMenu(QtGui.QMainWindow):\n    closeColor = QtCore.pyqtSignal()\n    colorSelected = QtCore.pyqtSignal(str)\n\n    def __init__(self, parent, point, model):\n        super(ColorMenu, self).__init__()\n        # QtGui.QMenu.__init__(self, parent)\n        self.setFocusPolicy(QtCore.Qt.StrongFocus)\n        self.parent = parent\n        # print(point)\n        self.model = model\n        self.view = QtGui.QListView(parent)\n        self.view.setModel(self.model)\n\n        QtCore.QObject.connect(self.view.selectionModel(), QtCore.SIGNAL('currentRowChanged(QModelIndex, QModelIndex)'), self.on_listView_clicked)\n        QtGui.QShortcut(QtGui.QKeySequence(\"ESC\"), self, self.close)\n\n        self.setCentralWidget(self.view)\n        w,h = 200, int(self.model.rowCount()*19)\n        self.setGeometry(point.x()-int(w/2), point.y()-int(h/2), w,h)\n        self.show()\n        self.setFocus()\n\n    @QtCore.pyqtSlot(\"QModelIndex, QModelIndex\")\n    def on_listView_clicked(self, selected, deselected):\n        color = self.model.items[selected.row()]\n        self.colorSelected.emit(color)\n\n    def focusOutEvent(self, event):\n        self.closeColor.emit()\n\n\nclass MainWindow(QtGui.QMainWindow):\n    # colorSelected = QtCore.pyqtSignal(str)\n    # closeColor = QtCore.pyqtSignal()\n\n    def __init__(self, parent=None):\n\n        super(MainWindow, self).__init__(parent)\n\n        self.tree_file = QtGui.QTreeView()\n        self.setCentralWidget(self.tree_file)\n        self.show()\n\n        self.colorModel = ColorModel()\n        self.colorDict = kelly_colors\n        self.colorModel.addColors(self.colorDict)\n\n\n        self.dxffileName = filename\n\n        self.headers = ('Name', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Show', 'Closed', 'Type', 'Color')\n\n        self.dxf = ezdxf.readfile('/Users/Merlin/Google Drive/Projects/ezdxf/current.dxf')\n        self.model = TreeModel(self.headers, self.dxf, parent=self)\n\n        self.tree_file.setModel(self.model)\n        self.tree_file.expandAll()\n        # self.tree_file.setDragEnabled( True )\n        # self.tree_file.setAcceptDrops( True )\n        self.tree_file.setDragDropMode( QtGui.QAbstractItemView.InternalMove )\n        self.tree_file.setSelectionMode( QtGui.QAbstractItemView.ExtendedSelection )\n\n        for column in range(self.model.columnCount()):\n            self.tree_file.resizeColumnToContents(column)\n\n        screen = QtGui.QDesktopWidget().screenGeometry()\n        self.setGeometry(int(screen.width()/2), 0, screen.width(), screen.height())\n\n        for col in [self.headers.index(col) for col in ['Voltage', 'Rate', 'Angle', 'Step']]:\n            self.tree_file.setItemDelegateForColumn(col,DoubleSpinBoxDelegate(self))\n\n        for col in [self.headers.index(col) for col in ['Color']]:\n            self.tree_file.setItemDelegateForColumn(col,ColorDelegate(self))\n\n        for col in [self.headers.index(col) for col in ['Closed']]: #'Show', todo for more columns???\n            self.tree_file.setItemDelegateForColumn(col,CheckBoxDelegate(self))\n\n\n\n            # self.tree_file.setEditTriggers(\n            #             # QtGui.QAbstractItemView.DoubleClicked |\n            #             QtGui.QAbstractItemView.SelectedClicked)\n\n\n        # self.text_edit.setContextMenuPolicy(Qt.CustomContextMenu)\n        self.tree_file.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)\n        self.connect(self.tree_file, QtCore.SIGNAL(\"customContextMenuRequested(const QPoint &)\"), self.doMenu)\n        # self.connect(self.tree_file, QtCore.SIGNAL(\"mousePressEvent( QEvent)\"), self.doPress)\n        # self.connect(self.tree_file, QtCore.SIGNAL('clicked()'), self.clicked)\n\n        # self.connect(self.text_edit, SIGNAL('customContextMenuRequested(const QPoint &)'), self.context_menu)\n\n    def clicked(self):\n        print('point')\n\n    def doMenu(self, point):\n        index=self.tree_file.indexAt(point)\n        model = index.model()\n        headers = model.rootData\n        column = index.column()\n        colname = headers[column]\n        item = self.tree_file.model().getItem(index)\n\n        # print(headers,column,colname)\n        # if colname == 'Color':\n        #     self.closeMenu()\n        #     self.colorItem = item\n        #     self.colorIndex = index\n        #     self.colorMenu = ColorMenu(self,self.mapToGlobal(point),self.colorModel)\n        #     self.colorMenu.colorSelected.connect(self.handleColorSelected)\n        #     self.colorMenu.closeColor.connect(self.closeMenu)\n        #     return\n\n        print(colname)\n\n    def closeMenu(self):\n        try:\n            self.colorMenu.close()\n        except:\n            pass\n        self.setFocus()\n\n    # @pyqtSlot(str)\n    def handleColorSelected(self, color):\n        index = self.colorIndex\n        model = index.model()\n        # print(model.data(index, QtCore.Qt.EditRole), selcolor)\n        model.setData(index, self.colorDict[color])\n        # print(model)\n\n        # color = self.colorDict[color]\n        # model = self.colorItem.model\n        # headers = model.rootData\n        # column = headers.index('Color')\n        # # print(headers)\n        # self.colorItem.setData(column,color)\n        # # print('xxx', color)\n        self.colorMenu.close()\n\nif __name__ == '__main__':\n    app = QtGui.QApplication(sys.argv)\n    window = MainWindow()\n    # window.setContextMenuPolicy(QtCore.Qt.CustomContextMenu);\n    # window.connect(window,SIGNAL(\"customContextMenuRequested(QPoint)\"),\n    #                 window,SLOT(\"contextMenuRequested(QPoint)\"))\n\n    # window.show()\n    sys.exit(app.exec_())\n",
+			"file": "source/treeclass3.py",
+			"file_size": 33783,
+			"file_write_time": 130935738440000000,
+			"settings":
+			{
+				"buffer_size": 33876,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"settings":
+			{
+				"buffer_size": 0,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "combobox.py",
+			"settings":
+			{
+				"buffer_size": 5686,
+				"line_ending": "Unix",
+				"name": "from PyQt4 import QtGui, QtCore"
+			}
+		},
+		{
+			"file": "combobox2.py",
+			"settings":
+			{
+				"buffer_size": 3612,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "source/treeclass2.py",
+			"settings":
+			{
+				"buffer_size": 21510,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "project.sublime-project",
+			"settings":
+			{
+				"buffer_size": 585,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "source/afmHandler.py",
+			"settings":
+			{
+				"buffer_size": 1741,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "multi_processing.py",
+			"settings":
+			{
+				"buffer_size": 1218,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "source/ni_measurement.py",
+			"settings":
+			{
+				"buffer_size": 6719,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"contents": "",
+			"settings":
+			{
+				"buffer_size": 0,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "treetest.py",
+			"settings":
+			{
+				"buffer_size": 7241,
+				"line_ending": "Unix",
+				"name": "import sys"
+			}
+		}
+	],
+	"build_system": "Packages/Python/Python.sublime-build",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Packages/LaTeXing/LaTeX.sublime-build",
+					""
+				],
+				[
+					"Packages/LaTeXing/LaTeX.sublime-build",
+					"Clean up Files"
+				]
+			],
+			[
+				"Packages/LaTeXing/LaTeX.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/LaTeXing/LaTeX.sublime-build",
+					""
+				],
+				[
+					"Packages/LaTeXing/LaTeX.sublime-build",
+					"Primary Quick Build"
+				],
+				[
+					"Packages/LaTeXing/LaTeX.sublime-build",
+					"Choose Quick Build"
+				],
+				[
+					"Packages/LaTeXing/LaTeX.sublime-build",
+					"Clean up Files"
+				]
+			],
+			[
+				"Packages/LaTeXing/LaTeX.sublime-build",
+				"Choose Quick Build"
+			]
+		],
+		[
+			[
+				[
+					"Packages/LaTeXing/LaTeX.sublime-build",
+					""
+				],
+				[
+					"Packages/LaTeXing/LaTeX.sublime-build",
+					"Primary Quick Build"
+				],
+				[
+					"Packages/LaTeXing/LaTeX.sublime-build",
+					"Choose Quick Build"
+				],
+				[
+					"Packages/LaTeXing/LaTeX.sublime-build",
+					"Clean up Files"
+				],
+				[
+					"Packages/SublimeREPL/sublimerepl_build_system_hack.sublime-build",
+					""
+				],
+				[
+					"Packages/User/LaTeX.sublime-build",
+					""
+				],
+				[
+					"Packages/User/LaTeX.sublime-build",
+					"Primary Quick Build"
+				],
+				[
+					"Packages/User/LaTeX.sublime-build",
+					"Choose Quick Build"
+				],
+				[
+					"Packages/User/LaTeX.sublime-build",
+					"Clean up Files"
+				],
+				[
+					"Packages/User/ReplBuild.sublime-build",
+					""
+				],
+				[
+					"Packages/User/Package Control.cache/LaTeX.sublime-build",
+					""
+				],
+				[
+					"Packages/User/Package Control.cache/LaTeX.sublime-build",
+					"Primary Quick Build"
+				],
+				[
+					"Packages/User/Package Control.cache/LaTeX.sublime-build",
+					"Choose Quick Build"
+				],
+				[
+					"Packages/User/Package Control.cache/LaTeX.sublime-build",
+					"Clean up Files"
+				]
+			],
+			[
+				"Packages/User/Package Control.cache/LaTeX.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/Makefile/Make.sublime-build",
+					""
+				],
+				[
+					"Packages/Makefile/Make.sublime-build",
+					"Clean"
+				]
+			],
+			[
+				"Packages/Makefile/Make.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/Python/Python.sublime-build",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					"Syntax Check"
+				]
+			],
+			[
+				"Packages/Python/Python.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/User/LaTeX_merlin.sublime-build",
+					""
+				],
+				[
+					"Packages/User/LaTeX_merlin.sublime-build",
+					"Primary Quick Build"
+				],
+				[
+					"Packages/User/LaTeX_merlin.sublime-build",
+					"Choose Quick Build"
+				],
+				[
+					"Packages/User/LaTeX_merlin.sublime-build",
+					"Clean up Files"
+				]
+			],
+			[
+				"Packages/User/LaTeX_merlin.sublime-build",
+				"Primary Quick Build"
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 71.0,
+		"last_filter": "sy py",
+		"selected_items":
+		[
+			[
+				"sy py",
+				"Set Syntax: Python"
+			],
+			[
+				"anacon",
+				"Anaconda: Run Last Test"
+			],
+			[
+				"inst",
+				"Package Control: Install Package"
+			],
+			[
+				"setting",
+				"Preferences: Settings - Default"
+			],
+			[
+				"clea",
+				"LaTeXing: Clean Temporary Output Dictionary"
+			],
+			[
+				"keybin",
+				"Preferences: Key Bindings - User"
+			],
+			[
+				"key",
+				"Preferences: Key Bindings - Default"
+			],
+			[
+				"latexing ext",
+				"Preferences: LaTeXing Settings - User (Extended)"
+			],
+			[
+				"remo",
+				"Package Control: Remove Package"
+			],
+			[
+				"alig",
+				"AlignTab: Table Mode"
+			],
+			[
+				"install",
+				"Package Control: Install Package"
+			],
+			[
+				"align",
+				"Preferences: Alignment File Settings – User"
+			],
+			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
+				"cw",
+				"LaTeXing: New Command for Current Word"
+			],
+			[
+				"install ",
+				"Package Control: Install Package"
+			],
+			[
+				"latexing e",
+				"Preferences: LaTeXing Settings - Default (Extended)"
+			],
+			[
+				"latexing sett",
+				"Preferences: LaTeXing Settings - Default"
+			],
+			[
+				"syn late",
+				"Set Syntax: LaTeXing"
+			],
+			[
+				"latexing",
+				"Preferences: LaTeXing Settings - User"
+			],
+			[
+				"looku",
+				"LaTeXing: Online Lookup"
+			],
+			[
+				"syn lat",
+				"Set Syntax: LaTeXing"
+			],
+			[
+				"laetxing set",
+				"Preferences: LaTeXing Settings - Toggle Value"
+			],
+			[
+				"syn la",
+				"Set Syntax: LaTeXing"
+			],
+			[
+				"latexin sett",
+				"Preferences: LaTeXing Settings - Default (Extended)"
+			],
+			[
+				"cle",
+				"LaTeXing: Clean up (Remove) all Nonessential Files"
+			],
+			[
+				"clean",
+				"LaTeXing: Clean up (Remove) all Nonessential Files"
+			],
+			[
+				"latexin set",
+				"Preferences: LaTeXing Settings - User (Extended)"
+			],
+			[
+				"synta tex",
+				"Set Syntax: LaTeXing"
+			],
+			[
+				"latex set",
+				"Preferences: LaTeXing Settings - User"
+			],
+			[
+				"clean up",
+				"LaTeXing: Clean up (Remove) all Nonessential Files"
+			],
+			[
+				"l cle",
+				"LaTeXing: Clean up (Remove) all Nonessential Files"
+			],
+			[
+				"l",
+				"Preferences: LaTeXing Settings - Default"
+			],
+			[
+				"Build: ",
+				"Build: Custom Quick Build"
+			],
+			[
+				"latex",
+				"Preferences: LaTeXing Settings - User (Extended)"
+			],
+			[
+				"qui",
+				"Build: Custom Quick Build"
+			],
+			[
+				"latex sett",
+				"Preferences: LaTeXing Settings - Default"
+			],
+			[
+				"late su",
+				"Preferences: LaTeXing Settings - User (Extended)"
+			],
+			[
+				"lateing sett",
+				"Preferences: LaTeXing Settings - Default (Extended)"
+			],
+			[
+				"pack remov",
+				"Package Control: Remove Package"
+			],
+			[
+				"packag re",
+				"Package Control: Remove Channel"
+			],
+			[
+				"latexing ",
+				"Preferences: LaTeXing Settings - Default (Extended)"
+			],
+			[
+				"synta late",
+				"Set Syntax: LaTeXing"
+			],
+			[
+				"build",
+				"Build With: LaTeX - Clean up Files"
+			],
+			[
+				"",
+				"AVR: Create/Update Project"
+			],
+			[
+				"latexing se",
+				"Preferences: LaTeXing Settings - User"
+			],
+			[
+				"SYNTA C",
+				"Set Syntax: C"
+			],
+			[
+				"buil",
+				"Build With: SublimeAVR - Program"
+			],
+			[
+				"avr",
+				"AVR: Create/Update Project"
+			]
+		],
+		"width": 453.0
+	},
+	"console":
+	{
+		"height": 128.0,
+		"history":
+		[
+			"sublime.log_commands(True)"
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/Users/Merlin/Google Drive/Projects/lithocontrol",
+		"/Users/Merlin/Google Drive/Projects/lithocontrol/source"
+	],
+	"file_history":
+	[
+		"/Users/Merlin/Google Drive/Projects/lithocontrol/treetester2.py",
+		"/Users/Merlin/Google Drive/Projects/lithocontrol/testingdrag.py",
+		"/Users/Merlin/Google Drive/Projects/lithocontrol/treetester.py",
+		"/Users/Merlin/anaconda/envs/py3/lib/python3.4/site-packages/watchdog/utils/dirsnapshot.py",
+		"/Users/Merlin/anaconda/envs/py3/lib/python3.4/site-packages/ezdxf/__init__.py",
+		"/Users/Merlin/Library/Application Support/Sublime Text 3/Packages/SublimeREPL/sublimerepl_build_system_hack.sublime-build",
+		"/Users/Merlin/Library/Application Support/Sublime Text 3/Packages/User/Preferences.sublime-settings",
+		"/Users/Merlin/Google Drive/Projects/lithocontrol/source/treeclass.py",
+		"/Users/Merlin/Google Drive/Projects/lithocontrol/source/helpers.py",
+		"/Users/Merlin/Google Drive/Projects/lithocontrol/source/generator.py",
+		"/Users/Merlin/Google Drive/Projects/lithocontrol/source/dxf2shape.py",
+		"/Users/Merlin/Google Drive/Stuff/PCB/http_vectormadness.com_getfile_7954.eps",
+		"/Users/Merlin/Google",
+		"/Users/Merlin/Drive/MasterProject/AB_exp/git/qd_tools",
+		"/Users/Merlin/Google Drive/Projects/lithocontrol/remoteplotting.py",
+		"/Users/Merlin/anaconda/lib/python2.7/site-packages/pyqtgraph/widgets/RemoteGraphicsView.py",
+		"/Users/Merlin/Library/Application Support/Sublime Text 3/Packages/Default/Preferences.sublime-settings",
+		"/Users/Merlin/Google Drive/Documents/Dammholm saal verkabelung.txt",
+		"/Users/Merlin/anaconda/envs/py3/lib/python3.4/site-packages/cv2.so",
+		"/Users/Merlin/Google Drive/Documents/anschlussklemmen auf platine fuer diese netzwerk k",
+		"/Users/Merlin/Google Drive/INCLUDE/gui.h",
+		"/Volumes/Users/QDevTriton2/Google Drive/joachim/git/qd_tools/getFolder.py",
+		"/Users/Merlin/Google Drive/Projects/lithocontrol/source/DataStore.py",
+		"/Users/Merlin/anaconda/envs/py3/bin/gizeh/setup.py",
+		"/Users/Merlin/anaconda/envs/py3/lib/python3.4/site-packages/easy-install.pth",
+		"/Users/Merlin/anaconda/envs/py3/lib/python3.4/site-packages/setuptools-14.0-py3.4.egg",
+		"/var/folders/dm/_kpx37s51wd4yfkc9xtclth00000gp/T/easy_install-l1zdhiqr/mayavi-4.4.3/setup.py",
+		"/Users/Merlin/Downloads/ffmpeg.osx",
+		"/Users/Merlin/Google Drive/PHD/Application/CoverLetter/CoverLetterMartin.tex",
+		"/Users/Merlin/Google Drive/PHD/Application/CoverLetter/CoverLetter.tex",
+		"/Users/Merlin/Google Drive/PHD/Application/CoverLetterNini/CoverLetterNini.tex",
+		"/Users/Merlin/Google Drive/PHD/Application/CV/CV-merlin.tex",
+		"/Users/Merlin/Google Drive/Stuff/PCB/dirt_cheap_dirty_boards.v1.cam",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/VBG rotations/PhiRot 4-70V/AC/AC_2014-01-16#031/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/VBG rotations/store.py",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/VBG rotations/VBGrotations.h5",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/VBG rotations/ThetaRot 4-70V/AC/AC_2014-01-13#014/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/VBG rotations/ThetaRot 4-70V/AC/AC_2014-01-08#054/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/VBG rotations/ThetaRot 4-70V/DC/DC_2014-01-12#067/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/VBG rotations/ThetaRot 4-70V/DC/DC_2014-01-08#003/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/VBG rotations/ThetaRot 4-70V/DC/DC_2014-01-08#003/data.dat",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24 old/theta rotations/theta rot D-aligned @70vbg/2013-11-27#008/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24 old/BG @B parallell to D/2013-11-30#026/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/AC phi rot 10-70V/2014-01-07#039/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/BG-Sweeps/2014-01-12#058 BG sweep/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/DC phi rot 10-40V/2014-01-06#072/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/DC phi rot 10-40V/2014-01-06#041/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/DC phi rot 10-40V/2014-01-06#036/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/individual Bz/2013-11-22#bz[-0.5,0,5]T @28Vbg/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/SD_BG/2014-02-02#001_LR/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/VBG dependent/VbgBzTriples-- 33.5 - 70V/2013-12-23#004/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/TemperatureControlTriples/AC_2014-01-21#045/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/VBG dependent/VbgBzTriples-- 33.5 - 70V/2013-12-23#002/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/VBG rotations/ThetaRot 4-70V/DC/DC_2014-01-08#006/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/VBG rotations/PhiRot 4-70V/DC/DC_2014-01-08#024/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/VBG rotations/PhiRot 4-70V/AC/AC_2014-01-16#013/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/VBG rotations/PhiRot 4-70V/AC/AC_2014-01-09#036/data.json",
+		"/Users/Merlin/Google Drive/Research/WALdata/Data/02_A24/A24/VBG rotations/PhiRot 4-70V/AC/AC_2014-01-09#014/data.json",
+		"/Users/Merlin/Google Drive/PHD/Application/CV/CV-EN2.tex",
+		"/Users/Merlin/Google Drive/MasterProject/PIT-Grant application/CV-en/CV-EN2.tex",
+		"/Users/Merlin/Downloads/NemKonto-4160457872-20150930.csv",
+		"/Users/Merlin/Desktop/cookie-law-info/readme.txt",
+		"/private/etc/hosts",
+		"/Users/Merlin/Desktop/AAMtool.app/Contents/MacOS/AAMtool",
+		"/Users/Merlin/Downloads/Adobe_CC_2014_KEYGEN_-_Mac_OS_X/Read Me.txt",
+		"/Volumes/TCPBlock_v4.2/TCPBlock_License.txt",
+		"/Users/Merlin/Google Drive/Research/WALpaper/main.tex",
+		"/Users/Merlin/Downloads/AdLR601.MacOSX/Adobe Photoshop Lightroom CC 6.0.1 MacOSX/Alternative Activation Option/Sample HOSTS file with Adobe blocks",
+		"/Users/Merlin/Google Drive/Projects/esp/examples/source-code-examples/blinky/Makefile",
+		"/Volumes/esp-open-sdk/esp-open-sdk/xtensa-lx106-elf/bin/esptool.py",
+		"/Volumes/esp-open-sdk/esp-open-sdk/examples/Makefile.blinky",
+		"/Volumes/esp-open-sdk/esp-open-sdk/crosstool-NG/.build/src/gmp-5.1.3/gmp-h.in",
+		"/Volumes/esp-open-sdk/esp-open-sdk/examples/Makefile.esp8266_at",
+		"/Users/Merlin/Google Drive/Projects/AVR/dimmer/lib_phase_cntrl.c",
+		"/Users/Merlin/Google Drive/Projects/AVR/dimmer/main.h",
+		"/Users/Merlin/Google Drive/Projects/AVR/dimmer/main.c",
+		"/Users/Merlin/Google Drive/Projects/AVR/dimmer/uart.c",
+		"/Users/Merlin/Google Drive/Projects/AVR/ControlBoard/main.c",
+		"/Users/Merlin/Downloads/Brushed/Template/brushed/_include/js/main.js",
+		"/Users/Merlin/Downloads/Brushed/Template/brushed/_include/css/main.css",
+		"/Users/Merlin/Downloads/Brushed/Template/brushed/index.html",
+		"/Users/Merlin/Downloads/Brushed/Template/brushed/_include/css/responsive.css",
+		"/Users/Merlin/Downloads/Brushed/Template/brushed/_include/css/shortcodes.css",
+		"/Users/Merlin/Google Drive/Research/WALdata/Python/myinit.py",
+		"/Users/Merlin/Google Drive/Research/WALdata/Python/multifit.py",
+		"/Users/Merlin/Google Drive/Research/WALdata/Python/helpers.py",
+		"/usr/local/texlive/2015/texmf-dist/tex/latex/caption/caption.sty",
+		"/Users/Merlin/Desktop/fuck/FuckFuckFuckFuckFuckFuckFuckFuckFuckFuckFuckFuckFu",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/Oxides.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/Outlook.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/AB_data.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/quick-commands.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/Abbreviations.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/AppendixData.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/AppendixPoster.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/AB_intro.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/Theory_Ring.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/thesis.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/Preface.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/Pittsburgh.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/SampleFabrication.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/AFM_setup.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/sketching.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/Title.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/Acknowledgments.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/thesis.aux",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/thesis.bbl",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/AppendixRecipe.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/preamble.tex",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/Abstract.tex",
+		"/Volumes/lithography/canvas.001",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/thesis.toc",
+		"/Users/Merlin/Google Drive/Pittsburgh/2014-12-10_SA02794_G/SA02794G0000 (1).ibw.json",
+		"/Users/Merlin/Google Drive/Pittsburgh/2014-12-10_SA02794_G/cond.0000.tdms",
+		"/Users/Merlin/Google Drive/Pittsburgh/2014-12-10_SA02794_G/cond.0000.tdms_index",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/thesis.pdf",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/thesis.acr",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/bib/ThesisIntro.bib",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/thesis.acn",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/thesis.glsdefs",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/bib/Thesis.bib",
+		"/Users/Merlin/Google Drive/Projects/Arduino/dht21_inst/dht21_inst.ino",
+		"/Users/Merlin/Google Drive/Projects/Arduino/libraries/DHT/examples/dht21_test/dht21_test.ino",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/questions.txt",
+		"/Users/Merlin/Google Drive/MasterProject/Thesis/texfiles/content.tex",
+		"/Users/Merlin/Library/Application Support/Sublime Text 3/Packages/User/snippets/id.sublime-snippet",
+		"/Users/Merlin/Library/Application Support/Sublime Text 3/Packages/User/snippets/cite.sublime-snippet",
+		"/Users/Merlin/Library/Application Support/Sublime Text 3/Packages/User/Default (OSX).sublime-keymap"
+	],
+	"find":
+	{
+		"height": 37.0
+	},
+	"find_in_files":
+	{
+		"height": 95.0,
+		"where_history":
+		[
+			""
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"flags",
+			"closed",
+			"is_closed",
+			"closed",
+			"show",
+			"closed",
+			"painter",
+			"check",
+			"print",
+			"print ",
+			"255",
+			"0",
+			"self.combo",
+			"combo",
+			"editor.",
+			"combo",
+			"emit",
+			"color",
+			"treemodel",
+			"model",
+			"ColorDelegate",
+			"delegate",
+			"colorde",
+			"colordeleg",
+			"colordele",
+			"keyPressEvent",
+			"self.menu",
+			"rootData",
+			"treeidx",
+			"treeView",
+			"iconPix",
+			"pixmap",
+			"color",
+			"i.",
+			"delegate",
+			"color",
+			"colordele",
+			":",
+			"min(0",
+			"QtCore",
+			"size",
+			"width",
+			"connect",
+			"connet",
+			"dict",
+			"self",
+			"model",
+			".treeView",
+			".ui",
+			"ui.",
+			"                               ",
+			"                              ",
+			"                             ",
+			"                            ",
+			"                           ",
+			"                          ",
+			"                         ",
+			"                        ",
+			"                       ",
+			"                      ",
+			"                     ",
+			"                    ",
+			"                   ",
+			"                                            ",
+			"                                           ",
+			"                                          ",
+			"                                         ",
+			"                                        ",
+			"                                       ",
+			"                                      ",
+			"                                             ",
+			"                                            ",
+			"                                           ",
+			"                                          ",
+			"                                         ",
+			"                                        ",
+			"                                       ",
+			"                                      ",
+			"                                     ",
+			"                                    ",
+			"                                   ",
+			"                                  ",
+			"                                 ",
+			"                                ",
+			"                               ",
+			"                              ",
+			"                             ",
+			"                            ",
+			"                           ",
+			"                          ",
+			"                         ",
+			"                        ",
+			"                       ",
+			"                      ",
+			"                     ",
+			"           ",
+			"          ",
+			"         ",
+			"             ",
+			"            ",
+			"           ",
+			"          ",
+			"         ",
+			"                                            ",
+			"                                           ",
+			"                                          ",
+			"                                         ",
+			"                                        ",
+			"                                       ",
+			"                                      ",
+			"                                     ",
+			"                                    ",
+			"                                   ",
+			"                                  ",
+			"                                 ",
+			"                                ",
+			"                               ",
+			"                              ",
+			"                             ",
+			"                            ",
+			"                           ",
+			"                          ",
+			"                         ",
+			"                        ",
+			"                       ",
+			"                      ",
+			"                     ",
+			"                    "
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+			"_grb_%N.",
+			"/out/",
+			"\\out\\%N.",
+			"\\tdes",
+			"DmxField[1]\nDmxField[2]\nDmxField[3]\nDmxField[4]\nDmxField[5]\nDmxField[6]\nDmxField[7]\nDmxField[8]\nDmxField[9]\nDmxField[10]\nDmxField[11]\nDmxField[12]\nDmxField[13]\nDmxField[14]",
+			"TIFR0",
+			"TIMSK0",
+			"EIMSK"
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 3,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "cAFM_ui_py3.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 51500,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2534,
+								2541
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"syntax": "Packages/Python/Python.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 817.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "treetester.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3654,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								927,
+								939
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"spell_check": true,
+							"syntax": "Packages/Python/Python.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 323.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "source/treeclass3.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 33876,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3452,
+								3452
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"spell_check": true,
+							"syntax": "Packages/Python/Python.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 1145.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 0,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"default_dir": "/Users/Merlin/Google Drive/Projects/lithocontrol",
+							"encoding_helper_encoding": "",
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "combobox.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 5686,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2442,
+								1046
+							]
+						],
+						"settings":
+						{
+							"auto_name": "from PyQt4 import QtGui, QtCore",
+							"encoding_helper_encoding": "UTF-8",
+							"spell_check": false,
+							"syntax": "Packages/Python/Python.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 345.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 4,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "combobox2.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3612,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1818,
+								1833
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"syntax": "Packages/Python/Python.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 309.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				},
+				{
+					"buffer": 6,
+					"file": "source/treeclass2.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 21510,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								16304,
+								16439
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"syntax": "Packages/Python/Python.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 6577.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 8,
+					"type": "text"
+				},
+				{
+					"buffer": 7,
+					"file": "project.sublime-project",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 585,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								55,
+								55
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"syntax": "Packages/JavaScript/JSON.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 7,
+					"type": "text"
+				},
+				{
+					"buffer": 8,
+					"file": "source/afmHandler.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1741,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1488,
+								1488
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"syntax": "Packages/Python/Python.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 47.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 9,
+					"type": "text"
+				},
+				{
+					"buffer": 9,
+					"file": "multi_processing.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1218,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								243,
+								243
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"syntax": "Packages/Python/Python.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 6,
+					"type": "text"
+				},
+				{
+					"buffer": 10,
+					"file": "source/ni_measurement.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 6719,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								5322,
+								5322
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"syntax": "Packages/Python/Python.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 10,
+					"type": "text"
+				},
+				{
+					"buffer": 11,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 0,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"default_dir": "/Users/Merlin/Google Drive/Projects/lithocontrol",
+							"encoding_helper_encoding": "",
+							"syntax": "Packages/Python/Python.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 11,
+					"type": "text"
+				},
+				{
+					"buffer": 12,
+					"file": "treetest.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 7241,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2475,
+								2493
+							]
+						],
+						"settings":
+						{
+							"auto_name": "import sys",
+							"encoding_helper_encoding": "UTF-8",
+							"syntax": "Packages/Python/Python.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 1733.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 12,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 22.0
+	},
+	"input":
+	{
+		"height": 33.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 187.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "Anaconda Python Builder",
+	"project": "project.sublime-project",
+	"replace":
+	{
+		"height": 40.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"",
+				"~/Google Drive/Projects/AVR/ControlBoard/main.sublime-workspace"
+			]
+		],
+		"width": 380.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 238.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}

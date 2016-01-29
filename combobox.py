@@ -1,0 +1,169 @@
+
+# from PyQt4 import QtGui,QtCore
+# import sys
+
+from PyQt4 import QtGui
+from PyQt4 import QtCore
+from PyQt4.QtCore import pyqtSlot,SIGNAL,SLOT
+import sys
+
+
+kelly_colors = dict(vivid_yellow=(255, 179, 0),
+            strong_purple=(128, 62, 117),
+            vivid_orange=(255, 104, 0),
+            very_light_blue=(166, 189, 215),
+            vivid_red=(193, 0, 32),
+            grayish_yellow=(206, 162, 98),
+            medium_gray=(129, 112, 102),
+            vivid_green=(0, 125, 52),
+            strong_purplish_pink=(246, 118, 142),
+            strong_blue=(0, 83, 138),
+            strong_yellowish_pink=(255, 122, 92),
+            strong_violet=(83, 55, 122),
+            vivid_orange_yellow=(255, 142, 0),
+            strong_purplish_red=(179, 40, 81),
+            vivid_greenish_yellow=(244, 200, 0),
+            strong_reddish_brown=(127, 24, 13),
+            vivid_yellowish_green=(147, 170, 0),
+            deep_yellowish_brown=(89, 51, 21),
+            vivid_reddish_orange=(241, 58, 19),
+            dark_olive_green=(35, 44, 22))
+
+class ColorModel(QtCore.QAbstractListModel):
+    def __init__(self, *args, **kwargs):
+        QtCore.QAbstractListModel.__init__(self, *args, **kwargs)
+        self.items=[]
+
+    def rowCount(self, parent=QtCore.QModelIndex()):
+        return len(self.items)
+
+    def data(self, index, role=QtCore.Qt.DisplayRole):
+        if index.isValid() is True:
+            if role == QtCore.Qt.DisplayRole:
+                return self.items[index.row()]
+            elif role == QtCore.Qt.ItemDataRole:
+                return self.items[index.row()]
+            elif role==QtCore.Qt.DecorationRole:
+                # print(self.items[index.row()])
+                k = self.items[index.row()]
+                pixmap = QtGui.QPixmap(16, 16)
+                pixmap.fill(QtGui.QColor(*kelly_colors[k]))
+                icon = QtGui.QIcon(pixmap)
+                return icon
+            # print(role)
+        return None
+
+    def addColors(self,colors):
+        self.colors = colors
+        for k in sorted(colors):
+            self.addItem(k)
+
+    def getColor(self, index):
+        if type(index) == int:
+            return self.colors[self.items[index]]
+        if type(index) == str:
+            return self.colors[index]
+
+    def addItem(self, item):
+        # index=QtCore.QModelIndex()
+        self.beginInsertRows(QtCore.QModelIndex(), 0, 0)
+        self.items.append(item)
+        self.endInsertRows()
+
+class ColorMenu(QtGui.QMainWindow):
+    closeColor = QtCore.pyqtSignal()
+    colorSelected = QtCore.pyqtSignal(str)
+
+    def __init__(self, parent, point, model):
+        super(ColorMenu, self).__init__()
+        # QtGui.QMenu.__init__(self, parent)
+        self.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.parent = parent
+        # print(point)
+        self.model = model
+        self.view = QtGui.QListView(parent)
+        self.view.setModel(self.model)
+
+        QtCore.QObject.connect(self.view.selectionModel(), QtCore.SIGNAL('currentRowChanged(QModelIndex, QModelIndex)'), self.on_listView_clicked)
+
+        self.setCentralWidget(self.view)
+        w,h = 200, int(self.model.rowCount()*20)
+        self.setGeometry(point.x()-int(w/2), point.y()-int(h/2), w,h)
+        self.show()
+        self.setFocus()
+
+    @QtCore.pyqtSlot("QModelIndex, QModelIndex")
+    def on_listView_clicked(self, selected, deselected):
+        color = self.model.items[selected.row()]
+        self.colorSelected.emit(color)
+
+    def focusOutEvent(self, event):
+        self.closeColor.emit()
+
+
+class myMainWindow(QtGui.QMainWindow):
+    colorSelected = QtCore.pyqtSignal(str)
+    closeColor = QtCore.pyqtSignal()
+    def __init__(self, parent = None):
+        QtGui.QMainWindow.__init__(self, parent)
+        self.colorModel = ColorModel()
+        self.colorDict = kelly_colors
+        self.colorModel.addColors(self.colorDict)
+
+    @pyqtSlot(QtCore.QPoint)
+    def contextMenuRequested(self,point):
+        # action1 = menu.addAction("Set Size 100x100")
+        # action2 = menu.addAction("Set Size 500x500")
+        self.closeMenu()
+        self.menu = ColorMenu(self,self.mapToGlobal(point),self.colorModel)
+        self.menu.colorSelected.connect(self.handleColorSelected)
+        self.menu.closeColor.connect(self.closeMenu)
+        # self.connect(action2,SIGNAL("triggered()"),
+        #                 self,SLOT("slotShow500x500()"))
+        # self.connect(action1,SIGNAL("triggered()"),
+        #                 self,SLOT("slotShow100x100()"))
+        # menu.show()
+    def closeMenu(self):
+        try:
+            self.menu.close()
+        except:
+            pass
+        self.setFocus()
+
+    @pyqtSlot(str)
+    def handleColorSelected(self, color):
+        color = self.colorDict[color]
+        print('xxx', color)
+        self.menu.close()
+
+    @pyqtSlot()
+    def slotShow500x500(self):
+        self.setFixedSize(500,500)
+        self.show()
+
+
+
+# def changedFocusSlot(old, now):
+#     print(old,now)
+#     if (now==None):
+#         print ("set focus to the active window")
+#         # QtGui.QApplication.activeWindow().setFocus()
+
+def main():
+    app      = QtGui.QApplication(sys.argv)
+    # QtCore.QObject.connect(app, SIGNAL("focusChanged(QWidget *, QWidget *)"), changedFocusSlot)
+    window   = myMainWindow()
+    # menu     = ColorMenu()
+
+    #Resize width and height
+    window.resize(250,250)
+    window.setWindowTitle('PyQt Context Menu Example')
+    window.setContextMenuPolicy(QtCore.Qt.CustomContextMenu);
+
+    window.connect(window,SIGNAL("customContextMenuRequested(QPoint)"),
+                    window,SLOT("contextMenuRequested(QPoint)"))
+    window.show()
+    sys.exit(app.exec_())
+
+if __name__ == '__main__':
+    main()
