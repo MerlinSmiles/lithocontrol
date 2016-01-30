@@ -38,14 +38,14 @@
     }
   },
   "storage": {
-    "storeFolder": "F:/lithography/sketches/",
-    "def_dxf_file": "F:/lithography/DesignFiles/current.dxf",
-    "afmImageFolder": "D:/afmImages/"
+    "storeFolder": "./demo/sketches/",
+    "def_dxf_file": "./demo/current.dxf",
+    "afmImageFolder": "./demo/afmImages/"
   },
   "measure": {
     "PAR_sensitivity": 0.001,
     "DHTport": 5,
-    "SR_sensitivity": 10e-09,
+    "SR_sensitivity": 10e-09
   },
 
   "color_list": [

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-demo = False
+demo = True
 
 import sip
 API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
@@ -25,12 +25,16 @@ import shutil
 # %autoreload 2
 
 import sys
-
 sys.path.append(".\\source")
 
+import json
+
+with open('config.json', 'r') as f:
+    config = json.load(f)
+print(config['storage'])
+
 def_dxf_file = 'F:/lithography/DesignFiles/current.dxf'
-if demo:
-    def_dxf_file = './test.dxf'
+def_dxf_file = config['storage']['def_dxf_file']
 
 import os
 import time
@@ -38,7 +42,6 @@ from time import sleep
 import socket
 
 from source.helpers import *
-from source.dxf2shape_tst import *
 if not demo:
     from source.convertAFM import *
     from source.ni_measurement import *
@@ -143,8 +146,8 @@ class MainWindow(QtGui.QMainWindow):
         self.nextPosition = np.array([np.nan,np.nan,np.nan])
         self.sketching = False
 
-        self.afmImageFolder = 'D:/afmImages/'
-        self.storeFolder = 'F:/lithography/sketches/' + self.s_time + '/'
+        self.afmImageFolder = config['storage']['afmImageFolder']
+        self.storeFolder = config['storage']['storeFolder'] + self.s_time + '/'
         self.sketchSubFolder = './'
 
         if demo:
@@ -228,6 +231,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
 
+
     # def keyPressEvent(self, event):
     #     print ('key: %s -' % hex(event.key()))
     #     print ('modifiers:', hex(int(event.modifiers())))
@@ -294,7 +298,9 @@ class MainWindow(QtGui.QMainWindow):
 
         self.headers = ('Name','Show', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Closed', 'Color', 'Type')
 
+        self.splash.showMessage("Initialize AFMWorker",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
         self.AFMthread = AFMWorker()
+        self.splash.showMessage("Initialize SocketWorker",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
         self.SocketThread = SocketWorker()
 
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("finished()"), self.updateAFM)
@@ -370,6 +376,7 @@ class MainWindow(QtGui.QMainWindow):
         self.init_dht_plot()
 
         if not demo:
+
             self.ni_worker = ni_Worker(self.settings['measure'])
             self.ni_workerThread = None
 
@@ -530,19 +537,20 @@ class MainWindow(QtGui.QMainWindow):
             self.log(['sketch','x','y','r'], ['xyAbs', x, y, r])
             self.afmPoints.append([x,y,r])
 
+
     def doDemo(self):
         data = self.sketchFile.split('\n')
         for line in data:
             if line.startswith('xyAbs'):
-                dx,dy,dr = self.nextPosition - self.currentPosition
-                r = self.nextPosition[2]
-                dt = np.sqrt(dx**2 + dy**2)/r
-                print(dt)
+                # dx,dy,dr = self.nextPosition - self.currentPosition
+                # r = self.nextPosition[2]
+                # dt = np.sqrt(dx**2 + dy**2)/r
+                # print(dt)
                 self.updateStatus(line)
                 # self.timer.restart()
                 self.sketching = True
-                line = line.split( )
-                r = float(line[3])
+                # line = line.split( )
+                # r = float(line[3])
 
     def sketchNow(self, index=None):
         self.afmPosition.clear()
@@ -689,13 +697,12 @@ class MainWindow(QtGui.QMainWindow):
             pass
 
     def readDXFFile(self):
-        if demo:
-            pass
         self.clearDXFFile()
 
-        # self.fileIn.setText(self.dxffileName)
-        self.dxf = ezdxf.readfile('F:/lithography/DesignFiles/current.dxf')
+        # self.fileIn.setText()
+        self.dxf = ezdxf.readfile(self.dxffileName)
         self.model = TreeModel(self.headers, self.dxf, parent=self)
+
 
         # self.tree_file.setSizes([20, 300])
         self.tree_file.setModel(self.model)
@@ -736,8 +743,9 @@ class MainWindow(QtGui.QMainWindow):
 
         QtCore.QObject.connect(self.tree_file.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
         # QtCore.QObject.connect(self.tree_schedule.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
-        QtCore.QObject.connect(self.model, QtCore.SIGNAL('checkChanged(QModelIndex)'), self.checked)
-        QtCore.QObject.connect(self.model, QtCore.SIGNAL('redraw(QModelIndex)'), self.redraw)
+        QtCore.QObject.connect(self.model, QtCore.SIGNAL('checkChanged(QModelIndex,QModelIndex)'), self.checked)
+        QtCore.QObject.connect(self.model, QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), self.replot)
+        QtCore.QObject.connect(self.model, QtCore.SIGNAL('redraw(QModelIndex,QModelIndex)'), self.redraw)
 
         self.updateActions()
 
@@ -753,11 +761,12 @@ class MainWindow(QtGui.QMainWindow):
         item = self.tree_file.model().getItem(index)
         print(colname,item)
 
-    @QtCore.pyqtSlot("QModelIndex")
+    @QtCore.pyqtSlot("QModelIndex", "QModelIndex")
     def redraw(self, index):
+        print('redraw xx')
         model = self.model
         item = model.getItem(index)
-
+        print('xx',item)
         checked = item.checkState
         if not checked == 0:
             # clear plot from item
@@ -776,8 +785,32 @@ class MainWindow(QtGui.QMainWindow):
         # print( self.pi.listDataItems() )
 
 
-    @QtCore.pyqtSlot("QModelIndex")
+    @QtCore.pyqtSlot("QModelIndex", "QModelIndex")
+    def replot(self, index):
+        model = self.model
+        item = model.getItem(index)
+        # self.pi.removeItem(item.pltHandle)
+        for i in item.pltHandle:
+            self.pi.removeItem(i)
+        item.pltHandle = []
+
+        checked = item.checkState
+        if checked != 0:
+            showPen.setColor(pg.QtGui.QColor(*item.color))
+            for i in item.pltData:
+                # print(i)
+                # print(i.shape)
+                # print(data.shape)
+                pdi = self.pi.plot(i, pen = showPen)
+                item.pltHandle.append(pdi)
+
+            self.updateActions()
+
+
+
+    @QtCore.pyqtSlot("QModelIndex","QModelIndex")
     def checked(self, index):
+        print('checked')
         model = self.model
         item = model.getItem(index)
         checked = item.checkState
@@ -820,7 +853,7 @@ class MainWindow(QtGui.QMainWindow):
         #     self.color = (255,0,255)
         #     # self.color = self.entity.get_rgb_color()
 
-        data = dxf2shape(item, fill_step = item.fillStep, fill_angle=item.fillAngle)
+
 
         showPen.setColor(pg.QtGui.QColor(*item.color))
 
@@ -833,11 +866,13 @@ class MainWindow(QtGui.QMainWindow):
                 item.pltHandle.append(pdi)
 
         print('need updateActions here?')
+        # print(item.pltHandle)
         self.updateActions()
 
 
     @QtCore.pyqtSlot("QItemSelection, QItemSelection")
     def update_plot(self, selected, deselected):
+        print('úpdateplot')
         index = selected.indexes()
         self.tree_file.setCurrentIndex(index[0])
         # self.tree_schedule.setCurrentIndex(index[0])

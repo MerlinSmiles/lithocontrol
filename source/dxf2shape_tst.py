@@ -1,13 +1,13 @@
 # import sys
 # import os
 # import time
-import dxfgrabber
+# import dxfgrabber
 # from collections import Counter
 import matplotlib.pyplot as plt
 # %matplotlib inline
 import numpy as np
 # from scipy.interpolate import interp1d
-from source.helpers import *
+from helpers import *
 
 def get_points(entity, threshold = 1e-9):
     if entity.dxftype == 'LINE':
@@ -33,7 +33,14 @@ def dxf2shape(item, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_dire
         print( 'Path direction must be -1 or 1!' )
         return 0
 
-    data = np.array(list(item.entity.points()))[:,:2]
+    try:
+        data = np.array(list(item.entity.points()))[:,:2]
+    except:
+        try:
+            data = np.array(item.entity.points)[:,:2]
+        except:
+            return 0
+        return 0
     pts  = data[::path_direction]
 
     # return
@@ -80,8 +87,9 @@ def dxf2shape(item, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_dire
                 # print( inter,  a1,a2, b1, b2 )
             b1 = b2
         # print( ints )
-        if ints != []:
+        if len(ints) > 1:
             ints = np.array(ints)
+            # print(ints)
             ints.view('float32,float32').sort(order=['f1'], axis=0)
             # it actually might happen, that there is an uneven number of points, so if there are two points very close
             if len(ints)%2 !=0:
@@ -95,7 +103,8 @@ def dxf2shape(item, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_dire
             for i in np.arange(0,len(ints),2):
                 lines.append( np.array([ints[i],ints[i+1]]) )
 
-    lines = lines
+    # lines = lines
+    # print(lines)
     collection = []
     npath = []
     while len(lines)>0:

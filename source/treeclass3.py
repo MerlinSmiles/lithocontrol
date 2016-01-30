@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-demo = False
+
 print('\n\n')
 import sip
 API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
@@ -25,6 +25,7 @@ sys.path.append(".\\source")
 
 filename = './test.dxf'
 
+from dxf2shape_tst import *
 import os
 import pickle as pickle
 
@@ -250,6 +251,9 @@ class TreeItem(object):
 
 #     shape.type = None # [VirtualElectrode, line, area]
 
+    def redraw(self):
+        print('Fix redraw')
+
     def setEntity(self, entity):
         self.entity = entity
         self.initData()
@@ -272,7 +276,7 @@ class TreeItem(object):
                 self.is_closed = True
         if self.entity.dxftype()=='LINE':
             self.is_closed = False
-            # data = np.array([self.entity.dxf.start, self.entity.dxf.end])
+            self.entity.points = np.array([self.entity.dxf.start, self.entity.dxf.end])
 
 
         item_data = {'Color':        self.color,
@@ -293,6 +297,7 @@ class TreeItem(object):
                      'Name':         self.name,
                      'Type':         self.type}
         self.loadMetaData(item_data)
+        self.recalc()
 
     def loadMetaData(self, meta):
         for column, key in enumerate(self.model.header):
@@ -310,6 +315,10 @@ class TreeItem(object):
             self.checkState = QtCore.Qt.PartiallyChecked
         else:
             self.checkState = QtCore.Qt.Unchecked
+
+        if self.parentItem != None:
+            self.parentItem.calcTime()
+
         return self.checkState
 
     def child(self, row):
@@ -380,25 +389,58 @@ class TreeItem(object):
 
         return True
 
-    def redraw(self):
-        print (redraw)
-        return
+    def replot(self):
+        self.model.emit(QtCore.SIGNAL('replot(QModelIndex)'), self.index())
+        print('replot', self.pltHandle)
+        pass
+
+    def recalc(self):
+        if self.entity.dxftype() in ['POLYLINE','LINE']:
+            dxf2shape(self, fill_step = self.fillStep, fill_angle=self.fillAngle)
+        self.calcTime()
+
+    def calcLength(self):
+        try:
+            dat = np.concatenate(self.pltData).reshape((-1,2))
+        except:
+            print('error calculating length')
+            return
+        dat_b = np.roll(dat,-2)
+        dist = 0
+        for k in range(len(dat)-1):
+            dist += np.linalg.norm(dat[k]-dat_b[k])
+        self.length = dist
+
+    def calcTime(self):
+        if self.childCount() == 0:
+            self.calcLength()
+            self.sketchTime = self.length / float(self.rate)
+            self.parentItem.calcTime()
+        else:
+            self.sketchTime = 0.0
+            # self.setData(5,self.sketchTime)
+            for i in range(self.childCount()):
+                if self.child(i).checkState == 2:
+                    self.sketchTime += self.child(i).sketchTime
+        self.setData('Time',round(float(self.sketchTime),1))
 
 
     def setData(self, column, value, index=None):
-        if column < 0 or column >= len(self.itemData):
-            return False
-
-#         print(self.model.header[column],column, value)
         if type(column) == int:
+            if column < 0 or column >= len(self.itemData):
+                return False
             colname = self.model.col(column)
         else:
             colname = column
+            column = self.model.col(column)
+
+        # print(column, colname, value)
+
         if colname == 'Angle':
             value= float(value)
             if self.fillAngle != value:
                 self.fillAngle = value
-                self.redraw()
+                self.recalc()
         elif colname == 'Rate':
             value= float(value)
             if self.rate != value:
@@ -408,17 +450,18 @@ class TreeItem(object):
             value= float(value)
             if self.fillStep != value:
                 self.fillStep = value
-                self.redraw()
+                self.recalc()
         elif colname == 'Closed':
             value= bool(value)
+            # print(column,colname,value,index)
             if self.is_closed != value:
                 self.is_closed = value
-                self.redraw()
+                self.recalc()
         elif colname == 'Show':
             value= bool(value)
             if self.show != value:
                 self.show = value
-                self.redraw()
+                self.replot()
         elif colname == 'Time':
             value= float(value)
             if self.sketchTime != value:
@@ -427,10 +470,22 @@ class TreeItem(object):
                 value = 'Time'
         elif colname == 'Color':
             self.color = value
+            print('color:' , self.pltHandle)
+            self.replot()
 
         self.meta[colname] = value
-
         self.itemData[column] = value
+
+        if index != None:
+            self.model.emit(QtCore.SIGNAL('redraw(QModelIndex,QModelIndex)'), index,index)
+            self.model.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), index, index)
+
+
+        # if self.model.rootData[column] in  ['Voltage', 'Angle', 'Rate', 'Step']:
+        #     for ch in self.childItems:
+        #         ch.setData(column, value)
+        # if (self.childCount() != 0) and (column != (0 or 5)):
+            # self.itemData[column] = ''
         return True
 
 
@@ -621,14 +676,13 @@ class TreeModel(QtCore.QAbstractItemModel):
             item = self.getItem(index)
 
             item.setCheckState(value)
-            self.emit(QtCore.SIGNAL('checkChanged(QModelIndex)'), index)
+            self.emit(QtCore.SIGNAL('checkChanged(QModelIndex, QModelIndex)'), index, index)
 
             cc = item.childCount()
             if cc > 0:
                 for i in range(cc):
                     chindex =  self.createIndex(i, 0, item.child(i))
                     self.setData(chindex,value,role)
-
 
             item = self.getItem(index.parent())
             cc = item.childCount()
@@ -661,6 +715,7 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         result = item.setData(index.column(), value, index)
         if result:
+            self.emit(QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), index,index)
             self.emit(QtCore.SIGNAL('redraw(QModelIndex,QModelIndex)'), index,index)
             self.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), index,index)
 
@@ -858,80 +913,3 @@ class ColorModel(QtCore.QAbstractListModel):
         self.beginInsertRows(QtCore.QModelIndex(), 0, 0)
         self.items.append(item)
         self.endInsertRows()
-
-
-class MainWindow(QtGui.QMainWindow):
-    # colorSelected = QtCore.pyqtSignal(str)
-    # closeColor = QtCore.pyqtSignal()
-
-    def __init__(self, parent=None):
-
-        super(MainWindow, self).__init__(parent)
-
-        self.tree_file = QtGui.QTreeView()
-        self.setCentralWidget(self.tree_file)
-        self.show()
-
-        self.colorModel = ColorModel()
-        self.colorDict = kelly_colors
-        self.colorModel.addColors(self.colorDict)
-
-
-        self.dxffileName = filename
-
-        self.headers = ('Name','Show', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Closed', 'Color', 'Type')
-
-        self.dxf = ezdxf.readfile('F:/lithography/DesignFiles/current.dxf')
-        self.model = TreeModel(self.headers, self.dxf, parent=self)
-
-        self.tree_file.setModel(self.model)
-
-        self.tree_file.setDragDropMode( QtGui.QAbstractItemView.InternalMove )
-        self.tree_file.setSelectionMode( QtGui.QAbstractItemView.ExtendedSelection )
-
-        for col in [self.headers.index(col) for col in ['Closed', 'Show']]:
-            self.tree_file.setItemDelegateForColumn(col,CheckBoxDelegate(self))
-
-        for col in [self.headers.index(col) for col in ['Voltage', 'Rate', 'Angle', 'Step']]:
-            self.tree_file.setItemDelegateForColumn(col,DoubleSpinBoxDelegate(self))
-
-        self.tree_file.setItemDelegateForColumn(self.model.col('Color'),ColorDelegate(self))
-
-        self.tree_file.expandAll()
-        for column in range(self.model.columnCount()):
-            self.tree_file.resizeColumnToContents(column)
-
-        screen = QtGui.QDesktopWidget().screenGeometry()
-        print('(set to minimum expanding?)')
-        self.setGeometry(int(screen.width()/3), int(screen.height()/3), screen.width()/2, screen.height()/2)
-
-
-        # for col in [self.headers.index(col) for col in ['Color']]:
-
-        self.tree_file.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.connect(self.tree_file, QtCore.SIGNAL("customContextMenuRequested(const QPoint &)"), self.doMenu)
-        print('make last column just as wide as needed')
-
-
-    def clicked(self):
-        print('point')
-
-    def doMenu(self, point):
-        index=self.tree_file.indexAt(point)
-        model = index.model()
-        headers = model.header
-        column = index.column()
-        colname = headers[column]
-        item = self.tree_file.model().getItem(index)
-        print(colname,item)
-
-
-if __name__ == '__main__':
-    app = QtGui.QApplication(sys.argv)
-    window = MainWindow()
-    # window.setContextMenuPolicy(QtCore.Qt.CustomContextMenu);
-    # window.connect(window,SIGNAL("customContextMenuRequested(QPoint)"),
-    #                 window,SLOT("contextMenuRequested(QPoint)"))
-
-    # window.show()
-    sys.exit(app.exec_())

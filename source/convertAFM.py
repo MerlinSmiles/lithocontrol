@@ -42,7 +42,7 @@ def convertAFM(filenamex, saveImg = True):
             if saveImg:
                 filename = os.path.abspath('D:/lithography/')
                 imfilename = str(filename)+"/current.png"
-                print imfilename
+                print (imfilename)
                 res = saveAFMimg(data, imfilename )
                 writeImageMacro( imfilename , [-xreal, -yreal, xreal, yreal])
     info = {'width':xreal*2, 'height':yreal*2, 'imname': imfilename}
@@ -89,6 +89,6 @@ def writeImageMacro(filename, position):
 if __name__ == '__main__':
     afmFile = os.path.abspath('D:/lithography/afmImages/05131739.001')
     afmData, afmimage = convertAFM(afmFile)
-    print afmData
+    print (afmData)
 
     sys.exit()
