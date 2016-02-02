@@ -53,7 +53,7 @@ kelly_colors = dict(
             deep_yellowish_brown=(89, 51, 21),
             vivid_reddish_orange=(241, 58, 19),
             dark_olive_green=(35, 44, 22))
-
+accols = [(0  , 0  , 0),(255, 0  , 0),(255, 255, 0),(0  , 255, 0),(0  , 255, 255),(0  , 0  , 255),(255, 0  , 255),(255, 255, 255),(65 , 65 , 65),(128, 128, 128),(255, 0  , 0),(255, 170, 170),(189, 0  , 0),(189, 126, 126),(129, 0  , 0),(129, 86 , 86),(104, 0  , 0),(104, 69 , 69),(79 , 0  , 0),(79 , 53 , 53),(255, 63 , 0),(255, 191, 170),(189, 46 , 0),(189, 141, 126),(129, 31 , 0),(129, 96 , 86),(104, 25 , 0),(104, 78 , 69),(79 , 19 , 0),(79 , 59 , 53),(255, 127, 0),(255, 212, 170),(189, 94 , 0),(189, 157, 126),(129, 64 , 0),(129, 107, 86),(104, 52 , 0),(104, 86 , 69),(79 , 39 , 0),(79 , 66 , 53),(255, 191, 0),(255, 234, 170),(189, 141, 0),(189, 173, 126),(129, 96 , 0),(129, 118, 86),(104, 78 , 0),(104, 95 , 69),(79 , 59 , 0),(79 , 73 , 53),(255, 255, 0),(255, 255, 170),(189, 189, 0),(189, 189, 126),(129, 129, 0),(129, 129, 86),(104, 104, 0),(104, 104, 69),(79 , 79 , 0),(79 , 79 , 53),(191, 255, 0),(234, 255, 170),(141, 189, 0),(173, 189, 126),(96 , 129, 0),(118, 129, 86),(78 , 104, 0),(95 , 104, 69),(59 , 79 , 0),(73 , 79 , 53),(127, 255, 0),(212, 255, 170),(94 , 189, 0),(157, 189, 126),(64 , 129, 0),(107, 129, 86),(52 , 104, 0),(86 , 104, 69),(39 , 79 , 0),(66 , 79 , 53),(63 , 255, 0),(191, 255, 170),(46 , 189, 0),(141, 189, 126),(31 , 129, 0),(96 , 129, 86),(25 , 104, 0),(78 , 104, 69),(19 , 79 , 0),(59 , 79 , 53),(0  , 255, 0),(170, 255, 170),(0  , 189, 0),(126, 189, 126),(0  , 129, 0),(86 , 129, 86),(0  , 104, 0),(69 , 104, 69),(0  , 79 , 0),(53 , 79 , 53),(0  , 255, 63),(170, 255, 191),(0  , 189, 46),(126, 189, 141),(0  , 129, 31),(86 , 129, 96),(0  , 104, 25),(69 , 104, 78),(0  , 79 , 19),(53 , 79 , 59),(0  , 255, 127),(170, 255, 212),(0  , 189, 94),(126, 189, 157),(0  , 129, 64),(86 , 129, 107),(0  , 104, 52),(69 , 104, 86),(0  , 79 , 39),(53 , 79 , 66),(0  , 255, 191),(170, 255, 234),(0  , 189, 141),(126, 189, 173),(0  , 129, 96),(86 , 129, 118),(0  , 104, 78),(69 , 104, 95),(0  , 79 , 59),(53 , 79 , 73),(0  , 255, 255),(170, 255, 255),(0  , 189, 189),(126, 189, 189),(0  , 129, 129),(86 , 129, 129),(0  , 104, 104),(69 , 104, 104),(0  , 79 , 79),(53 , 79 , 79),(0  , 191, 255),(170, 234, 255),(0  , 141, 189),(126, 173, 189),(0  , 96 , 129),(86 , 118, 129),(0  , 78 , 104),(69 , 95 , 104),(0  , 59 , 79),(53 , 73 , 79),(0  , 127, 255),(170, 212, 255),(0  , 94 , 189),(126, 157, 189),(0  , 64 , 129),(86 , 107, 129),(0  , 52 , 104),(69 , 86 , 104),(0  , 39 , 79),(53 , 66 , 79),(0  , 63 , 255),(170, 191, 255),(0  , 46 , 189),(126, 141, 189),(0  , 31 , 129),(86 , 96 , 129),(0  , 25 , 104),(69 , 78 , 104),(0  , 19 , 79),(53 , 59 , 79),(0  , 0  , 255),(170, 170, 255),(0  , 0  , 189),(126, 126, 189),(0  , 0  , 129),(86 , 86 , 129),(0  , 0  , 104),(69 , 69 , 104),(0  , 0  , 79),(53 , 53 , 79),(63 , 0  , 255),(191, 170, 255),(46 , 0  , 189),(141, 126, 189),(31 , 0  , 129),(96 , 86 , 129),(25 , 0  , 104),(78 , 69 , 104),(19 , 0  , 79),(59 , 53 , 79),(127, 0  , 255),(212, 170, 255),(94 , 0  , 189),(157, 126, 189),(64 , 0  , 129),(107, 86 , 129),(52 , 0  , 104),(86 , 69 , 104),(39 , 0  , 79),(66 , 53 , 79),(191, 0  , 255),(234, 170, 255),(141, 0  , 189),(173, 126, 189),(96 , 0  , 129),(118, 86 , 129),(78 , 0  , 104),(95 , 69 , 104),(59 , 0  , 79),(73 , 53 , 79),(255, 0  , 255),(255, 170, 255),(189, 0  , 189),(189, 126, 189),(129, 0  , 129),(129, 86 , 129),(104, 0  , 104),(104, 69 , 104),(79 , 0  , 79),(79 , 53 , 79),(255, 0  , 191),(255, 170, 234),(189, 0  , 141),(189, 126, 173),(129, 0  , 96),(129, 86 , 118),(104, 0  , 78),(104, 69 , 95),(79 , 0  , 59),(79 , 53 , 73),(255, 0  , 127),(255, 170, 212),(189, 0  , 94),(189, 126, 157),(129, 0  , 64),(129, 86 , 107),(104, 0  , 52),(104, 69 , 86),(79 , 0  , 39),(79 , 53 , 66),(255, 0  , 63),(255, 170, 191),(189, 0  , 46),(189, 126, 141),(129, 0  , 31),(129, 86 , 96),(104, 0  , 25),(104, 69 , 78),(79 , 0  , 19),(79 , 53 , 59),(51 , 51 , 51),(80 , 80 , 80),(105, 105, 105),(130, 130, 130),(190, 190, 190),(255, 255, 255)]
 # mkPen for selected
 selectPen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
 sketchPen = pg.mkPen(color='FF0000',width=3)  #, style=QtCore.Qt.DotLine
@@ -193,19 +193,21 @@ class ColorDelegate(QtGui.QItemDelegate):
 
     def setModelData(self, editor, model, index):
         color = editor.model().getColor(editor.currentIndex())[1]
+        print(color)
         model.setData(index, color,QtCore.Qt.EditRole)
 
     @QtCore.pyqtSlot()
     def currentIndexChanged(self):
         self.commitData.emit(self.editor)
         self.closeEditor.emit(self.editor,QtGui.QAbstractItemDelegate.NoHint) #EditNextItem, EditPreviousItem, NoHint
-        print('Include full disabling of checkbox thing')
+        # print('D Include full disabling of checkbox thing')
         self.editor.close()
         self.commitData.emit(self.sender())
 
     @QtCore.pyqtSlot()
     def pressed(self):
-        print('Include full disabling of checkbox thing')
+        # print('Include full disabling of checkbox thing')
+        pass
 
     def paint(self, parent, option, index):
         # data = index.model().data(index, QtCore.Qt.DecorationRole)
@@ -229,7 +231,7 @@ class ColorDelegate(QtGui.QItemDelegate):
 class TreeItem(object):
     def __init__(self, data, parent=None, model=None):
         self.model = model
-        self.color = (255,255,255)
+        self.color = (255,200,255)
         self.is_closed = False
         self.parentItem = parent
         self.itemData = data
@@ -261,13 +263,27 @@ class TreeItem(object):
     def initData(self):
         # 'Name', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Closed', 'Type', 'Color', 'Show'
         self.type = self.entity.dxftype()
+
+        self.color = (999,999,999)
+
         if self.type == 'LAYER':
             self.name = self.entity.dxf.name
             self.show = self.entity.is_on()
         else:
             self.name  = self.entity.dxf.handle
+        try:
+            self.color = accols[self.entity.dxf.color]
+        except:
+            try:
+                if self.parentItem != None:
+                    self.color = self.parentItem.color
+            except:
+                print('alsofail')
+                pass
+            print('nocolor')
+            pass
+        if self.color == (999,999,999):
             self.color = (255,0,255)
-            # self.color = self.entity.get_rgb_color()
 
         self.is_closed = False
         if self.entity.dxftype()=='POLYLINE':
@@ -304,8 +320,8 @@ class TreeItem(object):
             if key in meta:
                 self.setData(column, meta[key])
 
-    def index(self):
-        index = self.model.createIndex(self.parentItem.childNumber(), 0, self.parentItem)
+    def index(self, column=0):
+        index = self.model.createIndex(self.parentItem.childNumber(), column, self.parentItem)
         return index
 
     def setCheckState(self, value):
@@ -338,6 +354,9 @@ class TreeItem(object):
     def data(self, column=None):
         if column == None:
             return self.itemData[:]
+        if type(column) == str:
+            column = self.col(column)
+
         return self.itemData[column]
 
     def insertChildren(self, position, count, columns):
@@ -391,30 +410,44 @@ class TreeItem(object):
 
     def replot(self):
         self.model.emit(QtCore.SIGNAL('replot(QModelIndex)'), self.index())
-        print('replot', self.pltHandle)
-        pass
+        # print('replot', self.pltHandle)
 
-    def recalc(self):
+    def recalc(self, col=0):
         if self.entity.dxftype() in ['POLYLINE','LINE']:
             dxf2shape(self, fill_step = self.fillStep, fill_angle=self.fillAngle)
         self.calcTime()
 
     def calcLength(self):
-        try:
-            dat = np.concatenate(self.pltData).reshape((-1,2))
-        except:
-            print('error calculating length')
-            return
-        dat_b = np.roll(dat,-2)
-        dist = 0
-        for k in range(len(dat)-1):
-            dist += np.linalg.norm(dat[k]-dat_b[k])
-        self.length = dist
+        if self.childCount() == 0:
+            try:
+                dat = np.concatenate(self.pltData).reshape((-1,2))
+            except:
+                # self.setData('Length', 0.0)
+                print('error calculating length')
+                return
+            dat_b = np.roll(dat,-2)
+            self.length = 0.0
+            for k in range(len(dat)-1):
+                self.length += np.linalg.norm(dat[k]-dat_b[k])
+            self.parentItem.calcLength()
+        else:
+            self.length = 0.0
+            for i in range(self.childCount()):
+                # print(i)
+                if self.child(i).checkState == 2:
+                    # self.child(i).calcLength()
+                    # print('chd',self.child(i).length)
+                    self.length += self.child(i).length
+            # print('par', self.length)
+        self.setData('Length', round(float(self.length),1))
 
     def calcTime(self):
         if self.childCount() == 0:
             self.calcLength()
             self.sketchTime = self.length / float(self.rate)
+            # col = self.col('Time')
+            # print(col)
+
             self.parentItem.calcTime()
         else:
             self.sketchTime = 0.0
@@ -424,6 +457,16 @@ class TreeItem(object):
                     self.sketchTime += self.child(i).sketchTime
         self.setData('Time',round(float(self.sketchTime),1))
 
+    def col(self, column):
+        if type(column) == int:
+            if column < 0 or column >= len(self.itemData):
+                return None
+            colname = self.model.col(column)
+            return colname
+        if type(column) == str:
+            colnum = self.model.col(column)
+            return colnum
+        return None
 
     def setData(self, column, value, index=None):
         if type(column) == int:
@@ -441,6 +484,10 @@ class TreeItem(object):
             if self.fillAngle != value:
                 self.fillAngle = value
                 self.recalc()
+        elif colname == 'Voltage':
+            value= float(value)
+            if self.volt != value:
+                self.volt = value
         elif colname == 'Rate':
             value= float(value)
             if self.rate != value:
@@ -457,6 +504,8 @@ class TreeItem(object):
             if self.is_closed != value:
                 self.is_closed = value
                 self.recalc()
+                col = self.model.col('Time')
+                self.model.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), self.index(col), self.index(col+1))
         elif colname == 'Show':
             value= bool(value)
             if self.show != value:
@@ -466,19 +515,27 @@ class TreeItem(object):
             value= float(value)
             if self.sketchTime != value:
                 self.sketchTime = value
+                print(value)
             if self.parent() == None:
                 value = 'Time'
+
+        elif colname == 'Length':
+            value= float(value)
+            if self.length != value:
+                self.length = value
+            if self.parent() == None:
+                value = 'Length'
         elif colname == 'Color':
             self.color = value
-            print('color:' , self.pltHandle)
+            # print('color:' , self.pltHandle)
             self.replot()
 
         self.meta[colname] = value
         self.itemData[column] = value
 
-        if index != None:
-            self.model.emit(QtCore.SIGNAL('redraw(QModelIndex,QModelIndex)'), index,index)
-            self.model.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), index, index)
+        # if index != None:
+        #     self.model.emit(QtCore.SIGNAL('redraw(QModelIndex,QModelIndex)'), index,index)
+        #     self.model.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), index, index)
 
 
         # if self.model.rootData[column] in  ['Voltage', 'Angle', 'Rate', 'Step']:
@@ -492,10 +549,10 @@ class TreeItem(object):
 class TreeModel(QtCore.QAbstractItemModel):
     def __init__(self, headers, data, parent=None):
         super(TreeModel, self).__init__(parent)
-        print(parent)
+        # print(parent)
         self.checks = {}
         self.par = parent
-        print(self.par)
+        # print(self.par)
 
         self.header = [header for header in headers] # Header Names
         self.rootItem = TreeItem(self.header, model=self)
@@ -554,6 +611,23 @@ class TreeModel(QtCore.QAbstractItemModel):
         if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole:
             return None
 
+        colname = self.col(index.column())
+        # print(column, self.col(column), self.itemData[column])
+
+        if colname in ['Time', 'Length']:
+            if (item.childCount() > 0) and (item.parentItem != None):
+                val = 0
+                for i in range(item.childCount()):
+                    if item.child(i).checkState == 2:
+                        # item.child(i).calcLength()
+                        # print('chd',item.child(i).length)
+                        val += item.child(i).data(colname)
+                # print(colname,val)
+                if val == 0.0:
+                    return ' '
+
+                return val
+
         return item.data(index.column())
 
     def flags(self, index):
@@ -565,14 +639,15 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsUserCheckable
 
-        if colname not in ['Name', 'Time', 'Type', 'Closed', 'Show']:
+        if colname not in ['Name', 'Time', 'Type', 'Closed', 'Show', 'Length']:
             flags = flags | QtCore.Qt.ItemIsEditable
 
-        item = self.getItem(index)
-        if item.childCount() == 0:
-            flags = flags | QtCore.Qt.ItemIsDragEnabled
-        else:
-            flags = flags | QtCore.Qt.ItemIsDropEnabled #| QtCore.Qt.ItemIsDragEnabled
+        # dragdrop kills other things :/
+        # item = self.getItem(index)
+        # if item.childCount() == 0:
+        #     flags = flags | QtCore.Qt.ItemIsDragEnabled
+        # else:
+        #     flags = flags | QtCore.Qt.ItemIsDropEnabled #| QtCore.Qt.ItemIsDragEnabled
 
         return  flags
 
@@ -864,14 +939,6 @@ class TreeModel(QtCore.QAbstractItemModel):
 
 
 
-
-
-
-
-
-
-
-
 class ColorModel(QtCore.QAbstractListModel):
     def __init__(self, *args, **kwargs):
         QtCore.QAbstractListModel.__init__(self, *args, **kwargs)
@@ -884,21 +951,21 @@ class ColorModel(QtCore.QAbstractListModel):
         if index.isValid() is True:
             if role == QtCore.Qt.DisplayRole:
                 return self.items[index.row()]
-            elif role == QtCore.Qt.ItemDataRole:
+            elif role == QtCore.Qt. ItemDataRole:
                 return self.items[index.row()]
             elif role==QtCore.Qt.DecorationRole:
                 # print(self.items[index.row()])
                 k = self.items[index.row()]
                 pixmap = QtGui.QPixmap(16, 16)
-                pixmap.fill(QtGui.QColor(*kelly_colors[k]))
+                pixmap.fill(QtGui.QColor(*self.colors[k]))
                 icon = QtGui.QIcon(pixmap)
                 return icon
             # print(role)
         return None
 
-    def addColors(self,colors):
+    def addColors(self,clist,colors):
         self.colors = colors
-        for k in sorted(colors):
+        for k in clist:
             self.addItem(k)
 
     def getColor(self, index):
