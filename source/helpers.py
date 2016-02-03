@@ -46,14 +46,17 @@ def get_nearest_point(data,pt):
         if d>1e-9:
             nearestb.append(np.array([j, d]))
     nearestb = np.array(nearestb)
-    if min(nearesta[:,1]) < (min(nearestb[:,1])):
-        p = nearesta[:,1].argmin()
-        j = nearesta[p,0]
-        return 0, int(j), np.sqrt(nearesta[p,1])
-    else:
-        p = nearestb[:,1].argmin()
-        j = nearestb[p,0]
-        return 1, int(j), np.sqrt(nearestb[p,1])
+    try:
+        if min(nearesta[:,1]) < (min(nearestb[:,1])):
+            p = nearesta[:,1].argmin()
+            j = nearesta[p,0]
+            return 0, int(j), np.sqrt(nearesta[p,1])
+        else:
+            p = nearestb[:,1].argmin()
+            j = nearestb[p,0]
+            return 1, int(j), np.sqrt(nearestb[p,1])
+    except:
+        return None, None, None
 
 
 def find_nearest(array,value):

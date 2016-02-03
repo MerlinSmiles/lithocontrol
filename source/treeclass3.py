@@ -274,14 +274,8 @@ class TreeItem(object):
         try:
             self.color = accols[self.entity.dxf.color]
         except:
-            try:
-                if self.parentItem != None:
-                    self.color = self.parentItem.color
-            except:
-                print('alsofail')
-                pass
-            print('nocolor')
-            pass
+            if self.parentItem != None:
+                self.color = self.parentItem.color
         if self.color == (999,999,999):
             self.color = (255,0,255)
 

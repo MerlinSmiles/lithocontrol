@@ -112,7 +112,8 @@ def dxf2shape(item, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_dire
             npath.append(lines[0])
             lines = np.delete(lines,0,0)
         a,b,l = get_nearest_point(lines,npath[-1][1])
-
+        if a == None:
+            continue
         last_line = npath[-1]
         this_line = lines[b][::1-(2*a)]
 
