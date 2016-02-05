@@ -1,5 +1,9 @@
 #!/usr/bin/env python
-demo = 0
+demo = False
+try:
+    import gwy, gwyutils
+except:
+    demo = True
 print('\n\n')
 import sip
 API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
@@ -30,6 +34,9 @@ import json
 
 with open('./config.json', 'r') as f:
     config = json.load(f)
+if demo:
+    config['storage'] = config['demo_storage']
+
 print(config['storage'])
 
 def_dxf_file = 'F:/lithography/DesignFiles/current.dxf'
@@ -84,17 +91,18 @@ class MainWindow(QtGui.QMainWindow):
 
         self.colorModel = ColorModel()
         self.colorDict = kelly_colors
-        self.colorModel.addColors(self.colorDict)
+        self.colorModel.addColors(self.colorDict,colors)
 
 
         self.dxffileName = filename
 
-        self.headers = ('Name','Show', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Closed', 'Color', 'Type')
+        self.headers = ('Name','Show', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Length', 'Closed', 'Color', 'Type')
 
         self.dxf = ezdxf.readfile(def_dxf_file)
         self.model = TreeModel(self.headers, self.dxf, parent=self)
 
         self.tree_file.setModel(self.model)
+
 
         self.tree_file.setDragDropMode( QtGui.QAbstractItemView.InternalMove )
         self.tree_file.setSelectionMode( QtGui.QAbstractItemView.ExtendedSelection )
@@ -108,6 +116,17 @@ class MainWindow(QtGui.QMainWindow):
         self.tree_file.setItemDelegateForColumn(self.model.col('Color'),ColorDelegate(self))
 
         self.tree_file.expandAll()
+
+        for col in [self.headers.index(col) for col in ['Closed', 'Show']]:
+            root = self.tree_file.rootIndex()
+            for i in range(0,self.model.rowCount(root)):
+                index = self.model.index(i, col)
+                self.tree_file.openPersistentEditor(index)
+                item = self.model.getItem(index)
+                for ch in range(0,item.childCount()):
+                    index2 = self.model.index(ch, col,  self.model.index(i))
+                    self.tree_file.openPersistentEditor(index2)
+
         for column in range(self.model.columnCount()):
             self.tree_file.resizeColumnToContents(column)
 

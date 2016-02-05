@@ -101,6 +101,169 @@ class DoubleSpinBoxDelegate(QtGui.QItemDelegate):
         editor.setGeometry(option.rect)
 
 class CheckBoxDelegate(QtGui.QItemDelegate):
+    """
+    A delegate that places a fully functioning QComboBox in every
+    cell of the column to which it's applied
+    """
+    def __init__(self, parent):
+        QtGui.QItemDelegate.__init__(self, parent)
+        # self.setTextAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight)
+        # self.model = parent.model
+
+    # def paint(self, painter, option, index):
+    #     return None
+
+    def createEditor(self, parent, option, index):
+        cbox = QtGui.QCheckBox(parent)
+        cbox.setCheckState(1)
+        self.item = index.model().getItem(index)
+
+        if self.item.childCount() > 0:
+            cbox.setTristate(True)
+            print('fix checkbox so that it checks for children, or maybe if a child changed that it updates its parent...')
+        else:
+            cbox.setTristate(False)
+
+        self.connect(cbox, QtCore.SIGNAL("stateChanged(int)"), self, QtCore.SLOT("stateChanged(int)"))
+        # self.connect(cbox, QtCore.SIGNAL("currentIndexChanged(int)"), self, QtCore.SLOT("currentIndexChanged()"))
+        return cbox
+
+    def setEditorData(self, editor, index):
+        editor.blockSignals(True)
+        editor.setCheckState(int(index.model().data(index, QtCore.Qt.EditRole)))
+        editor.blockSignals(False)
+
+    def setModelData(self, editor, model, index):
+        model.setData(index, editor.isChecked())
+        # newValue = not model.data(index, QtCore.Qt.EditRole)
+        # print(not newValue, newValue)
+        # model.setData(index, newValue, QtCore.Qt.EditRole)
+        return
+
+
+    # def editorEvent(self, event, model, option, index):
+    #     # print( 'Check Box editor Event detected : ')
+    #     # if not (index.flags() & QtCore.Qt.ItemIsEditable) > 0:
+    #     #     return False
+
+    #     # print ('Check Box edior Event detected : passed first check')
+    #     # Do not change the checkbox-state
+    #     if event.type() != QtCore.QEvent.MouseButtonRelease:
+    #         return False
+
+    #     # Change the checkbox-state
+    #     self.setModelData(None, model, index)
+    #     return True
+
+    def paint(self, painter, option, index):
+        item = index.model().getItem(index)
+        if item.childCount()==0:
+            return
+        # painter.save()
+        color = index.model().data(index, QtCore.Qt.BackgroundRole)
+        if color == None:
+            return
+            # color = QtCore.Qt.green
+        # set background color
+        painter.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+        # if option.state & QtGui.QStyle.State_Selected:
+        painter.setBrush(QtGui.QBrush(color))
+        # else:
+            # painter.setBrush(QtGui.QBrush(QtCore.Qt.white))
+        painter.drawRect(option.rect)
+
+        # set text color
+        # painter.setPen(QtGui.QPen(QtCore.Qt.black))
+
+        # painter.restore()
+
+    @QtCore.pyqtSlot('int')
+    def stateChanged(self, cc):
+        self.commitData.emit(self.sender())
+        # print('changed', cc , cbox.isChecked())
+        # self.item.setData( item.col())
+        # self.setModelData(None, model, index)
+        # model.setData(index, newValue, QtCore.Qt.EditRole)
+        # self.commitData.emit(self.sender())
+
+class CheckBoxDelegate3(QtGui.QItemDelegate):
+    # def __init__(self, parent = None):
+    #     QtGui.QGraphicsWidget.__init__(self)
+
+    def flags(self, index):
+        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled
+
+
+    def createEditor(self, parent, option, index):
+        '''
+        Important, otherwise an editor is created if the user clicks in this cell.
+        ** Need to hook up a signal to the model
+        '''
+        return None
+
+    def paint(self, painter, option, index):
+        '''
+        Paint a checkbox without the label.
+        '''
+        checked = bool(index.model().data(index, QtCore.Qt.EditRole))
+        # print(checked)
+        check_box_style_option = QtGui.QStyleOptionButton()
+
+        # if (index.flags() & QtCore.Qt.ItemIsEditable) > 0:
+        #     check_box_style_option.state |= QtGui.QStyle.State_Enabled
+        # else:
+        #     check_box_style_option.state |= QtGui.QStyle.State_ReadOnly
+
+        if checked:
+            check_box_style_option.state |= QtGui.QStyle.State_On
+        else:
+            check_box_style_option.state |= QtGui.QStyle.State_Off
+
+        check_box_style_option.rect = self.getCheckBoxRect(option)
+
+        # this will not run - hasFlag does not exist
+        #if not index.model().hasFlag(index, QtCore.Qt.ItemIsEditable):
+            #check_box_style_option.state |= QtGui.QStyle.State_ReadOnly
+
+        check_box_style_option.state |= QtGui.QStyle.State_Enabled
+
+        QtGui.QApplication.style().drawControl(QtGui.QStyle.CE_CheckBox, check_box_style_option, painter)
+
+    def editorEvent(self, event, model, option, index):
+        # print( 'Check Box editor Event detected : ')
+        # if not (index.flags() & QtCore.Qt.ItemIsEditable) > 0:
+        #     return False
+
+        # print ('Check Box edior Event detected : passed first check')
+        # Do not change the checkbox-state
+        if event.type() != QtCore.QEvent.MouseButtonRelease:
+            return False
+
+        # Change the checkbox-state
+        self.setModelData(None, model, index)
+        return True
+
+    def setModelData (self, editor, model, index):
+        '''
+        The user wanted to change the old state in the opposite.
+        '''
+        # print( 'SetModelData')
+        newValue = not model.data(index, QtCore.Qt.EditRole)
+        # print(not newValue, newValue)
+        model.setData(index, newValue, QtCore.Qt.EditRole)
+
+    def getCheckBoxRect(self, option):
+        check_box_style_option = QtGui.QStyleOptionButton()
+        check_box_rect = QtGui.QApplication.style().subElementRect(QtGui.QStyle.SE_CheckBoxIndicator, check_box_style_option, None)
+        check_box_point = QtCore.QPoint (option.rect.x() +
+                             option.rect.width() / 2 -
+                             check_box_rect.width() / 2,
+                             option.rect.y() +
+                             option.rect.height() / 2 -
+                             check_box_rect.height() / 2)
+        return QtCore.QRect(check_box_point, check_box_rect.size())
+
+class CheckBoxDelegate2(QtGui.QItemDelegate):
     # def __init__(self, parent = None):
     #     QtGui.QGraphicsWidget.__init__(self)
 
@@ -193,7 +356,7 @@ class ColorDelegate(QtGui.QItemDelegate):
 
     def setModelData(self, editor, model, index):
         color = editor.model().getColor(editor.currentIndex())[1]
-        print(color)
+        # print(color)
         model.setData(index, color,QtCore.Qt.EditRole)
 
     @QtCore.pyqtSlot()
@@ -209,9 +372,10 @@ class ColorDelegate(QtGui.QItemDelegate):
         # print('Include full disabling of checkbox thing')
         pass
 
-    def paint(self, parent, option, index):
+    def paint(self, painter, option, index):
         # data = index.model().data(index, QtCore.Qt.DecorationRole)
         color = index.model().data(index, QtCore.Qt.DisplayRole)
+        bgcolor = index.model().data(index, QtCore.Qt.BackgroundRole)
 
         pixmap = QtGui.QPixmap(QtCore.QSize(option.decorationSize))
         pixmap.fill(QtGui.QColor(*color))
@@ -219,20 +383,39 @@ class ColorDelegate(QtGui.QItemDelegate):
         h = option.decorationSize.height()
         iconRect = QtCore.QRect(option.rect.x(), option.rect.y(), w, h)
 
-        painter = QtGui.QPainter(pixmap)
-        painter.setPen(QtGui.QColor(0,0,0))
-        painter.drawRect(0,0, w-1, h-1)
-        del painter
+        rect_painter = QtGui.QPainter(pixmap)
+
+        item = index.model().getItem(index)
+        if item.childCount()>0:
+            # return
+            # # rect_painter.save()
+            # color = index.model().data(index, QtCore.Qt.BackgroundRole)
+            # if color == None:
+            #     return
+            #     # color = QtCore.Qt.green
+            # # set background color
+            painter.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+            # # if option.state & QtGui.QStyle.State_Selected:
+            painter.setBrush(QtGui.QBrush(bgcolor))
+            # # else:
+            #     # rect_painter.setBrush(QtGui.QBrush(QtCore.Qt.white))
+            painter.drawRect(option.rect)
+
+
+        rect_painter.setPen(QtGui.QColor(0,0,0))
+        rect_painter.drawRect(0,0, w-1, h-1)
+        del rect_painter
+
 
         viewCenter = option.rect.center()
         iconRect.moveCenter(viewCenter)
-        parent.drawPixmap(iconRect, pixmap)
+        painter.drawPixmap(iconRect, pixmap)
 
 class TreeItem(object):
     def __init__(self, data, parent=None, model=None):
         self.model = model
         self.color = (255,200,255)
-        self.is_closed = False
+        self.is_closed = 0
         self.parentItem = parent
         self.itemData = data
         self.childItems = []
@@ -252,9 +435,6 @@ class TreeItem(object):
         self.meta = {}
 
 #     shape.type = None # [VirtualElectrode, line, area]
-
-    def redraw(self):
-        print('Fix redraw')
 
     def setEntity(self, entity):
         self.entity = entity
@@ -279,13 +459,13 @@ class TreeItem(object):
         if self.color == (999,999,999):
             self.color = (255,0,255)
 
-        self.is_closed = False
+        self.is_closed = 0
         if self.entity.dxftype()=='POLYLINE':
             data = np.array(list(self.entity.points()))
             if(all(data[0] == data[-1])):
-                self.is_closed = True
+                self.is_closed = 2
         if self.entity.dxftype()=='LINE':
-            self.is_closed = False
+            self.is_closed = 0
             self.entity.points = np.array([self.entity.dxf.start, self.entity.dxf.end])
 
 
@@ -341,6 +521,11 @@ class TreeItem(object):
         if self.parentItem != None:
             return self.parentItem.childItems.index(self)
         return 0
+
+    # def childIndex(self):
+    #     if self.parentItem != None:
+    #         return self.parentItem.childItems.index(self)
+    #     return 0
 
     def columnCount(self):
         return len(self.itemData)
@@ -403,10 +588,12 @@ class TreeItem(object):
         return True
 
     def replot(self):
+        return
         self.model.emit(QtCore.SIGNAL('replot(QModelIndex)'), self.index())
         # print('replot', self.pltHandle)
 
     def recalc(self, col=0):
+        print('move all recalc to a separate process')
         if self.entity.dxftype() in ['POLYLINE','LINE']:
             dxf2shape(self, fill_step = self.fillStep, fill_angle=self.fillAngle)
         self.calcTime()
@@ -418,6 +605,7 @@ class TreeItem(object):
             except:
                 # self.setData('Length', 0.0)
                 print('error calculating length')
+                self.setData('Length', 0)
                 return
             dat_b = np.roll(dat,-2)
             self.length = 0.0
@@ -493,7 +681,11 @@ class TreeItem(object):
                 self.fillStep = value
                 self.recalc()
         elif colname == 'Closed':
-            value= bool(value)
+            if value == True:
+                value = 2
+            elif value == False:
+                value = 0
+            value= int(value)
             # print(column,colname,value,index)
             if self.is_closed != value:
                 self.is_closed = value
@@ -501,7 +693,11 @@ class TreeItem(object):
                 col = self.model.col('Time')
                 self.model.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), self.index(col), self.index(col+1))
         elif colname == 'Show':
-            value= bool(value)
+            if value == True:
+                value = 2
+            elif value == False:
+                value = 0
+            value= int(value)
             if self.show != value:
                 self.show = value
                 self.replot()
@@ -509,7 +705,7 @@ class TreeItem(object):
             value= float(value)
             if self.sketchTime != value:
                 self.sketchTime = value
-                print(value)
+                # print(value)
             if self.parent() == None:
                 value = 'Time'
 
@@ -528,8 +724,7 @@ class TreeItem(object):
         self.itemData[column] = value
 
         # if index != None:
-        #     self.model.emit(QtCore.SIGNAL('redraw(QModelIndex,QModelIndex)'), index,index)
-        #     self.model.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), index, index)
+        #     self.model.emit(QtCore.SIGNAL('recalc(QModelIndex,QModelIndex)'), index,index)
 
 
         # if self.model.rootData[column] in  ['Voltage', 'Angle', 'Rate', 'Step']:
@@ -586,12 +781,19 @@ class TreeModel(QtCore.QAbstractItemModel):
         if not index.isValid():
             return None
 
+
+        # if role == QtCore.Qt.AlignmentRole:
+        #     print(index.column() , self.col('Closed'))
+        #     if index.column() == self.col('Closed'):
+        #         print('yo')
+        #         return QtCore.Qt.AlignCenter
+
         if role == QtCore.Qt.CheckStateRole:
             if index.column() == 0:
                 return self.checkState(index)
         item = self.getItem(index)
 
-        if (role == QtCore.Qt.BackgroundRole) & (index.column() == 0) & (item.childCount()>0):
+        if (role == QtCore.Qt.BackgroundRole) & (item.childCount()>0):
             return QtGui.QColor(70,70,70,80)
 
            # if (role == Qt::BackgroundRole)
@@ -615,7 +817,10 @@ class TreeModel(QtCore.QAbstractItemModel):
                     if item.child(i).checkState == 2:
                         # item.child(i).calcLength()
                         # print('chd',item.child(i).length)
-                        val += item.child(i).data(colname)
+                        vv = item.child(i).data(colname)
+                        if vv == None:
+                            continue
+                        val += vv
                 # print(colname,val)
                 if val == 0.0:
                     return ' '
@@ -633,7 +838,7 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsUserCheckable
 
-        if colname not in ['Name', 'Time', 'Type', 'Closed', 'Show', 'Length']:
+        if colname not in ['Name', 'Time', 'Type', 'Show', 'Length']:
             flags = flags | QtCore.Qt.ItemIsEditable
 
         # dragdrop kills other things :/
@@ -700,6 +905,10 @@ class TreeModel(QtCore.QAbstractItemModel):
         parentItem = childItem.parent()
 
         if parentItem == self.rootItem:
+            return QtCore.QModelIndex()
+        try:
+            self.createIndex(parentItem.childNumber(), 0, parentItem)
+        except:
             return QtCore.QModelIndex()
 
         return self.createIndex(parentItem.childNumber(), 0, parentItem)
@@ -785,8 +994,7 @@ class TreeModel(QtCore.QAbstractItemModel):
         result = item.setData(index.column(), value, index)
         if result:
             self.emit(QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), index,index)
-            self.emit(QtCore.SIGNAL('redraw(QModelIndex,QModelIndex)'), index,index)
-            self.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), index,index)
+            self.emit(QtCore.SIGNAL('recalc(QModelIndex,QModelIndex)'), index,index)
 
         return result
 
@@ -865,7 +1073,6 @@ class TreeModel(QtCore.QAbstractItemModel):
             thisChild.setEntity(entity)
             # thisChild.initData()
 
-
     def mimeTypes(self):
         # types = QtCore.QStringList()
         types = ['QByteArray']
@@ -919,7 +1126,6 @@ class TreeModel(QtCore.QAbstractItemModel):
             # for k in dct:
             #     thisChild.setData(k,dct[k])
             #     print(k,dct[k])
-        # self.emit(QtCore.SIGNAL("dataChanged(QtCore.QModelIndex,QtCore.QModelIndex)"), parentIndex, parentIndex)
         print('make moved item selected, treeitem to reimplement thisChild.setSelected()')
         # self.par.tree_file.setSelection(thisChild)
         return True

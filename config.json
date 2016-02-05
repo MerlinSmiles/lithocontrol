@@ -42,6 +42,11 @@
     "def_dxf_file": "F:/lithography/DesignFiles/current.dxf",
     "afmImageFolder": "D:/afmImages/"
   },
+  "demo_storage": {
+    "storeFolder": "./demo/sketches/",
+    "def_dxf_file": "./demo/current.dxf",
+    "afmImageFolder": "./demo/afmImages/"
+  },
   "measure": {
     "PAR_sensitivity": 0.001,
     "DHTport": 5,

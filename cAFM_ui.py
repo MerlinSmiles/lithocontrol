@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 demo = False
+try:
+    import gwy, gwyutils
+except:
+    demo = True
 
 import sip
 API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
@@ -31,6 +35,8 @@ import json
 
 with open('config.json', 'r') as f:
     config = json.load(f)
+if demo:
+    config['storage'] = config['demo_storage']
 print(config['storage'])
 
 def_dxf_file = 'F:/lithography/DesignFiles/current.dxf'
@@ -736,6 +742,17 @@ class MainWindow(QtGui.QMainWindow):
         self.tree_file.setItemDelegateForColumn(self.model.col('Color'),ColorDelegate(self))
 
         self.tree_file.expandAll()
+
+        for col in [self.headers.index(col) for col in ['Closed', 'Show']]:
+            root = self.tree_file.rootIndex()
+            for i in range(0,self.model.rowCount(root)):
+                index = self.model.index(i, col)
+                self.tree_file.openPersistentEditor(index)
+                item = self.model.getItem(index)
+                for ch in range(0,item.childCount()):
+                    index2 = self.model.index(ch, col,  self.model.index(i))
+                    self.tree_file.openPersistentEditor(index2)
+
         for column in range(self.model.columnCount()):
             self.tree_file.resizeColumnToContents(column)
 
@@ -762,7 +779,7 @@ class MainWindow(QtGui.QMainWindow):
         # QtCore.QObject.connect(self.tree_schedule.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
         QtCore.QObject.connect(self.model, QtCore.SIGNAL('checkChanged(QModelIndex,QModelIndex)'), self.checked)
         QtCore.QObject.connect(self.model, QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), self.replot)
-        QtCore.QObject.connect(self.model, QtCore.SIGNAL('redraw(QModelIndex,QModelIndex)'), self.redraw)
+        QtCore.QObject.connect(self.model, QtCore.SIGNAL('recalc(QModelIndex,QModelIndex)'), self.recalc)
 
         self.updateActions()
 
@@ -779,10 +796,12 @@ class MainWindow(QtGui.QMainWindow):
         print(colname,item)
 
     @QtCore.pyqtSlot("QModelIndex", "QModelIndex")
-    def redraw(self, index):
-        print('redraw xx')
+    def recalc(self, index):
         model = self.model
         item = model.getItem(index)
+
+        # print('recalc xx', item.name)
+
         # print('xx',item)
         checked = item.checkState
         if not checked == 0:
@@ -804,6 +823,7 @@ class MainWindow(QtGui.QMainWindow):
 
     @QtCore.pyqtSlot("QModelIndex", "QModelIndex")
     def replot(self, index):
+        # return
         model = self.model
         item = model.getItem(index)
         # self.pi.removeItem(item.pltHandle)
