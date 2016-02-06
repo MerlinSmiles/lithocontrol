@@ -1,4 +1,4 @@
-import cPickle as pickle
+import pickle
 import multiprocessing
 from multiprocessing import Process, Pipe, Event
 import time
@@ -42,4 +42,4 @@ if __name__=='__main__':
     pipe_read.close()
     pipe_write.close()
 
-    print 'Finished'
+    print ('Finished')

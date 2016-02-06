@@ -58,6 +58,9 @@
         <enum>Qt::Vertical</enum>
        </property>
        <widget class="QTreeView" name="tree_file">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -429,7 +432,7 @@
              <property name="sizeHint" stdset="0">
               <size>
                <width>20</width>
-               <height>40</height>
+               <height>0</height>
               </size>
              </property>
             </spacer>
@@ -444,39 +447,17 @@
               <string>Matrix Sketch</string>
              </property>
              <layout class="QGridLayout" name="gridLayout_4">
-              <item row="3" column="3">
-               <widget class="QDoubleSpinBox" name="matrix_dx">
-                <property name="wrapping">
-                 <bool>false</bool>
-                </property>
-                <property name="singleStep">
-                 <double>0.010000000000000</double>
-                </property>
-                <property name="value">
-                 <double>0.100000000000000</double>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="3">
-               <widget class="QDoubleSpinBox" name="matrix_dy">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="singleStep">
-                 <double>0.010000000000000</double>
-                </property>
-                <property name="value">
-                 <double>0.100000000000000</double>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="1">
-               <widget class="QLabel" name="label_7">
+              <item row="3" column="4">
+               <widget class="QLabel" name="label_10">
                 <property name="text">
-                 <string>X-offset</string>
+                 <string>um</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="1">
+               <widget class="QLabel" name="label_9">
+                <property name="text">
+                 <string>Y-offset</string>
                 </property>
                </widget>
               </item>
@@ -493,17 +474,39 @@
                 </property>
                </widget>
               </item>
-              <item row="4" column="1">
-               <widget class="QLabel" name="label_9">
+              <item row="3" column="1">
+               <widget class="QLabel" name="label_7">
                 <property name="text">
-                 <string>Y-offset</string>
+                 <string>X-offset</string>
                 </property>
                </widget>
               </item>
-              <item row="3" column="4">
-               <widget class="QLabel" name="label_10">
-                <property name="text">
-                 <string>um</string>
+              <item row="3" column="3">
+               <widget class="QDoubleSpinBox" name="matrix_dx">
+                <property name="wrapping">
+                 <bool>false</bool>
+                </property>
+                <property name="singleStep">
+                 <double>0.010000000000000</double>
+                </property>
+                <property name="value">
+                 <double>0.100000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="3">
+               <widget class="QDoubleSpinBox" name="matrix_dy">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="singleStep">
+                 <double>0.010000000000000</double>
+                </property>
+                <property name="value">
+                 <double>0.100000000000000</double>
                 </property>
                </widget>
               </item>
@@ -558,6 +561,27 @@
                <widget class="QLabel" name="label_12">
                 <property name="text">
                  <string># X</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="QLabel" name="label_18">
+                <property name="text">
+                 <string>Wait per #</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="3">
+               <widget class="QDoubleSpinBox" name="matrix_time">
+                <property name="maximum">
+                 <double>99999.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="4">
+               <widget class="QLabel" name="label_19">
+                <property name="text">
+                 <string>s</string>
                 </property>
                </widget>
               </item>
@@ -647,12 +671,25 @@
              <property name="sizeHint" stdset="0">
               <size>
                <width>20</width>
-               <height>40</height>
+               <height>0</height>
               </size>
              </property>
             </spacer>
            </item>
           </layout>
+         </item>
+         <item row="0" column="4">
+          <spacer name="horizontalSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
          </item>
         </layout>
        </widget>

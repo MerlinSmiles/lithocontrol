@@ -61,7 +61,6 @@ from source.PlotFrame import *
 from source.afmHandler import AFMWorker
 
 
-
 colors = ['vivid_yellow','strong_purple','vivid_orange','very_light_blue','vivid_red','grayish_yellow','medium_gray','vivid_green','strong_purplish_pink','strong_blue','strong_yellowish_pink','strong_violet','vivid_orange_yellow','strong_purplish_red','vivid_greenish_yellow','strong_reddish_brown','vivid_yellowish_green','deep_yellowish_brown','vivid_reddish_orange','dark_olive_green']
 kelly_colors = dict(vivid_yellow=(255, 179, 0),
             strong_purple=(128, 62, 117),
@@ -797,9 +796,15 @@ class MainWindow(QtGui.QMainWindow):
 
     @QtCore.pyqtSlot("QModelIndex", "QModelIndex")
     def recalc(self, index):
+        # print('in recalc')
+
         model = self.model
         item = model.getItem(index)
+        print(item.name)
+        if item.entity.dxftype() in ['POLYLINE','LINE']:
+            dxf2shape(item, fill_step = item.fillStep, fill_angle = item.fillAngle)
 
+        item.calcTime()
         # print('recalc xx', item.name)
 
         # print('xx',item)

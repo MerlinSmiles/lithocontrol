@@ -593,10 +593,8 @@ class TreeItem(object):
         # print('replot', self.pltHandle)
 
     def recalc(self, col=0):
-        print('move all recalc to a separate process')
-        if self.entity.dxftype() in ['POLYLINE','LINE']:
-            dxf2shape(self, fill_step = self.fillStep, fill_angle=self.fillAngle)
-        self.calcTime()
+        self.model.emit(QtCore.SIGNAL('recalc(QModelIndex)'), self.index())
+
 
     def calcLength(self):
         if self.childCount() == 0:
