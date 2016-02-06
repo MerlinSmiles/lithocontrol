@@ -9,18 +9,6 @@ import numpy as np
 # from scipy.interpolate import interp1d
 from helpers import *
 
-def get_points(entity, threshold = 1e-9):
-    if entity.dxftype == 'LINE':
-        pts = np.array([entity.start[:-1], entity.end[:-1]])
-        return pts
-    pts = entity.points
-    pts = np.array(pts)[:,:2]
-
-    doubles = np.all((abs(pts - np.roll(pts,1,0))<threshold) == True,axis=1)
-
-    pts = np.delete(pts,np.where(doubles),axis = 0)
-
-    return pts
 
 def Rotate2D(pts,angle=0):
     theta = (angle/180.) * np.pi
@@ -33,13 +21,18 @@ def dxf2shape(item, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_dire
         print( 'Path direction must be -1 or 1!' )
         return 0
 
-    try:
+    if item.entity.dxftype() == 'SPLINE':
+        with item.entity.edit_data() as data:
+            pts = np.array(data.fit_points)
+            print(np.array(data.control_points)[:,:2])
+        item.entity.points = pts
+        data = item.entity.points[:,:2]
+        print(data)
+    elif item.entity.dxftype() == 'POLYLINE':
         data = np.array(list(item.entity.points()))[:,:2]
-    except:
-        try:
-            data = np.array(item.entity.points)[:,:2]
-        except:
-            return 0
+    elif item.entity.dxftype() == 'LINE':
+        data = np.array(item.entity.points)[:,:2]
+    else:
         return 0
     pts  = data[::path_direction]
 
@@ -47,8 +40,8 @@ def dxf2shape(item, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_dire
     if not item.is_closed:
         item.pltData = [pts.reshape((-1,2))]
         return [pts.reshape((-1,2))]
-    # else:
-    #     pts = np.append(pts,[pts[0]],axis = 0)
+    else:
+        pts = np.append(pts,[pts[0]],axis = 0)
     if fill_step<=0 :
         self.error('Tools diameter must be greater than 0!', 'error')
 
@@ -127,8 +120,12 @@ def dxf2shape(item, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_dire
     collection.append(np.array(npath))
     collection = np.array(collection)
 
-    for i in range(len(collection)):
-        collection[i] = Rotate2D(collection[i], fill_angle)
+    try:
+        for i in range(len(collection)):
+            collection[i] = Rotate2D(collection[i], fill_angle)
+    except:
+        print('ff', collection, fill_angle)
+        print(lines)
 
     item.pltData = [k.reshape((-1,2)) for k in collection]
     return item.pltData

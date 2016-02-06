@@ -595,7 +595,7 @@ class TreeModel(QtCore.QAbstractItemModel):
             if ll not in layers:
                 continue
 #             print(entity.dxftype())
-            if entity.dxftype()=='IMAGE':
+            if entity.dxftype() in ['IMAGE', 'SPLINE']:
                 continue
             thisChild.is_closed = False
             if entity.dxftype()=='POLYLINE':

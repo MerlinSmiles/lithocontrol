@@ -119,7 +119,7 @@ class CheckBoxDelegate(QtGui.QItemDelegate):
         self.item = index.model().getItem(index)
 
         if self.item.childCount() > 0:
-            cbox.setTristate(True)
+            cbox.setTristate(False)
             print('fix checkbox so that it checks for children, or maybe if a child changed that it updates its parent...')
         else:
             cbox.setTristate(False)
@@ -185,160 +185,6 @@ class CheckBoxDelegate(QtGui.QItemDelegate):
         # self.setModelData(None, model, index)
         # model.setData(index, newValue, QtCore.Qt.EditRole)
         # self.commitData.emit(self.sender())
-
-class CheckBoxDelegate3(QtGui.QItemDelegate):
-    # def __init__(self, parent = None):
-    #     QtGui.QGraphicsWidget.__init__(self)
-
-    def flags(self, index):
-        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled
-
-
-    def createEditor(self, parent, option, index):
-        '''
-        Important, otherwise an editor is created if the user clicks in this cell.
-        ** Need to hook up a signal to the model
-        '''
-        return None
-
-    def paint(self, painter, option, index):
-        '''
-        Paint a checkbox without the label.
-        '''
-        checked = bool(index.model().data(index, QtCore.Qt.EditRole))
-        # print(checked)
-        check_box_style_option = QtGui.QStyleOptionButton()
-
-        # if (index.flags() & QtCore.Qt.ItemIsEditable) > 0:
-        #     check_box_style_option.state |= QtGui.QStyle.State_Enabled
-        # else:
-        #     check_box_style_option.state |= QtGui.QStyle.State_ReadOnly
-
-        if checked:
-            check_box_style_option.state |= QtGui.QStyle.State_On
-        else:
-            check_box_style_option.state |= QtGui.QStyle.State_Off
-
-        check_box_style_option.rect = self.getCheckBoxRect(option)
-
-        # this will not run - hasFlag does not exist
-        #if not index.model().hasFlag(index, QtCore.Qt.ItemIsEditable):
-            #check_box_style_option.state |= QtGui.QStyle.State_ReadOnly
-
-        check_box_style_option.state |= QtGui.QStyle.State_Enabled
-
-        QtGui.QApplication.style().drawControl(QtGui.QStyle.CE_CheckBox, check_box_style_option, painter)
-
-    def editorEvent(self, event, model, option, index):
-        # print( 'Check Box editor Event detected : ')
-        # if not (index.flags() & QtCore.Qt.ItemIsEditable) > 0:
-        #     return False
-
-        # print ('Check Box edior Event detected : passed first check')
-        # Do not change the checkbox-state
-        if event.type() != QtCore.QEvent.MouseButtonRelease:
-            return False
-
-        # Change the checkbox-state
-        self.setModelData(None, model, index)
-        return True
-
-    def setModelData (self, editor, model, index):
-        '''
-        The user wanted to change the old state in the opposite.
-        '''
-        # print( 'SetModelData')
-        newValue = not model.data(index, QtCore.Qt.EditRole)
-        # print(not newValue, newValue)
-        model.setData(index, newValue, QtCore.Qt.EditRole)
-
-    def getCheckBoxRect(self, option):
-        check_box_style_option = QtGui.QStyleOptionButton()
-        check_box_rect = QtGui.QApplication.style().subElementRect(QtGui.QStyle.SE_CheckBoxIndicator, check_box_style_option, None)
-        check_box_point = QtCore.QPoint (option.rect.x() +
-                             option.rect.width() / 2 -
-                             check_box_rect.width() / 2,
-                             option.rect.y() +
-                             option.rect.height() / 2 -
-                             check_box_rect.height() / 2)
-        return QtCore.QRect(check_box_point, check_box_rect.size())
-
-class CheckBoxDelegate2(QtGui.QItemDelegate):
-    # def __init__(self, parent = None):
-    #     QtGui.QGraphicsWidget.__init__(self)
-
-    def flags(self, index):
-        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled
-
-
-    def createEditor(self, parent, option, index):
-        '''
-        Important, otherwise an editor is created if the user clicks in this cell.
-        ** Need to hook up a signal to the model
-        '''
-        return None
-
-    def paint(self, painter, option, index):
-        '''
-        Paint a checkbox without the label.
-        '''
-        checked = bool(index.model().data(index, QtCore.Qt.EditRole))
-        # print(checked)
-        check_box_style_option = QtGui.QStyleOptionButton()
-
-        # if (index.flags() & QtCore.Qt.ItemIsEditable) > 0:
-        #     check_box_style_option.state |= QtGui.QStyle.State_Enabled
-        # else:
-        #     check_box_style_option.state |= QtGui.QStyle.State_ReadOnly
-
-        if checked:
-            check_box_style_option.state |= QtGui.QStyle.State_On
-        else:
-            check_box_style_option.state |= QtGui.QStyle.State_Off
-
-        check_box_style_option.rect = self.getCheckBoxRect(option)
-
-        # this will not run - hasFlag does not exist
-        #if not index.model().hasFlag(index, QtCore.Qt.ItemIsEditable):
-            #check_box_style_option.state |= QtGui.QStyle.State_ReadOnly
-
-        check_box_style_option.state |= QtGui.QStyle.State_Enabled
-
-        QtGui.QApplication.style().drawControl(QtGui.QStyle.CE_CheckBox, check_box_style_option, painter)
-
-    def editorEvent(self, event, model, option, index):
-        # print( 'Check Box editor Event detected : ')
-        # if not (index.flags() & QtCore.Qt.ItemIsEditable) > 0:
-        #     return False
-
-        # print ('Check Box edior Event detected : passed first check')
-        # Do not change the checkbox-state
-        if event.type() != QtCore.QEvent.MouseButtonRelease:
-            return False
-
-        # Change the checkbox-state
-        self.setModelData(None, model, index)
-        return True
-
-    def setModelData (self, editor, model, index):
-        '''
-        The user wanted to change the old state in the opposite.
-        '''
-        # print( 'SetModelData')
-        newValue = not model.data(index, QtCore.Qt.EditRole)
-        # print(not newValue, newValue)
-        model.setData(index, newValue, QtCore.Qt.EditRole)
-
-    def getCheckBoxRect(self, option):
-        check_box_style_option = QtGui.QStyleOptionButton()
-        check_box_rect = QtGui.QApplication.style().subElementRect(QtGui.QStyle.SE_CheckBoxIndicator, check_box_style_option, None)
-        check_box_point = QtCore.QPoint (option.rect.x() +
-                             option.rect.width() / 2 -
-                             check_box_rect.width() / 2,
-                             option.rect.y() +
-                             option.rect.height() / 2 -
-                             check_box_rect.height() / 2)
-        return QtCore.QRect(check_box_point, check_box_rect.size())
 
 
 class ColorDelegate(QtGui.QItemDelegate):
@@ -459,6 +305,7 @@ class TreeItem(object):
         if self.color == (999,999,999):
             self.color = (255,0,255)
 
+
         self.is_closed = 0
         if self.entity.dxftype()=='POLYLINE':
             data = np.array(list(self.entity.points()))
@@ -468,6 +315,7 @@ class TreeItem(object):
             self.is_closed = 0
             self.entity.points = np.array([self.entity.dxf.start, self.entity.dxf.end])
 
+        # print('ininit')
 
         item_data = {'Color':        self.color,
                      'Closed':       self.is_closed,
@@ -487,7 +335,6 @@ class TreeItem(object):
                      'Name':         self.name,
                      'Type':         self.type}
         self.loadMetaData(item_data)
-        self.recalc()
 
     def loadMetaData(self, meta):
         for column, key in enumerate(self.model.header):
@@ -506,8 +353,11 @@ class TreeItem(object):
         else:
             self.checkState = QtCore.Qt.Unchecked
 
+        # self.model.emit(QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), self.index(), self.index())
+
         if self.parentItem != None:
             self.parentItem.calcTime()
+
 
         return self.checkState
 
@@ -587,13 +437,35 @@ class TreeItem(object):
 
         return True
 
-    def replot(self):
-        return
-        self.model.emit(QtCore.SIGNAL('replot(QModelIndex)'), self.index())
-        # print('replot', self.pltHandle)
 
-    def recalc(self, col=0):
-        self.model.emit(QtCore.SIGNAL('recalc(QModelIndex)'), self.index())
+    # def index( row, column=0, parent=QtCore.QModelIndex()):
+    #     if parent.isValid() and parent.column() != 0:
+    #         return QtCore.QModelIndex()
+
+    #     parentItem = self.getItem(parent)
+    #     childItem = parentItem.child(row)
+    #     if childItem:
+    #         return self.createIndex(row, column, childItem)
+    #     else:
+    #         return QtCore.QModelIndex()
+
+    # def parent(self, index):
+    #     if not index.isValid():
+    #         return QtCore.QModelIndex()
+
+    #     childItem = self.getItem(index)
+    #     parentItem = childItem.parent()
+
+    #     if parentItem == self.rootItem:
+    #         return QtCore.QModelIndex()
+    #     try:
+    #         self.createIndex(parentItem.childNumber(), 0, parentItem)
+    #     except:
+    #         return QtCore.QModelIndex()
+
+    #     return self.createIndex(parentItem.childNumber(), 0, parentItem)
+
+
 
 
     def calcLength(self):
@@ -657,13 +529,15 @@ class TreeItem(object):
             colname = column
             column = self.model.col(column)
 
-        # print(column, colname, value)
+        # recalc = False
+        replot = False
 
         if colname == 'Angle':
             value= float(value)
             if self.fillAngle != value:
                 self.fillAngle = value
-                self.recalc()
+                # self.recalc()
+                self.model.recalc(self, index)
         elif colname == 'Voltage':
             value= float(value)
             if self.volt != value:
@@ -677,7 +551,8 @@ class TreeItem(object):
             value= float(value)
             if self.fillStep != value:
                 self.fillStep = value
-                self.recalc()
+                # self.recalc()
+                self.model.recalc(self, index)
         elif colname == 'Closed':
             if value == True:
                 value = 2
@@ -687,7 +562,8 @@ class TreeItem(object):
             # print(column,colname,value,index)
             if self.is_closed != value:
                 self.is_closed = value
-                self.recalc()
+                # self.recalc()
+                self.model.recalc(self, index)
                 col = self.model.col('Time')
                 self.model.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), self.index(col), self.index(col+1))
         elif colname == 'Show':
@@ -698,7 +574,7 @@ class TreeItem(object):
             value= int(value)
             if self.show != value:
                 self.show = value
-                self.replot()
+                replot = True
         elif colname == 'Time':
             value= float(value)
             if self.sketchTime != value:
@@ -715,19 +591,31 @@ class TreeItem(object):
                 value = 'Length'
         elif colname == 'Color':
             self.color = value
-            # print('color:' , self.pltHandle)
-            self.replot()
+            replot = True
 
         self.meta[colname] = value
         self.itemData[column] = value
 
-        # if index != None:
+
+        # if colname in ['Closed']:
+        #     cc = self.childCount()
+        #     if cc > 0:
+        #         for i in range(cc):
+        #             chindex =  self.createIndex(i, index.column(), self.child(i))
+        #             self.setData(chindex,value,role)
+        #             if colname == 'Closed':
+        # if (index != None) and (recalc):
         #     self.model.emit(QtCore.SIGNAL('recalc(QModelIndex,QModelIndex)'), index,index)
+        #     self.model.emit(QtCore.SIGNAL('recalc(QModelIndex.QModelIndex)'), self.index(), self.index())
+
+        if (index != None) and (replot):
+            self.model.emit(QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), index,index)
 
 
-        # if self.model.rootData[column] in  ['Voltage', 'Angle', 'Rate', 'Step']:
-        #     for ch in self.childItems:
-        #         ch.setData(column, value)
+        if colname in  ['Closed']:
+            for ch in self.childItems:
+                ch.setData(column, value)
+                # print('X closed')
         # if (self.childCount() != 0) and (column != (0 or 5)):
             # self.itemData[column] = ''
         return True
@@ -774,6 +662,25 @@ class TreeModel(QtCore.QAbstractItemModel):
             return [(0.01,1000), 2, 0.1]
         else:
             return False
+
+    def recalc(self, item, index):
+        # print(item,index, item.name)
+        if item.entity.dxftype() in ['POLYLINE','LINE','SPLINE']:
+            dxf2shape(item, fill_step = item.fillStep, fill_angle = item.fillAngle)
+
+
+        item.calcTime()
+
+    # def index(item, row, column=0, parent=QtCore.QModelIndex()):
+        # print(item.childNumber())
+        # try:
+        #     index2 = item.model.index(item.childNumber(), 0, item.ParentItem)
+        #     print('nnn', index2, item.model.getItem(index2).name)
+        # except:
+        #     pass
+        self.emit(QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), index, index)
+
+
 
     def data(self, index, role):
         if not index.isValid():
@@ -952,7 +859,6 @@ class TreeModel(QtCore.QAbstractItemModel):
             item = self.getItem(index)
 
             item.setCheckState(value)
-            self.emit(QtCore.SIGNAL('checkChanged(QModelIndex, QModelIndex)'), index, index)
 
             cc = item.childCount()
             if cc > 0:
@@ -975,6 +881,9 @@ class TreeModel(QtCore.QAbstractItemModel):
                     item.setCheckState(0)
 
             self.layoutChanged.emit()
+            # print('checkstate', index)
+            # self.emit(QtCore.SIGNAL('checkChanged(QModelIndex, QModelIndex)'), index, index)
+            self.emit(QtCore.SIGNAL('replot(QModelIndex, QModelIndex)'), index, index)
             return True
 
         if role != QtCore.Qt.EditRole:
@@ -988,11 +897,16 @@ class TreeModel(QtCore.QAbstractItemModel):
                 for i in range(cc):
                     chindex =  self.createIndex(i, index.column(), item.child(i))
                     self.setData(chindex,value,role)
+                    # if colname == 'Closed':
+                    #     print('closed')
+
+        # if colname in ['Angle', 'Rate', 'Step', 'Color', 'Closed', 'Show']:
+        #     print('I have to recalc', item)
+            # self.emit(QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), index,index)
 
         result = item.setData(index.column(), value, index)
-        if result:
-            self.emit(QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), index,index)
-            self.emit(QtCore.SIGNAL('recalc(QModelIndex,QModelIndex)'), index,index)
+        # if result:
+            # self.emit(QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), index,index)
 
         return result
 
@@ -1024,12 +938,16 @@ class TreeModel(QtCore.QAbstractItemModel):
     def layers(self):
         if self.dxf == None:
             return []
+        # for layer in self.dxf.layers:
         layers = []
         for layer in self.dxf.layers:
+            # print(layer.dxf.name)
             eee = self.layerquery(layer.dxf.name)
             if len(eee.entities) > 0:
                 layers.append(layer)
-        layers = {layer.dxf.name:{'entity': layer} for layer in layers}
+
+        # layers = {layer.dxf.name:{'entity': layer} for layer in layers}
+        # print(layers)
         return layers
 
     def get_dxf_entity(self, handle):
@@ -1043,33 +961,28 @@ class TreeModel(QtCore.QAbstractItemModel):
 
     def setupModelData(self, data, parent):
         self.dxf = data
-        layers = self.layers()
-        for ll in layers:
-            layer = layers[ll]
-            entity = layer['entity']
-#             print(ll, layer['entity'].is_on(), layer['entity'].is_locked())
+
+        for layer in self.dxf.layers:
+            # print(layer.dxf.name)
+            query = self.layerquery(layer.dxf.name)
+
             parent.insertChildren(parent.childCount(), 1, self.rootItem.columnCount())
-            thisChild = parent.child(parent.childCount() -1)
-            thisChild.setEntity(entity)
+            thisLayer = parent.child(parent.childCount() -1)
+            thisLayer.setEntity(layer)
 
-            # thisChild.initData()
-            layer['parent'] = thisChild
+            for entity in query:
+                if entity.dxftype() in ['IMAGE', 'SPLINE']:
+                    continue
 
-        ms = data.modelspace()
-        for entity in ms:
-            ll = entity.dxf.layer
-            # if ll not in layers:
-            #     continue
-            # print(entity.dxftype())
-            if entity.dxftype()=='IMAGE':
-                continue
+                thisLayer.insertChildren(thisLayer.childCount(), 1, self.rootItem.columnCount())
 
-            parent = layers[ll]['parent']
-            parent.insertChildren(parent.childCount(), 1, self.rootItem.columnCount())
+                thisChild = thisLayer.child(thisLayer.childCount() -1)
+                thisChild.setEntity(entity)
 
-            thisChild = parent.child(parent.childCount() -1)
-            thisChild.setEntity(entity)
-            # thisChild.initData()
+                self.recalc(thisChild, thisChild.index())
+
+            if thisLayer.childCount() == 0:
+                self.removeRows(parent.childCount()-1,1)
 
     def mimeTypes(self):
         # types = QtCore.QStringList()

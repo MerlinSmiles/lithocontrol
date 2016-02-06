@@ -759,7 +759,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.tree_file.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.connect(self.tree_file, QtCore.SIGNAL("customContextMenuRequested(const QPoint &)"), self.doMenu)
-        print('make last column just as wide as needed')
+        # print('make last column just as wide as needed')
 
         ####################
         self.pi = self.plotFrame.sketchPlot.getPlotItem()
@@ -775,11 +775,11 @@ class MainWindow(QtGui.QMainWindow):
 
 
 
-        QtCore.QObject.connect(self.tree_file.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
+        QtCore.QObject.connect(self.tree_file.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_selection)
         # QtCore.QObject.connect(self.tree_schedule.selectionModel(), QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'), self.update_plot)
         QtCore.QObject.connect(self.model, QtCore.SIGNAL('checkChanged(QModelIndex,QModelIndex)'), self.checked)
         QtCore.QObject.connect(self.model, QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), self.replot)
-        QtCore.QObject.connect(self.model, QtCore.SIGNAL('recalc(QModelIndex,QModelIndex)'), self.recalc)
+        # QtCore.QObject.connect(self.model, QtCore.SIGNAL('recalc(QModelIndex,QModelIndex)'), self.recalc)
 
         self.updateActions()
 
@@ -793,70 +793,86 @@ class MainWindow(QtGui.QMainWindow):
         column = index.column()
         colname = headers[column]
         item = self.tree_file.model().getItem(index)
-        print(colname,item)
+        # print(colname,item)
+
 
     @QtCore.pyqtSlot("QModelIndex", "QModelIndex")
     def recalc(self, index):
-        # print('in recalc')
+        print('X recalc')
+        # # return
+        # model = self.model
+        # item = model.getItem(index)
 
-        model = self.model
-        item = model.getItem(index)
-        print(item.name)
-        if item.entity.dxftype() in ['POLYLINE','LINE']:
-            dxf2shape(item, fill_step = item.fillStep, fill_angle = item.fillAngle)
 
-        item.calcTime()
-        # print('recalc xx', item.name)
 
-        # print('xx',item)
-        checked = item.checkState
-        if not checked == 0:
-            # clear plot from item
-            for i in item.pltHandle:
-                self.pi.removeItem(i)
-            item.pltHandle = []
+        # self.replot(index)
 
-            data = model.getItem(index).pltData
-            if data:
-                for i in data:
-                    pdi = self.pi.plot(i, pen = showPen)
-                    item.pltHandle.append(pdi)
+        # checked = item.checkState
+        # if not checked == 0:
+        #     # clear plot from item
+        #     for i in item.pltHandle:
+        #         self.pi.removeItem(i)
+        #     item.pltHandle = []
 
-            self.updateActions()
+        #     data = model.getItem(index).pltData
+        #     if data != []:
+        #         for i in data:
+        #             pdi = self.pi.plot(i, pen = showPen)
+        #             item.pltHandle.append(pdi)
+
+        #     self.updateActions()
+
 
         # print( self.pi.listDataItems() )
 
 
     @QtCore.pyqtSlot("QModelIndex", "QModelIndex")
     def replot(self, index):
+        # print('replot', index, index.column())
         # return
         model = self.model
         item = model.getItem(index)
+        # print(index, item.name)
+
         # self.pi.removeItem(item.pltHandle)
         for i in item.pltHandle:
             self.pi.removeItem(i)
         item.pltHandle = []
 
         checked = item.checkState
+        # print(checked)
+        # print('replot', index, index.column(), checked)
         if checked != 0:
             showPen.setColor(pg.QtGui.QColor(*item.color))
-            for i in item.pltData:
-                # print(i)
-                # print(i.shape)
-                # print(data.shape)
-                pdi = self.pi.plot(i, pen = showPen)
 
-                item.pltHandle.append(pdi)
+            data = model.getItem(index).pltData
+            if data != []:
+                for i in data:
+                    pdi = self.pi.plot(i, pen = showPen)
+                    item.pltHandle.append(pdi)
+        self.update_selection(None,None)
+            # print('pd', item.pltData)
+            # for i in item.pltData:
+            #     print(i)
+            #     # print(i.shape)
+            #     print(data.shape)
+            #     pdi = self.pi.plot(i, pen = showPen)
 
-            self.updateActions()
+            #     item.pltHandle.append(pdi)
+
+        # self.updateActions()
 
 
 
     @QtCore.pyqtSlot("QModelIndex","QModelIndex")
     def checked(self, index):
-        # print('checked')
+        # print('checked', index, index.column())
+        # self.replot(index)
         model = self.model
         item = model.getItem(index)
+        # print(item.name)
+        # print(item.pltData)
+        return
         checked = item.checkState
 
         if item.type == 'LAYER':
@@ -867,7 +883,17 @@ class MainWindow(QtGui.QMainWindow):
             self.pi.removeItem(i)
         item.pltHandle = []
 
+        showPen.setColor(pg.QtGui.QColor(*item.color))
 
+        if checked != 0:
+            for i in item.pltData:
+                # print(i)
+                # print(i.shape)
+                # print(data.shape)
+                pdi = self.pi.plot(i, pen = showPen)
+                item.pltHandle.append(pdi)
+
+        print('need updateActions here?')
         # print( 'Color',         item.color)
         # print( 'Closed',        item.is_closed)
         # print( 'parentItem',    item.parentItem)
@@ -899,23 +925,14 @@ class MainWindow(QtGui.QMainWindow):
 
 
 
-        showPen.setColor(pg.QtGui.QColor(*item.color))
-
-        if checked != 0:
-            for i in item.pltData:
-                # print(i)
-                # print(i.shape)
-                # print(data.shape)
-                pdi = self.pi.plot(i, pen = showPen)
-                item.pltHandle.append(pdi)
-
-        print('need updateActions here?')
         # print(item.pltHandle)
         # self.updateActions()
 
 
+
     @QtCore.pyqtSlot("QItemSelection, QItemSelection")
-    def update_plot(self, selected, deselected):
+    def update_selection(self, selected=None, deselected=None):
+
         model = self.model
         indexes = self.tree_file.selectedIndexes()
 
@@ -925,7 +942,6 @@ class MainWindow(QtGui.QMainWindow):
 
         items = set([model.getItem(i) for i in indexes])
         for item in items:
-            print('x')
             checked = item.checkState
             if checked != 0:
                 if len(item.pltData) > 0 :

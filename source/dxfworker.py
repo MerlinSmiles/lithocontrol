@@ -16,21 +16,21 @@ class DXFWorker(QtCore.QThread):
     # dataReady = QtCore.pyqtSignal('QString')
 
     def __init__(self, data, parent = None):
-
         QtCore.QThread.__init__(self, parent)
         self.exiting = False
         self.data = data
 
     def __del__(self):
+        print('del', self.data)
+        self.exiting = True
         self.wait()
 
-
     def run(self):
-        print( self.data,  'start' )
+        # print( self.data,  'start' )
         time.sleep(np.random.random()*self.data)
         self.reasult = ['res', self.data]
-        self.emit( QtCore.SIGNAL('dataReady(PyQt_PyObject)'), np.array([self.data]) )
-        print( self.data,  'end' )
+        self.emit( QtCore.SIGNAL('dataReady(PyQt_PyObject)'), np.random.random([self.data]) )
+        # print( self.data,  'end' )
         # self.finished.emit()
 
         # self.emit(QtCore.SIGNAL("AFMStatus(QString)"), line)
@@ -39,21 +39,24 @@ class DXFWorker(QtCore.QThread):
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
 
-    def done():
-        print("Done!", "Done fetching posts!")
     @QtCore.pyqtSlot("PyQt_PyObject")
-    def done2(a='None'):
+    def done(a='None'):
         print("Done!", a)
+    @QtCore.pyqtSlot()
+    def finished():
+        print()
 
     threads = []
     for i in range(10):
         t = DXFWorker(i)
-        t.start()
-        print (i)
-        app.connect(t, QtCore.SIGNAL("finished()"), done)
-        app.connect(t, QtCore.SIGNAL("dataReady(PyQt_PyObject)"), done2)
+        # print (i)
+        # app.connect(t, QtCore.SIGNAL("finished()"), finished)
+        # app.connect(t, QtCore.SIGNAL("finished()"), t, QtCore.SLOT("quit()"))
+        app.connect(t, QtCore.SIGNAL("dataReady(PyQt_PyObject)"), done)
     # obj.dataReady.connect(onDataReady)
         threads.append(t)
+    for t in threads:
+        t.start()
     # print (threads)
 
     # obj.moveToThread(thread)
