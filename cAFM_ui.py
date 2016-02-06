@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 demo = False
+import sys
+sys.path.append(".\\source")
+
 try:
     import gwy, gwyutils
 except:
@@ -28,8 +31,6 @@ import shutil
 # %load_ext autoreload
 # %autoreload 2
 
-import sys
-sys.path.append(".\\source")
 
 import json
 
