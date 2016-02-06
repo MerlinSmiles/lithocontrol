@@ -1,0 +1,5 @@
+thread per item, signal the item on data change, which signals the main loop?
+quit threads on finish?
+thread handles in dict, delete handle when it exists and make thread __del__ abort the current calculation
+
+[i.setData() for i in item.childItems]
