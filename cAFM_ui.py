@@ -127,7 +127,7 @@ class MainWindow(QtGui.QMainWindow):
         self.plotSplitter.addWidget(self.plotFrame)
         # self.splitter.setStretch(1,1)
 
-        self.splitter.setSizes([505,1500])
+        self.splitter.setSizes([3,3])
         # self.tree_splitter.set
         self.addToolbars()
         # self.show()
@@ -314,20 +314,21 @@ class MainWindow(QtGui.QMainWindow):
 
         self.headers = ('Name', 'Color', 'Show', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Length', 'Closed', 'Type')
 
-        self.splash.showMessage("Initialize AFMWorker",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
-        self.AFMthread = AFMWorker()
-        self.splash.showMessage("Initialize SocketWorker",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
-        self.SocketThread = SocketWorker()
+        if not demo:
+            self.splash.showMessage("Initialize AFMWorker",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+            self.AFMthread = AFMWorker()
+            self.splash.showMessage("Initialize SocketWorker",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+            self.SocketThread = SocketWorker()
 
-        QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("finished()"), self.updateAFM)
-        QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("terminated()"), self.updateAFM)
-        QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("afmImage(QString)"), self.newafmImage)
+            QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("finished()"), self.updateAFM)
+            QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("terminated()"), self.updateAFM)
+            QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("afmImage(QString)"), self.newafmImage)
 
-        QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("AFMpos(float, float, float)"), self.updateAFMpos)
-        QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("READY"), self.afmReady)
-        QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("AFMStatus(QString)"), self.updateStatus)
-        self.AFMthread.monitor(self.afmImageFolder)
-        self.SocketThread.monitor()
+            QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("AFMpos(float, float, float)"), self.updateAFMpos)
+            QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("READY"), self.afmReady)
+            QtCore.QObject.connect(self.SocketThread, QtCore.SIGNAL("AFMStatus(QString)"), self.updateStatus)
+            self.AFMthread.monitor(self.afmImageFolder)
+            self.SocketThread.monitor()
 
 
     def init_measurement(self):
@@ -1198,6 +1199,10 @@ class MainWindow(QtGui.QMainWindow):
             pass
 
     def closeEvent(self,event):
+        if demo:
+            event.accept()
+            return
+
         reply=QtGui.QMessageBox.question(self,'Message',"Are you sure to quit?",QtGui.QMessageBox.Yes | QtGui.QMessageBox.No , QtGui.QMessageBox.Yes)
         if reply==QtGui.QMessageBox.Yes:
             self.SocketThread.send_message('ClientClose\n')

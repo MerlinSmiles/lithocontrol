@@ -494,6 +494,7 @@ class TreeItem(object):
         self.setData('Length', round(float(self.length),1))
 
     def calcTime(self):
+        print('settime')
         if self.childCount() == 0:
             self.calcLength()
             self.sketchTime = self.length / float(self.rate)
@@ -565,6 +566,7 @@ class TreeItem(object):
                 # self.recalc()
                 self.model.recalc(self, index)
                 col = self.model.col('Time')
+                print('time')
                 self.model.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), self.index(col), self.index(col+1))
         elif colname == 'Show':
             if value == True:
@@ -624,6 +626,7 @@ class TreeItem(object):
 class TreeModel(QtCore.QAbstractItemModel):
     def __init__(self, headers, data, parent=None):
         super(TreeModel, self).__init__(parent)
+        self.threadPool = []
         # print(parent)
         self.checks = {}
         self.par = parent
@@ -663,24 +666,39 @@ class TreeModel(QtCore.QAbstractItemModel):
         else:
             return False
 
-    def recalc(self, item, index):
-        # print(item,index, item.name)
-        if item.entity.dxftype() in ['POLYLINE','LINE','SPLINE']:
-            dxf2shape(item, fill_step = item.fillStep, fill_angle = item.fillAngle)
 
-
+    @QtCore.pyqtSlot('QModelIndex, PyQt_PyObject')
+    def recalcDone(self, index, data):
+        item = self.getItem(index)
+        print('done', item.name)
+        item.pltData = data
+        # print(np.shape(item.pltData))
         item.calcTime()
-
-    # def index(item, row, column=0, parent=QtCore.QModelIndex()):
-        # print(item.childNumber())
-        # try:
-        #     index2 = item.model.index(item.childNumber(), 0, item.ParentItem)
-        #     print('nnn', index2, item.model.getItem(index2).name)
-        # except:
-        #     pass
         self.emit(QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), index, index)
 
+    def recalc(self, item, index):
+        item2 = self.getItem(index)
+        # print('start',item.name, item2.name)
+        if item.entity.dxftype() in ['POLYLINE','LINE','SPLINE']:
+            if item.entity.dxftype() == 'SPLINE':
+                with item.entity.edit_data() as data:
+                    pts = np.array(data.fit_points)
+                    print(np.array(data.control_points)[:,:2])
+                item.entity.points = pts
+                data = item.entity.points[:,:2]
+                # print(data)
+            elif item.entity.dxftype() == 'POLYLINE':
+                data = np.array(list(item.entity.points()))[:,:2]
+            elif item.entity.dxftype() == 'LINE':
+                data = np.array(item.entity.points)[:,:2]
+            else:
+                print('Bigfail')
+                return 0
 
+
+            self.threadPool.append( WorkThread(index, data, closed=item.is_closed) )
+            self.connect( self.threadPool[len(self.threadPool)-1], QtCore.SIGNAL('recalcDone(QModelIndex, PyQt_PyObject)'), self.recalcDone )
+            self.threadPool[len(self.threadPool)-1].start()
 
     def data(self, index, role):
         if not index.isValid():
@@ -897,8 +915,8 @@ class TreeModel(QtCore.QAbstractItemModel):
                 for i in range(cc):
                     chindex =  self.createIndex(i, index.column(), item.child(i))
                     self.setData(chindex,value,role)
-                    # if colname == 'Closed':
-                    #     print('closed')
+                    if colname == 'Closed':
+                        print('closed')
 
         # if colname in ['Angle', 'Rate', 'Step', 'Color', 'Closed', 'Show']:
         #     print('I have to recalc', item)
@@ -979,7 +997,9 @@ class TreeModel(QtCore.QAbstractItemModel):
                 thisChild = thisLayer.child(thisLayer.childCount() -1)
                 thisChild.setEntity(entity)
 
-                self.recalc(thisChild, thisChild.index())
+                print('should recalc', self.index(thisLayer.childCount()-1, 0, thisChild.index()))
+
+                self.recalc(thisChild, self.index(thisLayer.childCount()-1, 0, thisChild.index()))
 
             if thisLayer.childCount() == 0:
                 self.removeRows(parent.childCount()-1,1)

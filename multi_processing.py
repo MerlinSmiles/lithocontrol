@@ -26,6 +26,10 @@ if __name__=='__main__':
     writer_p = writer(pipe_write,terminate_measurement,tasks,settings)
     writer_p.daemon = True
 
+    # del writer_p.context
+    # del reader_p.process
+
+
     writer_p.start()            # Launch the writer process
     reader_p.start()            # Launch the reader process
     settings['measure'] = True  # Finally starts the measurement
