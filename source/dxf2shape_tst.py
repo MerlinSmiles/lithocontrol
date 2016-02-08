@@ -9,28 +9,6 @@ import numpy as np
 # from scipy.interpolate import interp1d
 from helpers import *
 
-from PyQt4 import QtCore, QtGui, uic
-
-class WorkThread(QtCore.QThread):
-    def __init__(self, index, data,threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_direction = 1, closed = 0):
-        QtCore.QThread.__init__(self)
-        self.index = index
-        self.data = data
-        self.threshold = threshold
-        self.fill_step = fill_step
-        self.fill_angle = fill_angle
-        self.path_direction = path_direction
-        self.closed = closed
-
-    def __del__(self):
-        self.wait()
-
-    def run(self):
-        pltData = dxf2shape(self.data, self.threshold, self.fill_step, self.fill_angle, self.path_direction, self.closed)
-        self.emit( QtCore.SIGNAL('recalcDone(QModelIndex, PyQt_PyObject)'), self.index, pltData )
-        return
-
-
 
 def Rotate2D(pts,angle=0):
     theta = (angle/180.) * np.pi
@@ -38,15 +16,29 @@ def Rotate2D(pts,angle=0):
                           [np.sin(theta),  np.cos(theta)]])
     return np.dot(pts, rotMatrix)
 
-def dxf2shape(data, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_direction = 1, closed = 0):
+def dxf2shape(item, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_direction = 1):
     if path_direction not in [-1,1]:
         print( 'Path direction must be -1 or 1!' )
         return 0
 
+    if item.entity.dxftype() == 'SPLINE':
+        with item.entity.edit_data() as data:
+            pts = np.array(data.fit_points)
+            print(np.array(data.control_points)[:,:2])
+        item.entity.points = pts
+        data = item.entity.points[:,:2]
+        print(data)
+    elif item.entity.dxftype() == 'POLYLINE':
+        data = np.array(list(item.entity.points()))[:,:2]
+    elif item.entity.dxftype() == 'LINE':
+        data = np.array(item.entity.points)[:,:2]
+    else:
+        return 0
     pts  = data[::path_direction]
 
     # return
-    if not closed:
+    if not item.is_closed:
+        item.pltData = [pts.reshape((-1,2))]
         return [pts.reshape((-1,2))]
     else:
         pts = np.append(pts,[pts[0]],axis = 0)
@@ -135,8 +127,8 @@ def dxf2shape(data, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_dire
         print('ff', collection, fill_angle)
         print(lines)
 
-    pltData = [k.reshape((-1,2)) for k in collection]
-    return pltData
+    item.pltData = [k.reshape((-1,2)) for k in collection]
+    return item.pltData
 
     # sorted_collection = []
     # next_group = [0,1,1e9]

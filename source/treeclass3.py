@@ -680,6 +680,13 @@ class TreeModel(QtCore.QAbstractItemModel):
         item2 = self.getItem(index)
         # print('start',item.name, item2.name)
         if item.entity.dxftype() in ['POLYLINE','LINE','SPLINE']:
+            pltData = dxf2shape(item)
+
+            item.calcTime()
+            self.emit(QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), index, index)
+
+            return
+
             if item.entity.dxftype() == 'SPLINE':
                 with item.entity.edit_data() as data:
                     pts = np.array(data.fit_points)
@@ -694,7 +701,6 @@ class TreeModel(QtCore.QAbstractItemModel):
             else:
                 print('Bigfail')
                 return 0
-
 
             self.threadPool.append( WorkThread(index, data, closed=item.is_closed) )
             self.connect( self.threadPool[len(self.threadPool)-1], QtCore.SIGNAL('recalcDone(QModelIndex, PyQt_PyObject)'), self.recalcDone )
