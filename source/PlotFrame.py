@@ -26,13 +26,15 @@ class PlotFrame(QtGui.QWidget):
         self.setLayout(layout)
 
         self.sketchDock = pg_dock.Dock("Skecthing", size=(500, 500))     ## give this dock the minimum possible size
-        self.measureDock = pg_dock.Dock("Measuring", size=(500,200))
-        self.dhtDock = pg_dock.Dock("DHT", size=(500,200))
+        self.measureDock = pg_dock.Dock("Measuring R", size=(500,200))
+        self.mConductanceDock = pg_dock.Dock("Measuring G", size=(500,200))
+        self.dhtDock = pg_dock.Dock("DHT", size=(500,500))
 
 
-        self.area.addDock(self.sketchDock, 'top')
-        self.area.addDock(self.dhtDock, 'bottom')
-        self.area.addDock(self.measureDock, 'above',self.dhtDock)
+        self.area.addDock(self.dhtDock, 'top')
+        self.area.addDock(self.sketchDock, 'above', self.dhtDock)
+        self.area.addDock(self.measureDock, 'bottom')
+        self.area.addDock(self.mConductanceDock, 'bottom')
 
 
         data = pg.gaussianFilter(np.random.normal(size=(256, 256)), (20, 20))
@@ -56,6 +58,9 @@ class PlotFrame(QtGui.QWidget):
 
         self.measurePlot = pg.PlotWidget()
         self.measureDock.addWidget(self.measurePlot)
+
+        self.mConductancePlot = pg.PlotWidget()
+        self.mConductanceDock.addWidget(self.mConductancePlot)
 
         self.dhtPlot = pg.PlotWidget()
         self.dhtDock.addWidget(self.dhtPlot)

@@ -27,7 +27,7 @@ def dxf2shape(item, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_dire
             print(np.array(data.control_points)[:,:2])
         item.entity.points = pts
         data = item.entity.points[:,:2]
-        print(data)
+        # print(data)
     elif item.entity.dxftype() == 'POLYLINE':
         data = np.array(list(item.entity.points()))[:,:2]
     elif item.entity.dxftype() == 'LINE':

@@ -85,7 +85,7 @@ kelly_colors = dict(vivid_yellow=(255, 179, 0),
             dark_olive_green=(35, 44, 22))
 
 # mkPen for selected
-selectPen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
+# selectPen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
 sketchPen = pg.mkPen(color='FF0000AA',width=2.5)  #, style=QtCore.Qt.DotLine
 movePen = pg.mkPen(color='1E4193',width=2, style=QtCore.Qt.DotLine)  #, style=QtCore.Qt.DotLine
 showPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine , width=
@@ -127,7 +127,7 @@ class MainWindow(QtGui.QMainWindow):
         self.plotSplitter.addWidget(self.plotFrame)
         # self.splitter.setStretch(1,1)
 
-        self.splitter.setSizes([3,3])
+        self.splitter.setSizes([400,1000])
         # self.tree_splitter.set
         self.addToolbars()
         # self.show()
@@ -312,7 +312,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.dxffileName = def_dxf_file
 
-        self.headers = ('Name', 'Color', 'Show', 'Voltage', 'Rate', 'Angle', 'Step', 'Time', 'Length', 'Closed', 'Type')
+        self.headers = ('Name', 'Show', 'Color', 'Volt', 'Rate', 'Angle', 'Step', 'Time', 'Length', 'Closed', 'Type')
 
         if not demo:
             self.splash.showMessage("Initialize AFMWorker",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
@@ -334,7 +334,7 @@ class MainWindow(QtGui.QMainWindow):
     def init_measurement(self):
         self.ni_terminate = False
 
-        self.plotlist = []
+        self.plotlist = {}
         self.update_plotting()
         self.plot_counter = 0
 
@@ -349,7 +349,6 @@ class MainWindow(QtGui.QMainWindow):
         self.settings['plot']['plot_current'] = True
         self.SRSensitivity.setText("%.0e" %(self.settings['measure']['SR_sensitivity']))
         self.PARSensitivity.setText("%.0e" %(self.settings['measure']['PAR_sensitivity']))
-        self.settings['plot']['plotR'] = True
         self.settings['measure']['DHTport'] = 5
         self.spinCom.setValue( self.settings['measure']['DHTport'] )
 
@@ -401,16 +400,37 @@ class MainWindow(QtGui.QMainWindow):
             self.dht_WorkerThread = None
 
         self.ni_pi = self.plotFrame.measurePlot.getPlotItem()
+        self.ni_pi.setDownsampling(auto=True)
+
         # self.ni_pi = self.plotView.getPlotItem()
         self.ni_pi.addLegend()
         self.ni_pi_legend = self.ni_pi.legend
+        # self.ni_pi_legend.layout.setAlignment(QtCore.Qt.AlignLeft)
+        # print(self.ni_pi_legend.layout.alignment())
+        # alignment=QtCore.Qt.AlignHCenter
         self.ni_pi.enableAutoRange('x', True)
-        # self.ni_pi.setXRange(990000, 1000000)
         self.ni_pi.enableAutoRange('y', True)
+        # self.ni_pi.setXRange(990000, 1000000)
+
+        self.pltG_pi = self.plotFrame.mConductancePlot.getPlotItem()
+        self.pltG_pi.setDownsampling(auto=True)
+        self.pltG_pi.setXLink(self.ni_pi)
+        self.pltG_pi.addLegend()
+        self.pltG_pi_legend = self.pltG_pi.legend
+        # self.pltG_pi.enableAutoRange('x', True)
+        self.pltG_pi.enableAutoRange('y', True)
         # li_data = np.array([[gen_meas_amplitude], [normamplitudes], [normphases], [li_r/1e6], [li_g]])
         self.ni_pi_names = ['ch0','ch1','ch2','ch3','ch4','ch5','ch6','ch7','ch8','ch9',]
-        for i in range(5):
-            self.plotlist.append({'plot': self.ni_pi.plot(name=self.ni_pi_names[i]), 'channel': i})
+        self.plotR_names = ['Current1', 'R2pt', 'R4pt']
+        self.plotG_names = ['Current2', 'G2pt', 'G4pt']
+        # for i in range(5):
+        #     self.plotlist.append({'plot': self.ni_pi.plot(name=self.ni_pi_names[i]), 'channel': i})
+
+        for nme in self.plotR_names:
+            self.plotlist[nme] = self.ni_pi.plot(name=nme)
+        for nme in self.plotG_names:
+            self.plotlist[nme] = self.pltG_pi.plot(name=nme)
+
 
 
     @QtCore.pyqtSlot("QString")
@@ -522,6 +542,7 @@ class MainWindow(QtGui.QMainWindow):
             line = line.split( )
             print('Started '+line[2])
             self.log(['sketch','ID'],['start', line[2]])
+            self.afmPoints.clear()
 
         elif line.startswith('# end'):
             line = line.split( )
@@ -577,46 +598,70 @@ class MainWindow(QtGui.QMainWindow):
         if index == None:
             index = self.model
         nfile = False
-        for i in range(index.rowCount()):
-            # print( '- ', i )
-            item = index.getItem(index.index(i))
-            if item.checkState == 0:
-                continue
-            chitems = item.childItems
-            # if item.data(6) == 'Layer':
-            self.sAdd('')
-            self.sComment(item.data())
 
-            if len(chitems) != 0:
-                nfile = True
-                for child in item.childItems:
-                    if child.checkState == 0:
-                        continue
-                    self.sAdd('')
-                    # child.data()
+        if self.multi_check.checkState() == 2:
+            multiples = self.multi_n.value()
+            sleep = self.multi_time.value()
+            dx = self.multi_dx.value()
+            dy = self.multi_dy.value()
+        else:
+            multiples = 1
+            sleep = 0
+            dx = 0
+            dy = 0
 
-                    # print('xx',child.data('Voltage'),child.data(1),child.data(2),child.data(3))
-                    # print('yy',child.volt)
-                    l = [['start'], child.data()]
-                    startline = [item for sublist in l for item in sublist]
-                    self.sComment(startline)
-                    # self.sComment()
-                    if child.checkState == 2:
-                        for path in child.pltData:
-                            x,y = np.add(path[0],-self.centerCoord)
-                            self.sAdd('vtip\t%f' %(0.0))
-                            self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
-                            self.sAdd('vtip\t%f' %float(child.data('Voltage')))
-                            r = child.data('Rate')
-                            for x,y in np.add(path,-self.centerCoord):
-                            # Maybe go from [1:] but going to the startpoint twice should reduce vtip lag
-                                self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,r))
 
-                            self.sAdd('vtip\t%f' %(0.0))
-                            self.sComment(['end',child.data('Name')])
+        for cpy in range(multiples):
+
+            # offset = -self.centerCoord
+            offset = np.add(-self.centerCoord,[cpy*dx,cpy*dy])
+            self.sComment(['copy',cpy])
+
+            for i in range(index.rowCount()):
+                # print( '- ', i )
+                item = index.getItem(index.index(i))
+                if item.checkState == 0:
+                    continue
+                chitems = item.childItems
+                # if item.data(6) == 'Layer':
+                self.sAdd('')
+                self.sComment(item.data())
+
+                if len(chitems) != 0:
+                    nfile = True
+                    for child in item.childItems:
+                        if child.checkState == 0:
+                            continue
+                        self.sAdd('')
+                        # child.data()
+
+                        # print('xx',child.data('Volt'),child.data(1),child.data(2),child.data(3))
+                        # print('yy',child.volt)
+                        l = [['start'], child.data()]
+                        startline = [item for sublist in l for item in sublist]
+                        self.sComment(startline)
+                        # self.sComment()
+                        if child.checkState == 2:
+                            for path in child.pltData:
+                                x,y = np.add(path[0],offset)
+                                self.sAdd('vtip\t%f' %(0.0))
+                                self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
+                                self.sAdd('vtip\t%f' %float(child.data('Volt')))
+                                r = child.data('Rate')
+                                for x,y in np.add(path,offset):
+                                # Maybe go from [1:] but going to the startpoint twice should reduce vtip lag
+                                    self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,r))
+
+                                self.sAdd('vtip\t%f' %(0.0))
+                                self.sComment(['end',child.data('Name')])
+            self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(0,0,self.freerate))
+            # self.sAdd('vtip\t%f' %(0.0))
+            # time.sleep(sleep)
+            self.sAdd('pause\t%.1f' %(sleep))
+
+
         if nfile:
             # make sure the afm moves away from the device
-            self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(0,0,self.freerate))
             self.saveSketch()
 
             self.log(['sketch','dir'], ['subfolder', str(self.sketchSubFolder)])
@@ -728,31 +773,33 @@ class MainWindow(QtGui.QMainWindow):
 
         # self.tree_file.setSizes([20, 300])
         self.tree_file.setModel(self.model)
-        self.tree_file.setColumnHidden(self.headers.index('Show'), True)
+        # self.tree_file.setColumnHidden(self.headers.index('Show'), True)
 
 
         self.tree_file.setDragDropMode( QtGui.QAbstractItemView.InternalMove )
         self.tree_file.setSelectionMode( QtGui.QAbstractItemView.ExtendedSelection )
 
-        for col in [self.headers.index(col) for col in ['Closed', 'Show']]:
-            self.tree_file.setItemDelegateForColumn(col,CheckBoxDelegate(self))
+        for col in ['Closed', 'Show']:
+            colnum = self.headers.index(col)
+            self.tree_file.setItemDelegateForColumn(colnum,CheckBoxDelegate(self, column = col))
 
-        for col in [self.headers.index(col) for col in ['Voltage', 'Rate', 'Angle', 'Step']]:
-            self.tree_file.setItemDelegateForColumn(col,DoubleSpinBoxDelegate(self))
+        for col in ['Volt', 'Rate', 'Angle', 'Step']:
+            colnum = self.headers.index(col)
+            self.tree_file.setItemDelegateForColumn(colnum,DoubleSpinBoxDelegate(self))
 
         self.tree_file.setItemDelegateForColumn(self.model.col('Color'),ColorDelegate(self))
 
         self.tree_file.expandAll()
 
-        for col in [self.headers.index(col) for col in ['Closed', 'Show']]:
-            root = self.tree_file.rootIndex()
-            for i in range(0,self.model.rowCount(root)):
-                index = self.model.index(i, col)
-                self.tree_file.openPersistentEditor(index)
-                item = self.model.getItem(index)
-                for ch in range(0,item.childCount()):
-                    index2 = self.model.index(ch, col,  self.model.index(i))
-                    self.tree_file.openPersistentEditor(index2)
+        # for col in [self.headers.index(col) for col in ['Closed', 'Show']]:
+        #     root = self.tree_file.rootIndex()
+        #     for i in range(0,self.model.rowCount(root)):
+        #         index = self.model.index(i, col)
+        #         self.tree_file.openPersistentEditor(index)
+        #         item  = self.model.getItem(index)
+        #         for ch in range(0,item.childCount()):
+        #             index2 = self.model.index(ch, col,  self.model.index(i))
+        #             self.tree_file.openPersistentEditor(index2)
 
         for column in range(self.model.columnCount()):
             self.tree_file.resizeColumnToContents(column)
@@ -800,32 +847,19 @@ class MainWindow(QtGui.QMainWindow):
     @QtCore.pyqtSlot("QModelIndex", "QModelIndex")
     def recalc(self, index):
         print('X recalc')
-        # # return
-        # model = self.model
-        # item = model.getItem(index)
 
-
-
-        # self.replot(index)
-
-        # checked = item.checkState
-        # if not checked == 0:
-        #     # clear plot from item
-        #     for i in item.pltHandle:
-        #         self.pi.removeItem(i)
-        #     item.pltHandle = []
-
-        #     data = model.getItem(index).pltData
-        #     if data != []:
-        #         for i in data:
-        #             pdi = self.pi.plot(i, pen = showPen)
-        #             item.pltHandle.append(pdi)
-
-        #     self.updateActions()
-
-
-        # print( self.pi.listDataItems() )
-
+    def remulti(self):
+        root = self.tree_file.rootIndex()
+        for i in range(0,self.model.rowCount(root)):
+            index = self.model.index(i, 0)
+            # self.tree_file.openPersistentEditor(index)
+            item  = self.model.getItem(index)
+            for ch in range(0,item.childCount()):
+                index2 = self.model.index(ch, 0,  self.model.index(i))
+                item = self.model.getItem(index2)
+                checked = item.checkState
+                if checked != 0:
+                    self.replot(index2)
 
     @QtCore.pyqtSlot("QModelIndex", "QModelIndex")
     def replot(self, index):
@@ -840,17 +874,41 @@ class MainWindow(QtGui.QMainWindow):
             self.pi.removeItem(i)
         item.pltHandle = []
 
+        show = item.data('Show')
         checked = item.checkState
         # print(checked)
         # print('replot', index, index.column(), checked)
-        if checked != 0:
-            showPen.setColor(pg.QtGui.QColor(*item.color))
 
-            data = model.getItem(index).pltData
-            if data != []:
-                for i in data:
-                    pdi = self.pi.plot(i, pen = showPen)
-                    item.pltHandle.append(pdi)
+        if self.multi_check.checkState() == 2:
+            multiples = self.multi_n.value()
+            sleep = self.multi_time.value()
+            dx = self.multi_dx.value()
+            dy = self.multi_dy.value()
+        else:
+            multiples = 1
+            sleep = 0
+            dx = 0
+            dy = 0
+
+
+        for cpy in range(multiples):
+
+            # offset = -self.centerCoord
+            offset = np.add(-self.centerCoord,[cpy*dx,cpy*dy])
+
+            if (checked != 0) or (show != 0):
+                itemcolor = pg.QtGui.QColor(*item.color)
+                if checked == 0:
+                    itemcolor.setAlpha(44)
+
+                showPen.setColor(itemcolor)
+
+                data = model.getItem(index).pltData
+                if data != []:
+                    for i in data:
+                        pdi = self.pi.plot(np.add(i,offset), pen = showPen)
+                        item.pltHandle.append(pdi)
+
         self.update_selection(None,None)
             # print('pd', item.pltData)
             # for i in item.pltData:
@@ -864,37 +922,54 @@ class MainWindow(QtGui.QMainWindow):
         # self.updateActions()
 
 
+    @QtCore.pyqtSlot("QItemSelection, QItemSelection")
+    def update_selection(self, selected=None, deselected=None):
+        model = self.model
+        indexes = self.tree_file.selectedIndexes()
+        for i in self.selectedPI:
+            self.pi.removeItem(i)
+        self.selectedPI = []
+
+        items = set([model.getItem(i) for i in indexes])
+
+        selectPen = pg.mkPen(color='FF750ADD')  #, style=QtCore.Qt.DotLine
+
+        if self.multi_check.checkState() == 2:
+            multiples = self.multi_n.value()
+            sleep = self.multi_time.value()
+            dx = self.multi_dx.value()
+            dy = self.multi_dy.value()
+        else:
+            multiples = 1
+            sleep = 0
+            dx = 0
+            dy = 0
+
+        for cpy in range(multiples):
+            # offset = -self.centerCoord
+            offset = np.add(-self.centerCoord,[cpy*dx,cpy*dy])
+
+            for item in items:
+                show = item.data('Show')
+                checked = item.checkState
+                if (checked != 0) or (show != 0):
+                    if len(item.pltData) > 0 :
+                        for i in item.pltData:
+                            pdi = self.pi.plot(np.add(i,offset), pen = selectPen)
+                            # pdi.setZValue(10000)
+                            self.selectedPI.append(pdi)
+
+
+
 
     @QtCore.pyqtSlot("QModelIndex","QModelIndex")
     def checked(self, index):
+        return
         # print('checked', index, index.column())
         # self.replot(index)
-        model = self.model
-        item = model.getItem(index)
-        # print(item.name)
-        # print(item.pltData)
-        return
-        checked = item.checkState
+        # model = self.model
+        # item = model.getItem(index)
 
-        if item.type == 'LAYER':
-            return
-
-        # clear plot from item
-        for i in item.pltHandle:
-            self.pi.removeItem(i)
-        item.pltHandle = []
-
-        showPen.setColor(pg.QtGui.QColor(*item.color))
-
-        if checked != 0:
-            for i in item.pltData:
-                # print(i)
-                # print(i.shape)
-                # print(data.shape)
-                pdi = self.pi.plot(i, pen = showPen)
-                item.pltHandle.append(pdi)
-
-        print('need updateActions here?')
         # print( 'Color',         item.color)
         # print( 'Closed',        item.is_closed)
         # print( 'parentItem',    item.parentItem)
@@ -906,49 +981,13 @@ class MainWindow(QtGui.QMainWindow):
         # print( 'checkState',    item.checkState)
         # print( 'Angle',         item.fillAngle)
         # print( 'Step',          item.fillStep)
-        # print( 'Voltage',       item.volt)
+        # print( 'Volt',       item.volt)
         # print( 'Rate',          item.rate)
         # print( 'length',        item.length)
         # print( 'Time',          item.sketchTime)
         # print( 'Name',          item.name)
         # print( 'Type',          item.type)
-        # if checked == 0:
-            # hide item if unchecked
-            # self.tree_schedule.setRowHidden(index.row(),index.parent(), True)
-        # else:
-            # self.tree_schedule.setRowHidden(index.row(),index.parent(), False)
 
-        #     ename = self.entity.dxf.name
-        # else:
-        #     self.name  = self.entity.dxf.handle
-        #     self.color = (255,0,255)
-        #     # self.color = self.entity.get_rgb_color()
-
-
-
-        # print(item.pltHandle)
-        # self.updateActions()
-
-
-
-    @QtCore.pyqtSlot("QItemSelection, QItemSelection")
-    def update_selection(self, selected=None, deselected=None):
-
-        model = self.model
-        indexes = self.tree_file.selectedIndexes()
-
-        for i in self.selectedPI:
-            self.pi.removeItem(i)
-        self.selectedPI = []
-
-        items = set([model.getItem(i) for i in indexes])
-        for item in items:
-            checked = item.checkState
-            if checked != 0:
-                if len(item.pltData) > 0 :
-                    for i in item.pltData:
-                        pdi = self.pi.plot(i, pen = selectPen)
-                        self.selectedPI.append(pdi)
 
 
 
@@ -1237,14 +1276,20 @@ class MainWindow(QtGui.QMainWindow):
         self.check_2pt.stateChanged.connect(self.update_plotting)
         self.check_4pt.stateChanged.connect(self.update_plotting)
         self.check_current.stateChanged.connect(self.update_plotting)
-        self.radio_plotR.toggled.connect(self.update_plotting)
-        self.radio_plotC.toggled.connect(self.update_plotting)
         self.plot_update_time.valueChanged.connect(self.update_plotting)
         self.spinCom.valueChanged.connect(self.update_plotting)
         self.spinCom.valueChanged.connect(self.initSerial)
         self.SRSensitivity.editingFinished.connect(self.update_plotting)
         self.PARSensitivity.editingFinished.connect(self.update_plotting)
 
+        self.spinCom.valueChanged.connect(self.initSerial)
+
+        #xxx
+        self.multi_check.stateChanged.connect(self.remulti)
+        self.multi_n.editingFinished.connect(self.remulti)
+        self.multi_time.editingFinished.connect(self.remulti)
+        self.multi_dx.editingFinished.connect(self.remulti)
+        self.multi_dy.editingFinished.connect(self.remulti)
 
 
         if not demo:
@@ -1286,10 +1331,9 @@ class MainWindow(QtGui.QMainWindow):
             self.settings['plot']['plot_current'] = False
 
         for i in self.plotlist:
-            i['plot'].clear()
+            i.clear()
 
         self.settings['plot']['plot_timing'] = self.plot_update_time.value()
-        self.settings['plot']['plotR'] = self.radio_plotR.isChecked()
         self.settings['measure']['SR_sensitivity'] = float(self.SRSensitivity.text ())
         self.settings['measure']['PAR_sensitivity'] = float(self.PARSensitivity.text ())
         self.settings['measure']['DHTport'] = self.spinCom.value()
@@ -1394,87 +1438,88 @@ class MainWindow(QtGui.QMainWindow):
 
                 d_time = raw_buffer[0]
                 current = raw_buffer[1]
+                r2pt = raw_buffer[2]
+                r4pt = raw_buffer[3]
 
-                n += 1
+                n = 1
                 av_len = -10
                 if self.plot_counter>11:
                     self.ni_pi_legend.items = []
+                    self.pltG_pi_legend.items = []
 
                 if self.settings['plot']['plot_current'] == True:
                     if self.plot_counter>11:
 
                         try:
                             av_curr = np.average(current[av_len:])*1e9
-                            self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'Current' + ' = ' + '%.2f nA' % av_curr)
+                            self.ni_pi_legend.addItem(self.plotlist['Current1'], 'Current' + ' = ' + '%.2f nA' % av_curr)
+                            self.pltG_pi_legend.addItem(self.plotlist['Current2'], 'Current' + ' = ' + '%.2f nA' % av_curr)
                         except:
-                            self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'Current')
+                            self.ni_pi_legend.addItem(self.plotlist['Current1'], 'Current')
+                            self.pltG_pi_legend.addItem(self.plotlist['Current2'], 'Current')
                             pass
 
-                    self.plotlist[n]['plot'].setData(x=d_time, y=current*1e9)
-                    self.plotlist[n]['plot'].setPen(color=kelly_colors[colors[n]])
-                n += 1
+                    self.plotlist['Current1'].setData(x=d_time, y=current*1e9)
+                    self.plotlist['Current1'].setPen(color=kelly_colors[colors[n]])
+                    self.plotlist['Current2'].setData(x=d_time, y=current*1e9)
+                    self.plotlist['Current2'].setPen(color=kelly_colors[colors[n]])
 
-                if self.settings['plot']['plotR']:
-                    r2pt = raw_buffer[2]
-                    r4pt = raw_buffer[3]
+                n = 2
+                if self.settings['plot']['plot_2pt'] == True:
+                    if self.plot_counter>11:
+                        try:
+                            av_2pt = np.average(r2pt[av_len:])/1000.0
+                            self.ni_pi_legend.addItem(self.plotlist['R2pt'], 'R2pt' + ' = ' + '%.0f kOhm' % av_2pt)
+                        except:
+                            self.ni_pi_legend.addItem(self.plotlist['R2pt'], 'R2pt')
+                            pass
 
-                    if self.settings['plot']['plot_2pt'] == True:
-                        if self.plot_counter>11:
-                            try:
-                                av_2pt = np.average(r2pt[av_len:])/1000.0
-                                self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'R2pt' + ' = ' + '%.1f kOhm' % av_2pt)
-                            except:
-                                self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'R2pt')
-                                pass
+                    self.plotlist['R2pt'].setData(x=d_time, y=r2pt/1000.0)
+                    self.plotlist['R2pt'].setPen(color=kelly_colors[colors[n]])
 
-                        self.plotlist[n]['plot'].setData(x=d_time, y=r2pt/1000.0)
-                        self.plotlist[n]['plot'].setPen(color=kelly_colors[colors[n]])
+                n = 3
+                if self.settings['plot']['plot_4pt'] == True:
+                    if self.plot_counter>11:
+                        try:
+                            av_4pt = np.average(r4pt[av_len:])/1000.0
+                            self.ni_pi_legend.addItem(self.plotlist['R4pt'], 'R4pt' + ' = ' + '%.0f kOhm' % av_4pt)
+                        except:
+                            self.ni_pi_legend.addItem(self.plotlist['R4pt'], 'R4pt')
+                            pass
 
-                    n += 1
-                    if self.settings['plot']['plot_4pt'] == True:
-                        if self.plot_counter>11:
+                    self.plotlist['R4pt'].setData(x=d_time, y=r4pt/1000.0)
+                    self.plotlist['R4pt'].setPen(color=kelly_colors[colors[n]])
 
-                            self.plot_counter = 0
-                            try:
-                                av_4pt = np.average(r4pt[av_len:])/1000.0
-                                self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'R4pt' + ' = ' + '%.1f kOhm' % av_4pt)
-                            except:
-                                self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'R4pt')
-                                pass
+                g2pt = 1.0/r2pt *1e6
+                g4pt = 1.0/r4pt *1e6
 
-                        self.plotlist[n]['plot'].setData(x=d_time, y=r4pt/1000.0)
-                        self.plotlist[n]['plot'].setPen(color=kelly_colors[colors[n]])
+                n = 2
+                if self.settings['plot']['plot_2pt'] == True:
+                    if self.plot_counter>11:
+                        try:
+                            av_2pt = np.average(g2pt[av_len:])
+                            self.pltG_pi_legend.addItem(self.plotlist['G2pt'], 'g2pt' + ' = ' + '%.0f uS' % av_2pt)
+                        except:
+                            self.pltG_pi_legend.addItem(self.plotlist['G2pt'], 'g2pt')
+                            pass
 
-                if not self.settings['plot']['plotR']:
-                    g2pt = 1.0/raw_buffer[2] *1e6
-                    g4pt = 1.0/raw_buffer[3] *1e6
+                    self.plotlist['G2pt'].setData(x=d_time, y=g2pt)
+                    self.plotlist['G2pt'].setPen(color=kelly_colors[colors[n]])
 
-                    if self.settings['plot']['plot_2pt'] == True:
-                        if self.plot_counter>11:
-                            try:
-                                av_2pt = np.average(g2pt[av_len:])
-                                self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'g2pt' + ' = ' + '%.1f uS' % av_2pt)
-                            except:
-                                self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'g2pt')
-                                pass
+                n = 3
+                if self.settings['plot']['plot_4pt'] == True:
+                    if self.plot_counter>11:
+                        try:
+                            av_4pt = np.average(g4pt[av_len:])
+                            self.pltG_pi_legend.addItem(self.plotlist['G4pt'], 'g4pt' + ' = ' + '%.0f uS' % av_4pt)
+                        except:
+                            self.pltG_pi_legend.addItem(self.plotlist['G4pt'], 'g4pt')
+                            pass
 
-                        self.plotlist[n]['plot'].setData(x=d_time, y=g2pt)
-                        self.plotlist[n]['plot'].setPen(color=kelly_colors[colors[n]])
+                    self.plotlist['G4pt'].setData(x=d_time, y=g4pt)
+                    self.plotlist['G4pt'].setPen(color=kelly_colors[colors[n]])
 
-                    n += 1
-                    if self.settings['plot']['plot_4pt'] == True:
-                        if self.plot_counter>11:
-
-                            self.plot_counter = 0
-                            try:
-                                av_4pt = np.average(g4pt[av_len:])
-                                self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'g4pt' + ' = ' + '%.1f uS' % av_4pt)
-                            except:
-                                self.ni_pi_legend.addItem(self.plotlist[n]['plot'], 'g4pt')
-                                pass
-
-                        self.plotlist[n]['plot'].setData(x=d_time, y=g4pt)
-                        self.plotlist[n]['plot'].setPen(color=kelly_colors[colors[n]])
+            # self.plot_counter = 0
 
         if not self.ni_terminate:
             QtCore.QTimer.singleShot(self.settings['plot']['plot_timing'], self.graficar)
