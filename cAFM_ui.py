@@ -86,9 +86,10 @@ kelly_colors = dict(vivid_yellow=(255, 179, 0),
 
 # mkPen for selected
 # selectPen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
-sketchPen = pg.mkPen(color='FF0000AA',width=2.5)  #, style=QtCore.Qt.DotLine
+sketchPen = pg.mkPen(color='FF000099',width=2.5)  #, style=QtCore.Qt.DotLine
 movePen = pg.mkPen(color='1E4193',width=2, style=QtCore.Qt.DotLine)  #, style=QtCore.Qt.DotLine
 showPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine , width=
+selectPen = pg.mkPen(color='00FF00',width=3)  #, style=QtCore.Qt.DotLine , width=
 
 
 
@@ -236,6 +237,15 @@ class MainWindow(QtGui.QMainWindow):
         mainMenu = menubar.addMenu('&Main')
         mainMenu.addAction(exitAction)
 
+
+        self.offset_angle = 0
+        self.offset_center = [0,0]
+        self.dxf_design = None
+        self.designPltHandle = []
+
+        self.reoffset()
+        self.pltDesign()
+
         # self.tree_splitter.setGeometry(500, 100)
         # self.tree_splitter.setStretchFactor(0,1)
 
@@ -296,8 +306,6 @@ class MainWindow(QtGui.QMainWindow):
 
         self.afminfo = {}
 
-        self.centerCoord = np.array([0,0])
-
         self.afmPosition = pg.PlotDataItem(size=5, pen=sketchPen, brush=pg.mkBrush(255, 0, 0, 255))
         self.afmPosition.setZValue(100)
         self.afmNow = pg.PlotDataItem(size=2, pen=sketchPen, brush=pg.mkBrush(0, 0, 255, 255))
@@ -312,7 +320,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.dxffileName = def_dxf_file
 
-        self.headers = ('Name', 'Show', 'Color', 'Volt', 'Rate', 'Angle', 'Step', 'Time', 'Length', 'Closed', 'Direction', 'Type')
+        self.headers = ('Name', 'Show', 'Color', 'Volt', 'Rate', 'Angle', 'Step', 'Time', 'Length', 'Closed', 'Order', 'Type')
 
         if not demo:
             self.splash.showMessage("Initialize AFMWorker",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
@@ -573,7 +581,8 @@ class MainWindow(QtGui.QMainWindow):
             y = float(line[2])
             r = float(line[3])
             self.log(['sketch','x','y','r'], ['xyAbs', x, y, r])
-            self.afmPoints.append([x,y,r])
+            xo, yo = self.transformData([x,y], direction = -1)
+            self.afmPoints.append([xo,yo,r])
 
 
     def doDemo(self):
@@ -614,8 +623,7 @@ class MainWindow(QtGui.QMainWindow):
 
         for cpy in range(multiples):
 
-            # offset = -self.centerCoord
-            offset = np.add(-self.centerCoord,[cpy*dx,cpy*dy])
+            offset = [cpy*dx,cpy*dy]
             self.sComment(['copy',cpy])
 
             for i in range(index.rowCount()):
@@ -643,8 +651,9 @@ class MainWindow(QtGui.QMainWindow):
                         self.sComment(startline)
                         # self.sComment()
                         if child.checkState == 2:
-                            for chpath in child.pltData[::child.pathDirection]:
-                                path = chpath[::child.pathDirection]
+                            for chpath in child.pltData[::child.pathOrder]:
+
+                                path = self.transformData( chpath[::child.pathOrder] ,direction=1)
                                 x,y = np.add(path[0],offset)
                                 self.sAdd('vtip\t%f' %(0.0))
                                 self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
@@ -656,7 +665,8 @@ class MainWindow(QtGui.QMainWindow):
 
                                 self.sAdd('vtip\t%f' %(0.0))
                                 self.sComment(['end',child.data('Name')])
-            self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(0,0,self.freerate))
+            x0,y0 = self.offset_center
+            self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(-x0,-y0,self.freerate))
             # self.sAdd('vtip\t%f' %(0.0))
             # time.sleep(sleep)
             self.sAdd('pause\t%.1f' %(sleep))
@@ -782,7 +792,7 @@ class MainWindow(QtGui.QMainWindow):
         self.tree_file.setDragDropMode( QtGui.QAbstractItemView.InternalMove )
         self.tree_file.setSelectionMode( QtGui.QAbstractItemView.ExtendedSelection )
 
-        for col in ['Closed', 'Show', 'Direction']:
+        for col in ['Closed', 'Show', 'Order']:
             colnum = self.headers.index(col)
             self.tree_file.setItemDelegateForColumn(colnum,CheckBoxDelegate(self, column = col))
 
@@ -854,6 +864,84 @@ class MainWindow(QtGui.QMainWindow):
     def recalc(self, index):
         print('X recalc')
 
+
+    def pltDesign(self):
+        if self.dxf_design == None:
+            self.dxf_design = ezdxf.readfile('./layout/design.dxf')
+
+        design_pltlist = []
+
+        for i in self.designPltHandle:
+            self.pi.removeItem(i)
+        self.designPltHandle = []
+
+        if self.offset_check_design.checkState() == 2:
+            modelspace = self.dxf_design.modelspace()
+            for entity in modelspace:
+                print (entity)
+                if entity.dxftype() == 'POLYLINE':
+                    data = np.array(list(entity.points()))[:,:2]
+                    design_pltlist.append(data)
+                if entity.dxftype() == 'LINE':
+                    data = np.array(entity.points)[:,:2]
+                    design_pltlist.append(data)
+                else:
+                    continue
+
+
+            designPen = pg.mkPen(color='00FF00DD', style=QtCore.Qt.DotLine, width=2)
+            designBrush = pg.mkBrush(color='00FF00DD')
+            for i in design_pltlist:
+                pdi = self.pi.plot(i, pen = designPen, brush=designBrush)
+                self.designPltHandle.append(pdi)
+
+
+    def lockOffset(self):
+        self.offset_check_lock.stateChanged.connect(self.reoffset)
+        if self.offset_check_lock.checkState() == 2:
+            self.offset_angle_spin.setEnabled(False)
+            self.offset_dx_spin.setEnabled(False)
+            self.offset_dy_spin.setEnabled(False)
+        else:
+            self.offset_angle_spin.setEnabled(True)
+            self.offset_dx_spin.setEnabled(True)
+            self.offset_dy_spin.setEnabled(True)
+
+
+    def reoffset(self):
+        dx = -self.offset_dx_spin.value()
+        dy = -self.offset_dy_spin.value()
+
+        self.offset_angle = -self.offset_angle_spin.value()
+        self.offset_center = [dx,dy]
+
+        self.plotFrame.setAfmImage(angle = self.offset_angle, offset = self.offset_center )
+
+        # print(self.plotFrame.afmIm.rect)
+        # self.replot()
+
+
+    def transformData(self, data, angle = None, offset = None, direction = 1):
+        c = data
+        if angle == None:
+            angle = self.offset_angle
+        if offset == None:
+            offset = self.offset_center
+        offset = -np.array(offset)
+
+        theta = direction*(angle/180.) * np.pi
+        rotMatrix = np.array([[np.cos(theta), -np.sin(theta)],
+                              [np.sin(theta),  np.cos(theta)]])
+        if direction == 1:
+            c = np.add(c, direction*offset)
+            c = np.dot(c, rotMatrix)
+        else:
+            c = np.dot(c, rotMatrix)
+            c = np.add(c, direction*offset)
+        return c
+
+
+
     def remulti(self):
         root = self.tree_file.rootIndex()
         for i in range(0,self.model.rowCount(root)):
@@ -868,7 +956,17 @@ class MainWindow(QtGui.QMainWindow):
                     self.replot(index2)
 
     @QtCore.pyqtSlot("QModelIndex", "QModelIndex")
-    def replot(self, index):
+    def replot(self, index = None):
+        if index == None:
+            root = self.tree_file.rootIndex()
+            for i in range(0,self.model.rowCount(root)):
+                index = self.model.index(i, 0)
+                item  = self.model.getItem(index)
+                for ch in range(0,item.childCount()):
+                    index2 = self.model.index(ch, 0,  self.model.index(i))
+                    print(index2)
+                    self.replot(index2)
+            return
 
         # print('replot', index, index.column())
         # return
@@ -900,8 +998,7 @@ class MainWindow(QtGui.QMainWindow):
 
         for cpy in range(multiples):
 
-            # offset = -self.centerCoord
-            offset = np.add(-self.centerCoord,[cpy*dx,cpy*dy])
+            offset = [cpy*dx,cpy*dy]
 
             if (checked != 0) or (show != 0):
                 itemcolor = pg.QtGui.QColor(*item.color)
@@ -912,13 +1009,14 @@ class MainWindow(QtGui.QMainWindow):
 
                 data = model.getItem(index).pltData
                 if data != []:
-                    for i in data[::item.pathDirection]:
-                        dta = np.add(i[::item.pathDirection],offset)
+                    for i in data[::item.pathOrder]:
+                        # dta = self.transformData(i[::item.pathOrder])
+                        dta = np.add(i[::item.pathOrder],offset)
                         pdi = self.pi.plot(dta, pen = showPen)
                         item.pltHandle.append(pdi)
                         x = np.array(dta[0][0])
                         y = np.array(dta[0][1])
-                        pdi = self.pi.plot([x], [y], symbolPen=None, symbolBrush=showPen.color(), symbol='s', symbolSize=0.2, pxMode=False)
+                        pdi = self.pi.plot([x], [y], symbolPen=None, symbolBrush=showPen.color(), symbol='s', symbolSize=0.05, pxMode=False)
                         item.pltHandle.append(pdi)
 
         self.update_selection(None,None)
@@ -944,7 +1042,7 @@ class MainWindow(QtGui.QMainWindow):
 
         items = set([model.getItem(i) for i in indexes])
 
-        selectPen = pg.mkPen(color='FF750ADD')  #, style=QtCore.Qt.DotLine
+        # selectPen = pg.mkPen(color='FF750ADD')  #, style=QtCore.Qt.DotLine
 
         if self.multi_check.checkState() == 2:
             multiples = self.multi_n.value()
@@ -958,23 +1056,29 @@ class MainWindow(QtGui.QMainWindow):
             dy = 0
 
         for cpy in range(multiples):
-            # offset = -self.centerCoord
-            offset = np.add(-self.centerCoord,[cpy*dx,cpy*dy])
+            offset = [cpy*dx,cpy*dy]
 
             for item in items:
                 show = item.data('Show')
                 checked = item.checkState
                 if (checked != 0) or (show != 0):
                     if len(item.pltData) > 0 :
+                        itemcolor = pg.QtGui.QColor(*item.color)
+                        itemcolor.setAlpha(70)
+                        if checked == 0:
+                            itemcolor.setAlpha(44)
+
+                        selectPen.setColor(itemcolor)
                         for i in item.pltData:
                             # pdi.setZValue(10000)
 
-                            dta = np.add(i[::item.pathDirection],offset)
+                            # dta = self.transformData(i[::item.pathOrder])
+                            dta = np.add(i[::item.pathOrder],offset)
                             pdi = self.pi.plot(dta, pen = selectPen)
                             self.selectedPI.append(pdi)
                             x = np.array(dta[0][0])
                             y = np.array(dta[0][1])
-                            pdi = self.pi.plot([x], [y], symbolPen=None, symbolBrush=selectPen.color(), symbol='s', symbolSize=0.2, pxMode=False)
+                            pdi = self.pi.plot([x], [y], symbolPen=None, symbolBrush=itemcolor, symbol='s', symbolSize=0.05, pxMode=False)
                             self.selectedPI.append(pdi)
 
 
@@ -1308,6 +1412,14 @@ class MainWindow(QtGui.QMainWindow):
         self.multi_time.editingFinished.connect(self.remulti)
         self.multi_dx.editingFinished.connect(self.remulti)
         self.multi_dy.editingFinished.connect(self.remulti)
+
+
+        self.offset_check_lock.stateChanged.connect(self.lockOffset)
+        self.offset_check_design.stateChanged.connect(self.pltDesign)
+        self.offset_angle_spin.valueChanged.connect(self.reoffset)
+        self.offset_dx_spin.valueChanged.connect(self.reoffset)
+        self.offset_dy_spin.valueChanged.connect(self.reoffset)
+
 
 
         if not demo:

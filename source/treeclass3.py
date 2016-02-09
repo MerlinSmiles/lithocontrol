@@ -136,7 +136,7 @@ class CheckBoxDelegate(QtGui.QItemDelegate):
             w = 18
             h = 16
 
-        elif self.column == 'Direction':
+        elif self.column == 'Order':
             if checked:
                 path = "./icons/others/dir_normal.gif"
             else:
@@ -424,7 +424,7 @@ class TreeItem(object):
         self.rate = 1.0
         self.length = 0.0
         self.sketchTime = 0.0
-        self.pathDirection = 1
+        self.pathOrder = 1
         self.name = 'Item'
         self.type = 'Dummy'
         self.meta = {}
@@ -467,7 +467,7 @@ class TreeItem(object):
         # print('ininit')
         item_data = {'Color':        self.color,
                      'Closed':       self.is_closed,
-                     'Direction':    self.pathDirection,
+                     'Order':        self.pathOrder,
                      'parentItem':   self.parentItem,
                      'itemData':     self.itemData,
                      'childItems':   self.childItems,
@@ -501,7 +501,6 @@ class TreeItem(object):
             self.checkState = QtCore.Qt.PartiallyChecked
         else:
             self.checkState = QtCore.Qt.Unchecked
-        # print('pdir', self.pathDirection)
         # self.model.emit(QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), self.index(), self.index())
 
         if self.parentItem != None:
@@ -536,9 +535,9 @@ class TreeItem(object):
             column = self.col(column)
 
 
-        if self.col(column) in ['Direction']:
+        if self.col(column) in ['Order']:
             if self.parent() != None:
-                if self.pathDirection == 1:
+                if self.pathOrder == 1:
                     return 0
                 else:
                     return 2
@@ -716,7 +715,7 @@ class TreeItem(object):
                 if self.fillStep != value:
                     self.fillStep = value
                     recalc = True
-            elif colname == 'Direction':
+            elif colname == 'Order':
                 value= int(value)
                 # print('set', value)
                 if value == 0:
@@ -724,8 +723,8 @@ class TreeItem(object):
                 else:
                     value = -1
 
-                if self.pathDirection != value:
-                    self.pathDirection = value
+                if self.pathOrder != value:
+                    self.pathOrder = value
                     # recalc = True
                     replot = True
                     col = self.model.col(colname)
@@ -945,7 +944,7 @@ class TreeModel(QtCore.QAbstractItemModel):
                 return int(val)
             return int(item.data(index.column()))
 
-        if colname in ['Show', 'Closed', 'Direction']:
+        if colname in ['Show', 'Closed', 'Order']:
             if (item.childCount() > 0) and (item.parentItem != None):
                 val = []
                 for i in range(item.childCount()):
@@ -1118,13 +1117,13 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         item = self.getItem(index)
         colname = self.col(index)
-        if colname in ['Volt', 'Angle', 'Rate', 'Step', 'Color', 'Closed', 'Direction', 'Show']:
+        if colname in ['Volt', 'Angle', 'Rate', 'Step', 'Color', 'Closed', 'Order', 'Show']:
             cc = item.childCount()
             if cc > 0:
                 for i in range(cc):
                     chindex =  self.createIndex(i, index.column(), item.child(i))
                     self.setData(chindex,value,role)
-                    # if colname == 'Direction':
+                    # if colname == 'Order':
                         # print('dir', value)
 
         # if colname in ['Angle', 'Rate', 'Step', 'Color', 'Closed', 'Show']:

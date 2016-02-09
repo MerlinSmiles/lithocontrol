@@ -41,6 +41,10 @@ class PlotFrame(QtGui.QWidget):
         self.afmIm = pg.ImageItem(data)
         self.afmIm.setRect(pg.QtCore.QRectF(-20,-20,40,40))
         self.afmIm.setZValue(-1000)
+        self.afmOffset = [0,0]
+        self.afmAngle = 0
+        self.afmX = 20
+        self.afmY = 20
 
         self.sketchPlot = pg.PlotWidget()
         self.sketchPlot.enableAutoRange('x', True)
@@ -65,11 +69,30 @@ class PlotFrame(QtGui.QWidget):
         self.dhtPlot = pg.PlotWidget()
         self.dhtDock.addWidget(self.dhtPlot)
 
-    def setAfmImage(self, image_data, x= None, y=None):
-        self.afmIm.clear()
-        self.afmIm.setImage(image_data)
-        if not (x==None or y == None):
-            self.afmIm.setRect(pg.QtCore.QRectF(-x/2.0, -y/2.0, x, y))
+    def setAfmImage(self, image_data= None, x= None, y=None, offset=None, angle=None):
+        if not (image_data is None):
+            self.afmIm.clear()
+            self.afmIm.setImage(image_data)
+            self.image_shape = image_data.shape
+        if not (offset == None):
+            self.afmOffset = offset
+        if not (angle == None):
+            self.afmAngle = angle
+        if not (x==None):
+            self.afmX = x
+        if not (y == None):
+            self.afmY = y
+
+        X = self.afmX
+        Y = self.afmY
+        dx,dy = self.afmOffset
+
+        rect = [(-X/2.0)+dx,(-Y/2.0)+dy,X,Y]
+
+        self.afmIm.setRect(pg.QtCore.QRectF(*rect))
+        # print(image_data.shape)
+        self.afmIm.setTransformOriginPoint(self.image_shape[0]/2.0,self.image_shape[1]/2.0)
+        self.afmIm.setRotation(self.afmAngle)
         self.histWidget.setImageItem(self.afmIm)
 
     def clearSketchPlot(self):
