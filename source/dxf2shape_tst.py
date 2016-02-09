@@ -16,10 +16,24 @@ def Rotate2D(pts,angle=0):
                           [np.sin(theta),  np.cos(theta)]])
     return np.dot(pts, rotMatrix)
 
-def dxf2shape(item, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_direction = 1):
-    if path_direction not in [-1,1]:
-        print( 'Path direction must be -1 or 1!' )
-        return 0
+def dxf2shape(item, threshold = 1e-9, fillStep = None, fillAngle = None, pathDirection = None):
+    # if pathDirection not in [-1,1, None]:
+    #     print( 'Path direction must be -1 or 1 or None!' )
+    #     return 0
+
+    if fillStep == None:
+        fill_step = item.fillStep
+    if fillAngle == None:
+        fill_angle = item.fillAngle
+
+    # if pathDirection == None:
+    #     pathDirection = item.pathDirection
+
+    # if pathDirection == 0:
+    #     pathDirection = 1
+    # else:
+    #     pathDirection = -1
+    # print(pathDirection)
 
     if item.entity.dxftype() == 'SPLINE':
         with item.entity.edit_data() as data:
@@ -34,7 +48,7 @@ def dxf2shape(item, threshold = 1e-9, fill_step = 0.1, fill_angle = 0, path_dire
         data = np.array(item.entity.points)[:,:2]
     else:
         return 0
-    pts  = data[::path_direction]
+    pts  = data[:]
 
     # return
     if not item.is_closed:

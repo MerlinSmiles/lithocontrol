@@ -312,7 +312,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.dxffileName = def_dxf_file
 
-        self.headers = ('Name', 'Show', 'Color', 'Volt', 'Rate', 'Angle', 'Step', 'Time', 'Length', 'Closed', 'Type')
+        self.headers = ('Name', 'Show', 'Color', 'Volt', 'Rate', 'Angle', 'Step', 'Time', 'Length', 'Closed', 'Direction', 'Type')
 
         if not demo:
             self.splash.showMessage("Initialize AFMWorker",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
@@ -579,16 +579,17 @@ class MainWindow(QtGui.QMainWindow):
     def doDemo(self):
         data = self.sketchFile.split('\n')
         for line in data:
-            if line.startswith('xyAbs'):
-                # dx,dy,dr = self.nextPosition - self.currentPosition
-                # r = self.nextPosition[2]
-                # dt = np.sqrt(dx**2 + dy**2)/r
-                # print(dt)
-                self.updateStatus(line)
-                # self.timer.restart()
-                self.sketching = True
-                # line = line.split( )
-                # r = float(line[3])
+            # if line.startswith('xyAbs'):
+            # dx,dy,dr = self.nextPosition - self.currentPosition
+            # r = self.nextPosition[2]
+            # dt = np.sqrt(dx**2 + dy**2)/r
+            # print(dt)
+            self.updateStatus(line)
+            # time.sleep(0.5)
+            # self.timer.restart()
+            self.sketching = True
+            # line = line.split( )
+            # r = float(line[3])
 
     def sketchNow(self, index=None):
         self.afmPosition.clear()
@@ -642,7 +643,8 @@ class MainWindow(QtGui.QMainWindow):
                         self.sComment(startline)
                         # self.sComment()
                         if child.checkState == 2:
-                            for path in child.pltData:
+                            for chpath in child.pltData[::child.pathDirection]:
+                                path = chpath[::child.pathDirection]
                                 x,y = np.add(path[0],offset)
                                 self.sAdd('vtip\t%f' %(0.0))
                                 self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
@@ -666,10 +668,11 @@ class MainWindow(QtGui.QMainWindow):
 
             self.log(['sketch','dir'], ['subfolder', str(self.sketchSubFolder)])
             transmit = 'SketchScript %i \n' % len(self.sketchFile)
-            self.SocketThread.send_message(transmit + self.sketchFile)
 
             if demo:
                 self.doDemo()
+            else:
+                self.SocketThread.send_message(transmit + self.sketchFile)
 
     def saveSketch(self):
         self.sketchSubFolder = QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss')
@@ -779,7 +782,7 @@ class MainWindow(QtGui.QMainWindow):
         self.tree_file.setDragDropMode( QtGui.QAbstractItemView.InternalMove )
         self.tree_file.setSelectionMode( QtGui.QAbstractItemView.ExtendedSelection )
 
-        for col in ['Closed', 'Show']:
+        for col in ['Closed', 'Show', 'Direction']:
             colnum = self.headers.index(col)
             self.tree_file.setItemDelegateForColumn(colnum,CheckBoxDelegate(self, column = col))
 
@@ -789,7 +792,10 @@ class MainWindow(QtGui.QMainWindow):
 
         self.tree_file.setItemDelegateForColumn(self.model.col('Color'),ColorDelegate(self))
 
+
         self.tree_file.expandAll()
+        self.tree_file.setEditTriggers(QtGui.QAbstractItemView.AllEditTriggers)
+
 
         # for col in [self.headers.index(col) for col in ['Closed', 'Show']]:
         #     root = self.tree_file.rootIndex()
@@ -803,7 +809,7 @@ class MainWindow(QtGui.QMainWindow):
 
         for column in range(self.model.columnCount()):
             self.tree_file.resizeColumnToContents(column)
-
+        # self.tree_file.setColumnWidth(0, 100)
 
         self.tree_file.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.connect(self.tree_file, QtCore.SIGNAL("customContextMenuRequested(const QPoint &)"), self.doMenu)
@@ -863,11 +869,12 @@ class MainWindow(QtGui.QMainWindow):
 
     @QtCore.pyqtSlot("QModelIndex", "QModelIndex")
     def replot(self, index):
+
         # print('replot', index, index.column())
         # return
         model = self.model
         item = model.getItem(index)
-        # print(index, item.name)
+
 
         # self.pi.removeItem(item.pltHandle)
         for i in item.pltHandle:
@@ -905,8 +912,13 @@ class MainWindow(QtGui.QMainWindow):
 
                 data = model.getItem(index).pltData
                 if data != []:
-                    for i in data:
-                        pdi = self.pi.plot(np.add(i,offset), pen = showPen)
+                    for i in data[::item.pathDirection]:
+                        dta = np.add(i[::item.pathDirection],offset)
+                        pdi = self.pi.plot(dta, pen = showPen)
+                        item.pltHandle.append(pdi)
+                        x = np.array(dta[0][0])
+                        y = np.array(dta[0][1])
+                        pdi = self.pi.plot([x], [y], symbolPen=None, symbolBrush=showPen.color(), symbol='s', symbolSize=0.2, pxMode=False)
                         item.pltHandle.append(pdi)
 
         self.update_selection(None,None)
@@ -955,8 +967,14 @@ class MainWindow(QtGui.QMainWindow):
                 if (checked != 0) or (show != 0):
                     if len(item.pltData) > 0 :
                         for i in item.pltData:
-                            pdi = self.pi.plot(np.add(i,offset), pen = selectPen)
                             # pdi.setZValue(10000)
+
+                            dta = np.add(i[::item.pathDirection],offset)
+                            pdi = self.pi.plot(dta, pen = selectPen)
+                            self.selectedPI.append(pdi)
+                            x = np.array(dta[0][0])
+                            y = np.array(dta[0][1])
+                            pdi = self.pi.plot([x], [y], symbolPen=None, symbolBrush=selectPen.color(), symbol='s', symbolSize=0.2, pxMode=False)
                             self.selectedPI.append(pdi)
 
 

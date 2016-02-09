@@ -125,15 +125,32 @@ class CheckBoxDelegate(QtGui.QItemDelegate):
 
         if self.column == 'Show':
             if checked:
-                path = "./icons/others/eye_on.png"
+                path = "./icons/others/eye_on.gif"
             else:
-                path = "./icons/others/eye_off.png"
+                path = "./icons/others/eye_off.gif"
 
             image = QtGui.QImage(str(path))
             pixmap = QtGui.QPixmap.fromImage(image)
             w = option.decorationSize.width()
             h = option.decorationSize.height()
             w = 18
+            h = 16
+
+        elif self.column == 'Direction':
+            if checked:
+                path = "./icons/others/dir_normal.gif"
+            else:
+                path = "./icons/others/dir_inverted.gif"
+
+            # if index.model().getItem(index).childCount()>0:
+            #     path = "./icons/others/dir_empty.gif"
+
+
+            image = QtGui.QImage(str(path))
+            pixmap = QtGui.QPixmap.fromImage(image)
+            w = option.decorationSize.width()
+            h = option.decorationSize.height()
+            w = 16
             h = 16
 
         elif self.column == 'Closed':
@@ -215,9 +232,9 @@ class CheckBoxDelegate(QtGui.QItemDelegate):
         '''
         The user wanted to change the old state in the opposite.
         '''
-        # print( 'SetModelData')
-        newValue = not model.data(index, QtCore.Qt.EditRole)
-        # print(not newValue, newValue)
+        value = model.data(index, QtCore.Qt.EditRole)
+        newValue = not value
+        # print('SetModelData', value, newValue)
         model.setData(index, newValue, QtCore.Qt.EditRole)
 
     def getCheckBoxRect(self, option):
@@ -407,6 +424,7 @@ class TreeItem(object):
         self.rate = 1.0
         self.length = 0.0
         self.sketchTime = 0.0
+        self.pathDirection = 1
         self.name = 'Item'
         self.type = 'Dummy'
         self.meta = {}
@@ -447,9 +465,9 @@ class TreeItem(object):
             self.entity.points = np.array([self.entity.dxf.start, self.entity.dxf.end])
 
         # print('ininit')
-
         item_data = {'Color':        self.color,
                      'Closed':       self.is_closed,
+                     'Direction':    self.pathDirection,
                      'parentItem':   self.parentItem,
                      'itemData':     self.itemData,
                      'childItems':   self.childItems,
@@ -459,7 +477,7 @@ class TreeItem(object):
                      'checkState':   self.checkState,
                      'Angle':        self.fillAngle,
                      'Step':         self.fillStep,
-                     'Volt':      self.volt,
+                     'Volt':         self.volt,
                      'Rate':         self.rate,
                      'length':       self.length,
                      'Time':         self.sketchTime,
@@ -483,7 +501,7 @@ class TreeItem(object):
             self.checkState = QtCore.Qt.PartiallyChecked
         else:
             self.checkState = QtCore.Qt.Unchecked
-
+        # print('pdir', self.pathDirection)
         # self.model.emit(QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), self.index(), self.index())
 
         if self.parentItem != None:
@@ -517,9 +535,14 @@ class TreeItem(object):
         if type(column) == str:
             column = self.col(column)
 
-        # colname = self.model.col(column)
-        # if colname in ['Time','Length']:
-        #     return round(float(self.itemData[column]),1)
+
+        if self.col(column) in ['Direction']:
+            if self.parent() != None:
+                if self.pathDirection == 1:
+                    return 0
+                else:
+                    return 2
+
         return self.itemData[column]
 
     def insertChildren(self, position, count, columns):
@@ -655,6 +678,9 @@ class TreeItem(object):
             return colnum
         return None
 
+    def getPltData(self):
+        return self.pltData
+
     def setData(self, column, value, index=None):
         if type(column) == int:
             if column < 0 or column >= len(self.itemData):
@@ -664,68 +690,86 @@ class TreeItem(object):
             colname = column
             column = self.model.col(column)
 
-        # recalc = False
+        recalc = False
         replot = False
 
-        if colname == 'Angle':
-            value= float(value)
-            if self.fillAngle != value:
-                self.fillAngle = value
-                self.model.recalc(self, index)
-        elif colname == 'Volt':
-            value= float(value)
-            if self.volt != value:
-                self.volt = value
-        elif colname == 'Rate':
-            value= float(value)
-            if self.rate != value:
-                self.rate = value
-                self.calcTime()
-        elif colname == 'Step':
-            value= float(value)
-            if self.fillStep != value:
-                self.fillStep = value
-                self.model.recalc(self, index)
-        elif colname == 'Closed':
-            if value == True:
-                value = 2
-            elif value == False:
-                value = 0
-            value= int(value)
-            # print(column,colname,value,index)
-            if self.is_closed != value:
-                self.is_closed = value
-                self.model.recalc(self, index)
-                col = self.model.col('Time')
-                self.model.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), self.index(col), self.index(col+1))
-        elif colname == 'Show':
-            if value == True:
-                value = 2
-            elif value == False:
-                value = 0
-            value= int(value)
-            if self.show != value:
-                self.show = value
-                replot = True
-            col = self.model.col('Show')
-            self.model.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), self.index(col), self.index(col+1))
-        elif colname == 'Time':
-            value= float(value)
-            if self.sketchTime != value:
-                self.sketchTime = value
-                # print(value)
-            if self.parent() == None:
-                value = 'Time'
 
-        elif colname == 'Length':
-            value= float(value)
-            if self.length != value:
-                self.length = value
-            if self.parent() == None:
-                value = 'Length'
-        elif colname == 'Color':
-            self.color = value
-            replot = True
+        if self.parent() == None:
+            value = colname
+        else:
+            if colname == 'Angle':
+                value= float(value)
+                if self.fillAngle != value:
+                    self.fillAngle = value
+                    recalc = True
+            elif colname == 'Volt':
+                value= float(value)
+                if self.volt != value:
+                    self.volt = value
+            elif colname == 'Rate':
+                value= float(value)
+                if self.rate != value:
+                    self.rate = value
+                    self.calcTime()
+            elif colname == 'Step':
+                value= float(value)
+                if self.fillStep != value:
+                    self.fillStep = value
+                    recalc = True
+            elif colname == 'Direction':
+                value= int(value)
+                # print('set', value)
+                if value == 0:
+                    value = 1
+                else:
+                    value = -1
+
+                if self.pathDirection != value:
+                    self.pathDirection = value
+                    # recalc = True
+                    replot = True
+                    col = self.model.col(colname)
+                    self.model.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), self.index(col), self.index(col+1))
+            elif colname == 'Closed':
+                if value == True:
+                    value = 2
+                elif value == False:
+                    value = 0
+                value= int(value)
+                # print(column,colname,value,index)
+                if self.is_closed != value:
+                    self.is_closed = value
+                    recalc = True
+                    col = self.model.col('Time')
+                    self.model.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), self.index(col), self.index(col+1))
+            elif colname == 'Show':
+                if value == True:
+                    value = 2
+                elif value == False:
+                    value = 0
+                value= int(value)
+                if self.show != value:
+                    self.show = value
+                    replot = True
+                col = self.model.col('Show')
+                self.model.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), self.index(col), self.index(col+1))
+            elif colname == 'Time':
+                value= float(value)
+                if self.sketchTime != value:
+                    self.sketchTime = value
+                    # print(value)
+                # if self.parent() == None:
+                #     value = 'Time'
+
+            elif colname == 'Length':
+                value= float(value)
+                if self.length != value:
+                    self.length = value
+                # if self.parent() == None:
+                #     value = 'Length'
+            elif colname == 'Color':
+                self.color = value
+                replot = True
 
         self.meta[colname] = value
         self.itemData[column] = value
@@ -749,6 +793,9 @@ class TreeItem(object):
 
         if (index != None) and (replot):
             self.model.emit(QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), index,index)
+
+        if (index != None) and (recalc):
+            self.model.recalc(self, index)
 
 
         if colname in  ['Closed']:
@@ -814,34 +861,34 @@ class TreeModel(QtCore.QAbstractItemModel):
         self.emit(QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), index, index)
 
     def recalc(self, item, index):
-        item2 = self.getItem(index)
+        # item2 = self.getItem(index)
         # print('start',item.name, item2.name)
         if item.entity.dxftype() in ['POLYLINE','LINE','SPLINE']:
-            pltData = dxf2shape(item)
+            dxf2shape(item)
 
             item.calcTime()
             self.emit(QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), index, index)
 
-            return
+            # return
 
-            if item.entity.dxftype() == 'SPLINE':
-                with item.entity.edit_data() as data:
-                    pts = np.array(data.fit_points)
-                    print(np.array(data.control_points)[:,:2])
-                item.entity.points = pts
-                data = item.entity.points[:,:2]
-                # print(data)
-            elif item.entity.dxftype() == 'POLYLINE':
-                data = np.array(list(item.entity.points()))[:,:2]
-            elif item.entity.dxftype() == 'LINE':
-                data = np.array(item.entity.points)[:,:2]
-            else:
-                print('Bigfail')
-                return 0
+            # if item.entity.dxftype() == 'SPLINE':
+            #     with item.entity.edit_data() as data:
+            #         pts = np.array(data.fit_points)
+            #         print(np.array(data.control_points)[:,:2])
+            #     item.entity.points = pts
+            #     data = item.entity.points[:,:2]
+            #     # print(data)
+            # elif item.entity.dxftype() == 'POLYLINE':
+            #     data = np.array(list(item.entity.points()))[:,:2]
+            # elif item.entity.dxftype() == 'LINE':
+            #     data = np.array(item.entity.points)[:,:2]
+            # else:
+            #     print('Bigfail')
+            #     return 0
 
-            self.threadPool.append( WorkThread(index, data, closed=item.is_closed) )
-            self.connect( self.threadPool[len(self.threadPool)-1], QtCore.SIGNAL('recalcDone(QModelIndex, PyQt_PyObject)'), self.recalcDone )
-            self.threadPool[len(self.threadPool)-1].start()
+            # self.threadPool.append( WorkThread(index, data, closed=item.is_closed) )
+            # self.connect( self.threadPool[len(self.threadPool)-1], QtCore.SIGNAL('recalcDone(QModelIndex, PyQt_PyObject)'), self.recalcDone )
+            # self.threadPool[len(self.threadPool)-1].start()
 
     def data(self, index, role):
         if not index.isValid():
@@ -898,11 +945,12 @@ class TreeModel(QtCore.QAbstractItemModel):
                 return int(val)
             return int(item.data(index.column()))
 
-        if colname in ['Show', 'Closed']:
+        if colname in ['Show', 'Closed', 'Direction']:
             if (item.childCount() > 0) and (item.parentItem != None):
                 val = []
                 for i in range(item.childCount()):
                     val.append(item.child(i).data(index.column()))
+                    # print('val',val)
                 if all(v == 2 for v in val):
                     return 2
                 elif all(v == 0 for v in val):
@@ -922,7 +970,7 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsUserCheckable
 
-        if colname not in ['Name', 'Time', 'Type', 'Show', 'Length']:
+        if colname not in ['Name', 'Time', 'Type', 'Length']:
             flags = flags | QtCore.Qt.ItemIsEditable
 
         # dragdrop kills other things :/
@@ -1070,14 +1118,14 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         item = self.getItem(index)
         colname = self.col(index)
-        if colname in ['Volt', 'Angle', 'Rate', 'Step', 'Color', 'Closed', 'Show']:
+        if colname in ['Volt', 'Angle', 'Rate', 'Step', 'Color', 'Closed', 'Direction', 'Show']:
             cc = item.childCount()
             if cc > 0:
                 for i in range(cc):
                     chindex =  self.createIndex(i, index.column(), item.child(i))
                     self.setData(chindex,value,role)
-                    # if colname == 'Closed':
-                    #     print('closed')
+                    # if colname == 'Direction':
+                        # print('dir', value)
 
         # if colname in ['Angle', 'Rate', 'Step', 'Color', 'Closed', 'Show']:
         #     print('I have to recalc', item)
