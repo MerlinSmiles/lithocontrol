@@ -1189,7 +1189,9 @@ class TreeModel(QtCore.QAbstractItemModel):
         self.dxf = data
 
         for layer in self.dxf.layers:
-            # print(layer.dxf.name)
+            print(layer.dxf.name)
+            if layer.dxf.name == 'Design':
+                continue
             query = self.layerquery(layer.dxf.name)
 
             parent.insertChildren(parent.childCount(), 1, self.rootItem.columnCount())

@@ -11,7 +11,7 @@ from helpers import *
 
 
 def Rotate2D(pts,angle=0):
-    theta = (angle/180.) * np.pi
+    theta = ((angle)/180.) * np.pi
     rotMatrix = np.array([[np.cos(theta), -np.sin(theta)],
                           [np.sin(theta),  np.cos(theta)]])
     return np.dot(pts, rotMatrix)
@@ -60,7 +60,7 @@ def dxf2shape(item, threshold = 1e-9, fillStep = None, fillAngle = None, pathDir
         self.error('Tools diameter must be greater than 0!', 'error')
 
 
-    pts = Rotate2D(pts,-fill_angle)
+    pts = Rotate2D(pts,fill_angle)
     ll = []
     bounds = [min(pts[:,0]), min(pts[:,1]), max(pts[:,0]), max(pts[:,1])]
     line_x = bounds[0]-fill_step/2.0
@@ -136,7 +136,7 @@ def dxf2shape(item, threshold = 1e-9, fillStep = None, fillAngle = None, pathDir
 
     try:
         for i in range(len(collection)):
-            collection[i] = Rotate2D(collection[i], fill_angle)
+            collection[i] = Rotate2D(collection[i], -fill_angle)
     except:
         print('ff', collection, fill_angle)
         print(lines)

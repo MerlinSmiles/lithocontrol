@@ -86,7 +86,7 @@ kelly_colors = dict(vivid_yellow=(255, 179, 0),
 
 # mkPen for selected
 # selectPen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
-sketchPen = pg.mkPen(color='FF000099',width=2.5)  #, style=QtCore.Qt.DotLine
+sketchPen = pg.mkPen(color='FF0000DD',width=2.5)  #, style=QtCore.Qt.DotLine
 movePen = pg.mkPen(color='1E4193',width=2, style=QtCore.Qt.DotLine)  #, style=QtCore.Qt.DotLine
 showPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine , width=
 selectPen = pg.mkPen(color='00FF00',width=3)  #, style=QtCore.Qt.DotLine , width=
@@ -275,12 +275,13 @@ class MainWindow(QtGui.QMainWindow):
         self.log_store = DataStore(filename=self.storeFolder+c_time +'_logging.h5')
 
         self.ni_store_columns = ['time', 'current','r2p','r4p']
-        self.ni_store = RingBuffer(360000, filename=self.storeFolder+c_time +'_ni_data.h5',cols = self.ni_store_columns)
+        self.ni_store = RingBuffer(3600000, filename=self.storeFolder+c_time +'_ni_data.h5',cols = self.ni_store_columns)
 
         self.dht_store_columns = ['time', 'temperature', 'humidity']
         self.dht_store = RingBuffer(360000, filename=self.storeFolder+c_time +'_dht_data.h5',cols = self.dht_store_columns)
 
     def log(self, column, value):
+        # return
         tdelta = self.settings['measure']['time'].elapsed()/1000.0
 
         if type(column) not in [list,tuple]:
@@ -295,7 +296,7 @@ class MainWindow(QtGui.QMainWindow):
         columns=[item for sublist in columns for item in sublist]
 
         self.log_store.append(values,columns)
-        print('LOG:\t' + str(column) + '\t' + str(value))
+        # print('LOG:\t' + str(column) + '\t' + str(value))
 
     def init_sketching(self):
         self.inFile = ''
@@ -390,10 +391,10 @@ class MainWindow(QtGui.QMainWindow):
         # self.cAmpSpinBox.setValue(self.settings['measure']['in'][0]['curr_amp'])
         # (self._gen_meas_amplitude, self._normamplitudes, self._normphases)
 
-        self.ni_buff = RingBuffer(2000, cols = ['time'] + list(self.settings['measure']['in'].keys()))
+        self.ni_buff = RingBuffer(200000, cols = ['time'] + list(self.settings['measure']['in'].keys()))
         self.settings['measure']['buff'] = self.ni_buff
 
-        self.dht_buff = RingBuffer(2000, cols = self.dht_store_columns)
+        self.dht_buff = RingBuffer(200000, cols = self.dht_store_columns)
         self.settings['measure']['dht_buff'] = self.dht_buff
 
         self.initSerial()
@@ -521,7 +522,7 @@ class MainWindow(QtGui.QMainWindow):
         #     pass
 
         if self.sketching:
-            QtCore.QTimer.singleShot(self.settings['plot']['plot_timing']/5.0, self.sketchicar)
+            QtCore.QTimer.singleShot(self.settings['plot']['plot_timing']/1.0, self.sketchicar)
 
     def afmReady(self):
         self.log('sketch', 'end')
@@ -537,25 +538,24 @@ class MainWindow(QtGui.QMainWindow):
     def updateStatus(self,line):
         line = str(line)
         # print(line)
-        self.statusBar().showMessage(line)
+        # return
         if line.startswith('vtip'):
             line = line.split( )
             self.vtip = float(line[1])
             self.log(['sketch','vtip'],['vtip', self.vtip])
-            # print( 'VTIP ' , self.vtip )
+            print( 'VTIP ' , self.vtip )
+            self.statusBar().showMessage(line)
 
         elif line.startswith('# start'):
             self.sketching = True
             self.sketchicar()
             line = line.split( )
-            print('Started '+line[2])
             self.log(['sketch','ID'],['start', line[2]])
             self.afmPoints.clear()
-
+            print('Started '+line[2])
+            self.statusBar().showMessage(line)
         elif line.startswith('# end'):
             line = line.split( )
-
-
             xl,yl,rl = np.copy(self.afmPoints.get_partial())
 
             ti = pg.PlotDataItem(xl,yl, size=2, pen=sketchPen, brush=pg.mkBrush(0, 0, 255, 255))
@@ -563,15 +563,16 @@ class MainWindow(QtGui.QMainWindow):
             self.pi = self.plotFrame.sketchPlot.getPlotItem()
             self.pi.addItem(ti)
 
-
             self.afmPoints.clear()
-            print('Finished '+line[2])
             self.log(['sketch','ID'],['end', line[2]])
+            print('Finished '+line[2])
+            self.statusBar().showMessage(line)
 
         elif line.startswith('Ready'):
             self.sketching = False
             self.afmReady()
             print( "\nREADY\n" )
+            self.statusBar().showMessage(line)
 
         elif line.startswith('xyAbs'):
             self.sketching = True
@@ -583,6 +584,9 @@ class MainWindow(QtGui.QMainWindow):
             self.log(['sketch','x','y','r'], ['xyAbs', x, y, r])
             xo, yo = self.transformData([x,y], direction = -1)
             self.afmPoints.append([xo,yo,r])
+            # self.statusBar().showMessage(line)
+        else:
+            print('unknown', line)
 
 
     def doDemo(self):
@@ -732,8 +736,6 @@ class MainWindow(QtGui.QMainWindow):
 
     def shutLithoNow(self):
         self.SocketThread.send_message('shutdown\n')
-        sleep(1)
-        self.SocketThread.stop()
 
 
     def pickFile(self):
@@ -866,6 +868,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def pltDesign(self):
+        print('in pltdesign')
         if self.dxf_design == None:
             self.dxf_design = ezdxf.readfile('./layout/design.dxf')
 
@@ -878,7 +881,7 @@ class MainWindow(QtGui.QMainWindow):
         if self.offset_check_design.checkState() == 2:
             modelspace = self.dxf_design.modelspace()
             for entity in modelspace:
-                print (entity)
+                # print (entity)
                 if entity.dxftype() == 'POLYLINE':
                     data = np.array(list(entity.points()))[:,:2]
                     design_pltlist.append(data)
@@ -909,6 +912,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def reoffset(self):
+        print('in reoffset')
         dx = -self.offset_dx_spin.value()
         dy = -self.offset_dy_spin.value()
 
@@ -922,6 +926,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def transformData(self, data, angle = None, offset = None, direction = 1):
+        # print('in transformData')
         c = data
         if angle == None:
             angle = self.offset_angle
@@ -943,6 +948,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def remulti(self):
+        print('in remulti')
         root = self.tree_file.rootIndex()
         for i in range(0,self.model.rowCount(root)):
             index = self.model.index(i, 0)
@@ -957,6 +963,7 @@ class MainWindow(QtGui.QMainWindow):
 
     @QtCore.pyqtSlot("QModelIndex", "QModelIndex")
     def replot(self, index = None):
+        print('in replot')
         if index == None:
             root = self.tree_file.rootIndex()
             for i in range(0,self.model.rowCount(root)):
@@ -1009,7 +1016,7 @@ class MainWindow(QtGui.QMainWindow):
 
                 data = model.getItem(index).pltData
                 if data != []:
-                    for i in data[::item.pathOrder]:
+                    for i in data:
                         # dta = self.transformData(i[::item.pathOrder])
                         dta = np.add(i[::item.pathOrder],offset)
                         pdi = self.pi.plot(dta, pen = showPen)
@@ -1201,7 +1208,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def addToolbars(self):
         exitAction            = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_delete.png'), 'Exit', self)
-        closeConnectionAction = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_delete.png'), 'Close Connection', self)
+        closeConnectionAction = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_delete.png'), 'Shut down Lithocontrol on AFM', self)
         captureAction         = QtGui.QAction(QtGui.QIcon('icons/afm/a_0006_capture.png'), 'Capture', self)
         capture_abortAction   = QtGui.QAction(QtGui.QIcon('icons/afm/a_0008_capture_abort.png'), 'Capture Abort', self)
         capture_forceAction   = QtGui.QAction(QtGui.QIcon('icons/afm/a_0007_capture_force.png'), 'Capture Force', self)
@@ -1367,6 +1374,9 @@ class MainWindow(QtGui.QMainWindow):
         reply=QtGui.QMessageBox.question(self,'Message',"Are you sure to quit?",QtGui.QMessageBox.Yes | QtGui.QMessageBox.No , QtGui.QMessageBox.Yes)
         if reply==QtGui.QMessageBox.Yes:
             self.SocketThread.send_message('ClientClose\n')
+            sleep(1)
+            self.SocketThread.stop()
+
             self.measure_save()
             self.measure_stop()
             if not demo:
