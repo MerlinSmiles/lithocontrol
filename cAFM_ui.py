@@ -540,11 +540,11 @@ class MainWindow(QtGui.QMainWindow):
         # print(line)
         # return
         if line.startswith('vtip'):
+            self.statusBar().showMessage(line)
             line = line.split( )
             self.vtip = float(line[1])
             self.log(['sketch','vtip'],['vtip', self.vtip])
             print( 'VTIP ' , self.vtip )
-            self.statusBar().showMessage(line)
 
         elif line.startswith('# copy'):
             line = line.split( )
@@ -553,14 +553,15 @@ class MainWindow(QtGui.QMainWindow):
             print( 'VTIP ' , self.vtip )
 
         elif line.startswith('# start'):
+            self.statusBar().showMessage(line)
             self.sketching = True
             self.sketchicar()
             line = line.split( )
             self.log(['sketch','ID'],['start', line[2]])
             self.afmPoints.clear()
             print('Started '+line[2])
-            self.statusBar().showMessage(line)
         elif line.startswith('# end'):
+            self.statusBar().showMessage(line)
             line = line.split( )
             xl,yl,rl = np.copy(self.afmPoints.get_partial())
 
@@ -572,15 +573,15 @@ class MainWindow(QtGui.QMainWindow):
             self.afmPoints.clear()
             self.log(['sketch','ID'],['end', line[2]])
             print('Finished '+line[2])
-            self.statusBar().showMessage(line)
 
         elif line.startswith('Ready'):
+            self.statusBar().showMessage(line)
             self.sketching = False
             self.afmReady()
             print( "\nREADY\n" )
-            self.statusBar().showMessage(line)
 
         elif line.startswith('xyAbs'):
+            self.statusBar().showMessage(line)
             self.sketching = True
             self.timer.restart()
             line = line.split( )
@@ -590,7 +591,6 @@ class MainWindow(QtGui.QMainWindow):
             self.log(['sketch','x','y','r'], ['xyAbs', x, y, r])
             xo, yo = self.transformData([x,y], direction = -1)
             self.afmPoints.append([xo,yo,r])
-            # self.statusBar().showMessage(line)
         else:
             print('unknown', line)
 
@@ -804,7 +804,7 @@ class MainWindow(QtGui.QMainWindow):
             colnum = self.headers.index(col)
             self.tree_file.setItemDelegateForColumn(colnum,CheckBoxDelegate(self, column = col))
 
-        for col in ['Volt', 'Rate', 'Angle', 'Step']:
+        for col in ['Volt', 'Rate', 'Step']:
             colnum = self.headers.index(col)
             self.tree_file.setItemDelegateForColumn(colnum,DoubleSpinBoxDelegate(self))
 

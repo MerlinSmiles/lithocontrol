@@ -697,7 +697,7 @@ class TreeItem(object):
             value = colname
         else:
             if colname == 'Angle':
-                value= float(value)
+                value= str(value)
                 if self.fillAngle != value:
                     self.fillAngle = value
                     recalc = True

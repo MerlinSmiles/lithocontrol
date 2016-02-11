@@ -70,6 +70,7 @@ class PlotFrame(QtGui.QWidget):
         self.dhtDock.addWidget(self.dhtPlot)
 
     def setAfmImage(self, image_data= None, x= None, y=None, offset=None, angle=None):
+        self.image_shape = (255,255)
         if not (image_data is None):
             self.afmIm.clear()
             self.afmIm.setImage(image_data)
