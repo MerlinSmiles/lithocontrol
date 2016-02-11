@@ -26,11 +26,12 @@ class MyItem(QStandardItem):
     def columnCount(self):
         return len(self.itemData)
 
-    def data(self, role=QtCore.Qt.UserRole+1):
-        # print role
-        if role == QtCore.Qt.DisplayRole:
-            return self.itemData
-        # return super().data(role) # Fall back to the default method
+    # def data(self, role=QtCore.Qt.UserRole+1):
+    #     # print role
+    #     if role == QtCore.Qt.DisplayRole:
+    #         return self.itemData
+    #     # return self.itemData
+    #     return super().data(role) # Fall back to the default method
     # def data(self, x):
     #     print x
     #     return self.itemData

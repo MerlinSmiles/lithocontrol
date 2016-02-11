@@ -405,6 +405,7 @@ class ColorDelegate(QtGui.QItemDelegate):
         iconRect.moveCenter(viewCenter)
         painter.drawPixmap(iconRect, pixmap)
 
+
 class TreeItem(object):
     def __init__(self, data, parent=None, model=None):
         self.model = model

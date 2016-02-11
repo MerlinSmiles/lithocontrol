@@ -57,7 +57,7 @@ class dht_Worker(QtCore.QObject):
 
         super(dht_Worker, self).__init__(parent)
         self.settings = settings
-        self.running = False
+        self.running = True
         if self.settings['dht_serial'] != None:
             print( "Monitoring serial port " + self.settings['dht_serial'].name )
             self.running = True
@@ -109,6 +109,7 @@ class MeasureTask(Task):
         Task.__init__(self)
         self.running = False
         self.settings = settings
+        self.tdelta = 0.0
 
         self.settings['time'].start()
         self.acq_samples = self.settings['acq_samples']
@@ -166,9 +167,11 @@ class MeasureTask(Task):
         av_data = np.mean(meas_data,1)
 
         av_data = av_data.reshape((self.num_chans,-1))
+
         tdelta = self.settings['time'].elapsed()/1000.0
-        if tdelta>0.1:
-            self.settings['buff'].append([tdelta,av_data[0],av_data[1]])
+        if self.tdelta<=tdelta:
+            self.tdelta = tdelta
+            self.settings['buff'].append(np.array([tdelta,av_data[0],av_data[1]]))
         return 0  # The function should return an integer
 
     def DoneCallback(self, status):

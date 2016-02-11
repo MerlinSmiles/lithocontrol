@@ -544,7 +544,7 @@ class MainWindow(QtGui.QMainWindow):
             self.vtip = float(line[1])
             self.log(['sketch','vtip'],['vtip', self.vtip])
             print( 'VTIP ' , self.vtip )
-            self.statusBar().showMessage(line)
+            # self.statusBar().showMessage(line)
 
         elif line.startswith('# start'):
             self.sketching = True
@@ -553,7 +553,7 @@ class MainWindow(QtGui.QMainWindow):
             self.log(['sketch','ID'],['start', line[2]])
             self.afmPoints.clear()
             print('Started '+line[2])
-            self.statusBar().showMessage(line)
+            # self.statusBar().showMessage(line)
         elif line.startswith('# end'):
             line = line.split( )
             xl,yl,rl = np.copy(self.afmPoints.get_partial())
@@ -566,13 +566,13 @@ class MainWindow(QtGui.QMainWindow):
             self.afmPoints.clear()
             self.log(['sketch','ID'],['end', line[2]])
             print('Finished '+line[2])
-            self.statusBar().showMessage(line)
+            # self.statusBar().showMessage(line)
 
         elif line.startswith('Ready'):
             self.sketching = False
             self.afmReady()
             print( "\nREADY\n" )
-            self.statusBar().showMessage(line)
+            # self.statusBar().showMessage(line)
 
         elif line.startswith('xyAbs'):
             self.sketching = True
