@@ -546,6 +546,12 @@ class MainWindow(QtGui.QMainWindow):
             print( 'VTIP ' , self.vtip )
             self.statusBar().showMessage(line)
 
+        elif line.startswith('# copy'):
+            line = line.split( )
+            self.copy = int(line[1])
+            self.log(['sketch','copy'],['copy', self.copy])
+            print( 'VTIP ' , self.vtip )
+
         elif line.startswith('# start'):
             self.sketching = True
             self.sketchicar()
