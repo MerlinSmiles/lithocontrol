@@ -48,62 +48,6 @@ class ni_Worker(QtCore.QObject):
         # self.task.ClearTask()
 
 
-
-class dht_Worker(QtCore.QObject):
-
-    terminate = pyqtSignal()
-
-    def __init__(self, settings, parent=None):
-
-        super(dht_Worker, self).__init__(parent)
-        self.settings = settings
-        self.running = True
-        if self.settings['dht_serial'] != None:
-            print( "Monitoring serial port " + self.settings['dht_serial'].name )
-            self.running = True
-
-    def run(self):
-        data = ''
-        while (self.running == True):
-            if (self.settings['dht_serial'] == None):
-                sleep(3)
-            else:
-                try:
-                    self.settings['dht_serial'].write('READ:HUM:TEMP')
-                    ch = self.settings['dht_serial'].readline()
-                    if len(ch) != 0:
-                        data = ch
-                        if data.startswith('DHT:'):
-                            data = data.split()
-                            humidity = float(data[1])
-                            temperature = float(data[2])
-                            if (humidity>9) and (temperature>9 ):
-                                tdelta = self.settings['time'].elapsed()/1000.0
-                                self.settings['dht_buff'].append([tdelta, temperature, humidity])
-                except:
-                    pass
-
-    def update(self,settings):
-        self.settings = settings
-        # self.running = False
-        # if self.settings['dht_serial'] != None:
-        #     print( "Monitoring serial port " + self.settings['dht_serial'].name )
-            # self.running = True
-
-
-    def stop(self):
-        self.running = False
-        try:
-            self.settings['dht_serial'].close()
-        except:
-            pass
-
-
-
-
-##################################################################
-
-
 class MeasureTask(Task):
     def __init__(self, settings):
         Task.__init__(self)
@@ -177,6 +121,63 @@ class MeasureTask(Task):
     def DoneCallback(self, status):
         # print( "Status", status.value )
         return 0  # The function should return an integer
+
+
+class dht_Worker(QtCore.QObject):
+
+    terminate = pyqtSignal()
+
+    def __init__(self, settings, parent=None):
+
+        super(dht_Worker, self).__init__(parent)
+        self.settings = settings
+        self.running = True
+        if self.settings['dht_serial'] != None:
+            print( "Monitoring serial port " + self.settings['dht_serial'].name )
+            self.running = True
+
+    def run(self):
+        data = ''
+        while (self.running == True):
+            if (self.settings['dht_serial'] == None):
+                sleep(3)
+            else:
+                try:
+                    self.settings['dht_serial'].write('READ:HUM:TEMP')
+                    ch = self.settings['dht_serial'].readline()
+                    if len(ch) != 0:
+                        data = ch
+                        if data.startswith('DHT:'):
+                            data = data.split()
+                            humidity = float(data[1])
+                            temperature = float(data[2])
+                            if (humidity>9) and (temperature>9 ):
+                                tdelta = self.settings['time'].elapsed()/1000.0
+                                self.settings['dht_buff'].append([tdelta, temperature, humidity])
+                except:
+                    pass
+
+    def update(self,settings):
+        self.settings = settings
+        # self.running = False
+        # if self.settings['dht_serial'] != None:
+        #     print( "Monitoring serial port " + self.settings['dht_serial'].name )
+            # self.running = True
+
+
+    def stop(self):
+        self.running = False
+        try:
+            self.settings['dht_serial'].close()
+        except:
+            pass
+
+
+
+
+##################################################################
+
+
 
 
 class MeasureData():

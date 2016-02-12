@@ -48,7 +48,7 @@ from source.DataStore import *
 
 # from source.treeclass import *
 from source.niPlotFrame import *
-from source.afmHandler import AFMWorker
+# from source.afmHandler import AFMWorker
 from source.settingstree import *
 
 
