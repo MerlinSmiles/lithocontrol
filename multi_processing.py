@@ -4,13 +4,14 @@ from PyQt4 import QtCore, QtGui
 # from MyJob import job_function
 import sys, os
 import numpy as np
-from source.ni_measurement_demo import *
+from source.ni_measurement2 import *
+
+from source.ringbuffer2 import *
 
 
 
 
-
-class jobProcess(mp.Process, QtCore.QObject):
+class jobProcess(mp.Process):
     # def __init__(self, taskQueue, resultQueue, processName):
     def __init__(self, resultQueue, killEvent):
         super(jobProcess, self).__init__()
@@ -46,7 +47,9 @@ class Runner(QtCore.QObject):
     def _run(self):
         print('inrun')
         self.kill_event.clear()
-        self.p = jobProcess(self.queue, self.kill_event)
+        # self.p = jobProcess(self.queue, self.kill_event)
+        self.p = ni_Worker(self.queue, self.kill_event)
+        # self.p = Process(target=ni_Worker, args=(self.queue, self.kill_event))
         self.p.start()
         self.get()
 
@@ -85,10 +88,14 @@ class MainWindow(QtGui.QWidget):
         layout.addWidget(bs)
         layout.addWidget(be)
 
+        self.timer = QTime.currentTime()
+        self.buffer = RingBuffer2(200000,4)
+
 
         self.kill_event = mp.Event()
         self.runner_thread = QtCore.QThread()
         self.runner = Runner(start_signal=self.runner_thread.started, kill_event=self.kill_event)
+
         self.runner.msg_from_job.connect(self.handle_msg)
         self.runner.moveToThread(self.runner_thread)
         # self.runner_thread.start()
@@ -97,6 +104,8 @@ class MainWindow(QtGui.QWidget):
         # bs.clicked.connect(self.runner_thread.start)
         be.clicked.connect(self.quit_runner)
         # QtCore.QTimer.singleShot(1, self.quit_runner)
+        self.cnt = 0
+        self.t = 0
 
 
         # self.run_job('test')
@@ -109,8 +118,6 @@ class MainWindow(QtGui.QWidget):
         # print('init')
 
     def start_runner(self):
-        print('start')
-        print(self.runner_thread.isRunning())
         self.runner_thread.start()
 
     def quit_runner(self):
@@ -125,7 +132,19 @@ class MainWindow(QtGui.QWidget):
         # print('quit 3')
 
     def handle_msg(self, msg):
-        print('m')
+        self.buffer.append(msg)
+        self.cnt += 1
+        if self.cnt>100:
+            self.cnt = 0
+            # t = self.timer.elapsed()
+            # print (self.buffer.data.shape)
+            print (self.buffer.get_partial_clear())
+            # print(type(msg))
+            # self.t = t
+            # print(self.timer.elapsed()/1000)
+        # print(msg)
+
+        # self.timer.restart()
 
 
 if __name__ == '__main__':
