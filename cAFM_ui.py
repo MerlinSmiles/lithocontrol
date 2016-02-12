@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-demo = False
+demo = True
 import sys
 sys.path.append(".\\source")
 
@@ -52,6 +52,8 @@ from source.helpers import *
 if not demo:
     from source.convertAFM import *
     from source.ni_measurement import *
+else:
+    from source.ni_measurement_demo import *
 from source.socketworker import *
 from source.ringbuffer import *
 from source.DataStore import *
@@ -400,10 +402,10 @@ class MainWindow(QtGui.QMainWindow):
         self.initSerial()
         self.init_dht_plot()
 
+        self.ni_worker = ni_Worker(self.settings['measure'])
+        self.ni_workerThread = None
         if not demo:
 
-            self.ni_worker = ni_Worker(self.settings['measure'])
-            self.ni_workerThread = None
 
             self.dht_Worker = dht_Worker(self.settings['measure'])
             self.dht_WorkerThread = None
@@ -1379,8 +1381,8 @@ class MainWindow(QtGui.QMainWindow):
 
             self.measure_save()
             self.measure_stop()
+            self.ni_workerThread.quit()
             if not demo:
-                self.ni_workerThread.quit()
                 self.dht_WorkerThread.quit()
                 try:
                     self.settings['measure']['dht_serial'].close()
@@ -1395,10 +1397,10 @@ class MainWindow(QtGui.QMainWindow):
         pass
 
     def run(self):
+        self.ni_workerThread = QtCore.QThread()
+        self.ni_worker.terminate.connect(self.setterminate)
+        self.ni_worker.moveToThread(self.ni_workerThread)
         if not demo:
-            self.ni_workerThread = QtCore.QThread()
-            self.ni_worker.terminate.connect(self.setterminate)
-            self.ni_worker.moveToThread(self.ni_workerThread)
             self.dht_WorkerThread = QtCore.QThread()
             self.dht_Worker.terminate.connect(self.setterminate)
             self.dht_Worker.moveToThread(self.dht_WorkerThread)
@@ -1432,15 +1434,15 @@ class MainWindow(QtGui.QMainWindow):
 
 
 
+        self.sig_measure.connect(self.ni_worker.run)
+        self.sig_measure_stop.connect(self.ni_worker.stop)
+        self.ni_workerThread.start()
         if not demo:
-            self.sig_measure.connect(self.ni_worker.run)
-            self.sig_measure_stop.connect(self.ni_worker.stop)
 
             self.sig_dhtmeasure.connect(self.dht_Worker.run)
             self.sig_dhtmeasure.connect(self.dhticar)
             # self.sig_measure_stop.connect(self.dht_Worker.stop)
 
-            self.ni_workerThread.start()
             self.dht_WorkerThread.start()
 
 

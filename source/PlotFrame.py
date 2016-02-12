@@ -45,6 +45,7 @@ class PlotFrame(QtGui.QWidget):
         self.afmAngle = 0
         self.afmX = 20
         self.afmY = 20
+        self.image_shape = (20,20)
 
         self.sketchPlot = pg.PlotWidget()
         self.sketchPlot.enableAutoRange('x', True)

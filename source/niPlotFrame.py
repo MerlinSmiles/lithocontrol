@@ -36,9 +36,11 @@ class niPlotFrame(QtGui.QWidget):
 
 
         self.mResistanceeasurePlot = pg.PlotWidget()
+        self.mResistanceeasurePlot.setClipToView(True)
         self.mResistanceDock.addWidget(self.mResistanceeasurePlot)
 
         self.mConductancePlot = pg.PlotWidget()
+        self.mConductancePlot.setClipToView(True)
         self.mConductanceDock.addWidget(self.mConductancePlot)
 
         self.dhtPlot = pg.PlotWidget()

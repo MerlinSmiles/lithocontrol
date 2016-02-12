@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-demo = False
+demo = True
 import sys
 sys.path.append(".\\source")
 
@@ -39,6 +39,8 @@ import socket
 from source.helpers import *
 if not demo:
     from source.ni_measurement import *
+else:
+    from source.ni_measurement_demo import *
 from source.socketworker import *
 from source.ringbuffer import *
 from source.ringbuffer2 import *
@@ -152,7 +154,7 @@ class MainWindow(QtGui.QMainWindow):
 
         frameGm = self.frameGeometry()
         # screen = QtGui.QApplication.desktop().screenNumber(2)
-        centerPoint = QtGui.QApplication.desktop().screenGeometry(1).center()
+        centerPoint = QtGui.QApplication.desktop().screenGeometry(0).center()
         frameGm.moveCenter(centerPoint)
         self.move(frameGm.topLeft())
         self.showMaximized()
@@ -340,10 +342,9 @@ class MainWindow(QtGui.QMainWindow):
 
         self.initSerial()
 
+        self.ni_worker = ni_Worker(self.settings['measure'])
+        self.ni_workerThread = None
         if not demo:
-            self.ni_worker = ni_Worker(self.settings['measure'])
-            self.ni_workerThread = None
-
             self.dht_Worker = dht_Worker(self.settings['measure'])
             self.dht_WorkerThread = None
 
@@ -434,6 +435,7 @@ class MainWindow(QtGui.QMainWindow):
             # QtCore.QTimer.singleShot(5000, self.initSerial)
 
     def closeEvent(self,event):
+        self.ni_workerThread.quit()
         if demo:
             event.accept()
             return
@@ -477,15 +479,15 @@ class MainWindow(QtGui.QMainWindow):
             self.dht_WorkerThread.start()
 
     def run_ni(self):
-        if not demo:
-            self.ni_workerThread = QtCore.QThread()
-            self.ni_worker.terminate.connect(self.setterminate)
-            self.ni_worker.moveToThread(self.ni_workerThread)
+        # if not demo:
+        self.ni_workerThread = QtCore.QThread()
+        self.ni_worker.terminate.connect(self.setterminate)
+        self.ni_worker.moveToThread(self.ni_workerThread)
 
-            self.sig_measure.connect(self.ni_worker.run)
-            self.sig_measure_stop.connect(self.ni_worker.stop)
+        self.sig_measure.connect(self.ni_worker.run)
+        self.sig_measure_stop.connect(self.ni_worker.stop)
 
-            self.ni_workerThread.start()
+        self.ni_workerThread.start()
 
 
     def update_plotting(self):
@@ -556,21 +558,21 @@ class MainWindow(QtGui.QMainWindow):
     def dhticar(self):
         if self.settings['measure']['dht_buff'].size > 0:
             raw_buffer = self.settings['measure']['dht_buff'].get_partial_clear()
-            dtime = raw_buffer[0]
-            dtmp = raw_buffer[1]
-            dhum = raw_buffer[2]
+            # dtime = raw_buffer[0]
+            # raw_buffer[1] = raw_buffer[1]
+            # raw_buffer[2] = raw_buffer[2]
             self.dht_store.append(raw_buffer[0:2])
 
-            self.p.param("Measurements","Current Data",'Temperature').setValue(dtmp.mean())
-            self.p.param("Measurements","Current Data",'Humidity').setValue(dhum.mean())
+            self.p.param("Measurements","Current Data",'Temperature').setValue(raw_buffer[1].mean())
+            self.p.param("Measurements","Current Data",'Humidity').setValue(raw_buffer[2].mean())
 
             self.tplot.setData(x=self.dht_store.get_partial()[0], y=self.dht_store.get_partial()[1])
             self.hplot.setData(x=self.dht_store.get_partial()[0], y=self.dht_store.get_partial()[2])
 
 
             self.dht_pi.legend.items = []
-            self.dht_pi.legend.addItem(self.hplot, 'Humidity' + ' = ' + '%.1f %%RH' % dhum.mean())
-            self.dht_pi.legend.addItem(self.tplot, 'Temperature' + ' = ' + '%.1f ' % dtmp.mean() +u"\u00b0"+'C')
+            self.dht_pi.legend.addItem(self.hplot, 'Humidity' + ' = ' + '%.1f %%RH' % raw_buffer[2].mean())
+            self.dht_pi.legend.addItem(self.tplot, 'Temperature' + ' = ' + '%.1f ' % raw_buffer[1].mean() +u"\u00b0"+'C')
 
         if not self.measure_terminate:
             QtCore.QTimer.singleShot(self.p.param('Plotting', 'DHT Timing').value()*1000, self.dhticar)
@@ -579,128 +581,46 @@ class MainWindow(QtGui.QMainWindow):
 
     def graficar(self):
 
-        if self.settings['measure']['buff'].size > 0:
-            raw_buffer = self.settings['measure']['buff'].get_partial_clear().T
-            raw_buffer[~np.isnan(raw_buffer).any(axis=1)]
-            d_time = raw_buffer[0]
-            d_ch0 = raw_buffer[1]
-            d_ch1 = raw_buffer[2]
-
-            # print(raw_buffer.shape)
-            # print(d_time.shape)
-            # print(d_ch0.shape)
-            # print(d_ch1.shape)
-
-            par_sen = self.p.param('Measurements','Instruments','PAR-LockIn','Sensitivity').value()
-            sr_sen = self.p.param('Measurements','Instruments','SR-LockIn','Sensitivity').value()
-
-            # sr_ampl = self.p.param('Measurements','Instruments','SR-LockIn','Amplitude').value()
-
-            current = np.abs(d_ch0*sr_sen/10.0)
-
-            r2pt = np.abs(self.settings['measure']['in'][0]['amplitude'] / current)
-
-            a_b = d_ch1*par_sen/10
-            r4pt = np.abs(a_b / current)
-
-            self.ni_store.append(np.array([d_time, current, r2pt, r4pt]).T)
-
         if self.p.param('Plotting', 'Enable').value():
-            if self.ni_store.size>1:
-                n = 0
-                self.plot_counter +=1
-                raw_buffer = self.ni_store.get_partial_clear().T
+            if self.settings['measure']['buff'].size > 0:
+                raw_buffer = self.settings['measure']['buff'].get_partial().T
+                raw_buffer[~np.isnan(raw_buffer).any(axis=1)]
 
-                d_time = raw_buffer[0]
-                current = raw_buffer[1]
-                # print(current)
-                r2pt = raw_buffer[2]
-                r4pt = raw_buffer[3]
 
-                n = 1
-                av_len = -20
-                if self.plot_counter>11:
-                    self.ni_pi_legend.items = []
-                    self.pltG_pi_legend.items = []
+                if 2>1:
+                    n = 0
+                    self.plot_counter +=1
+                    # raw_buffer = self.ni_store.get_partial_clear().T
 
-                if self.p.param('Plotting', 'Plot Current').value() == True:
-                    if self.plot_counter>11:
+                    # raw_buffer[0] = raw_buffer[0]
+                    current = raw_buffer[1]
+                    # print(current)
+                    r2pt = raw_buffer[2]
+                    # r4pt = raw_buffer[3]
 
-                        try:
-                            av_curr = np.average(current[av_len:])*1e9
-                            self.p.param("Measurements","Current Data",'Current').setValue('%.2f nA' % av_curr)
-                            self.ni_pi_legend.addItem(self.plotlist['Current1'], 'Current' + ' = ' + '%.2f nA' % av_curr)
-                            self.pltG_pi_legend.addItem(self.plotlist['Current2'], 'Current' + ' = ' + '%.2f nA' % av_curr)
-                        except:
-                            self.ni_pi_legend.addItem(self.plotlist['Current1'], 'Current')
-                            self.pltG_pi_legend.addItem(self.plotlist['Current2'], 'Current')
-                            pass
+                    n = 1
+                    if self.p.param('Plotting', 'Plot Current').value() == True:
 
-                    self.plotlist['Current1'].setData(x=d_time, y=current*1e9)
-                    self.plotlist['Current1'].setPen(color=kelly_colors[colors[n]])
-                    self.plotlist['Current2'].setData(x=d_time, y=current*1e9)
-                    self.plotlist['Current2'].setPen(color=kelly_colors[colors[n]])
+                        self.plotlist['Current1'].setData(x=raw_buffer[0], y=current*1e9)
+                        self.plotlist['Current1'].setPen(color=kelly_colors[colors[n]])
+                        self.plotlist['Current2'].setData(x=raw_buffer[0], y=current*1e9)
+                        self.plotlist['Current2'].setPen(color=kelly_colors[colors[n]])
 
-                n = 2
-                if self.p.param('Plotting', 'Plot 2p').value() == True:
-                    if self.plot_counter>11:
-                        try:
-                            av_2pt = np.average(r2pt[av_len:])/1000.0
-                            self.ni_pi_legend.addItem(self.plotlist['R2pt'], 'R2pt' + ' = ' + '%.0f kOhm' % av_2pt)
-                            self.p.param("Measurements","Current Data",'R2pt').setValue('%.0f kOhm' % av_2pt)
-                        except:
-                            self.ni_pi_legend.addItem(self.plotlist['R2pt'], 'R2pt')
-                            pass
+                    n = 2
+                    if self.p.param('Plotting', 'Plot 2p').value() == True:
 
-                    self.plotlist['R2pt'].setData(x=d_time, y=r2pt/1000.0)
-                    self.plotlist['R2pt'].setPen(color=kelly_colors[colors[n]])
+                        self.plotlist['R2pt'].setData(x=raw_buffer[0], y=r2pt/1000.0)
+                        self.plotlist['R2pt'].setPen(color=kelly_colors[colors[n]])
 
-                n = 3
-                if self.p.param('Plotting', 'Plot 4p').value() == True:
-                    if self.plot_counter>11:
-                        try:
-                            av_4pt = np.average(r4pt[av_len:])/1000.0
-                            self.ni_pi_legend.addItem(self.plotlist['R4pt'], 'R4pt' + ' = ' + '%.0f kOhm' % av_4pt)
-                            self.p.param("Measurements","Current Data",'R4pt').setValue('%.0f kOhm' % av_4pt)
-                        except:
-                            self.ni_pi_legend.addItem(self.plotlist['R4pt'], 'R4pt')
-                            pass
+                    g2pt = 1.0/r2pt *1e6
+                    # g4pt = 1.0/r4pt *1e6
 
-                    self.plotlist['R4pt'].setData(x=d_time, y=r4pt/1000.0)
-                    self.plotlist['R4pt'].setPen(color=kelly_colors[colors[n]])
+                    n = 2
+                    if self.p.param('Plotting', 'Plot 2p').value() == True:
 
-                g2pt = 1.0/r2pt *1e6
-                g4pt = 1.0/r4pt *1e6
+                        self.plotlist['G2pt'].setData(x=raw_buffer[0], y=g2pt)
+                        self.plotlist['G2pt'].setPen(color=kelly_colors[colors[n]])
 
-                n = 2
-                if self.p.param('Plotting', 'Plot 2p').value() == True:
-                    if self.plot_counter>11:
-                        try:
-                            av_2pt = np.average(g2pt[av_len:])
-                            self.pltG_pi_legend.addItem(self.plotlist['G2pt'], 'g2pt' + ' = ' + '%.0f uS' % av_2pt)
-                            self.p.param("Measurements","Current Data",'G2pt').setValue('%.0f uS' % av_2pt)
-                        except:
-                            self.pltG_pi_legend.addItem(self.plotlist['G2pt'], 'g2pt')
-                            pass
-
-                    self.plotlist['G2pt'].setData(x=d_time, y=g2pt)
-                    self.plotlist['G2pt'].setPen(color=kelly_colors[colors[n]])
-
-                n = 3
-                if self.p.param('Plotting', 'Plot 4p').value() == True:
-                    if self.plot_counter>11:
-                        try:
-                            av_4pt = np.average(g4pt[av_len:])
-                            self.pltG_pi_legend.addItem(self.plotlist['G4pt'], 'g4pt' + ' = ' + '%.0f uS' % av_4pt)
-                            self.p.param("Measurements","Current Data",'G4pt').setValue('%.0f uS' % av_4pt)
-                        except:
-                            self.pltG_pi_legend.addItem(self.plotlist['G4pt'], 'g4pt')
-                            pass
-
-                    self.plotlist['G4pt'].setData(x=d_time, y=g4pt)
-                    self.plotlist['G4pt'].setPen(color=kelly_colors[colors[n]])
-
-            # self.plot_counter = 0
 
         if not self.measure_terminate:
             QtCore.QTimer.singleShot(self.p.param('Plotting', 'Plot Timing').value()*1000 , self.graficar)
