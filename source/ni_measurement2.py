@@ -6,7 +6,7 @@ from PyQt4.QtCore import pyqtSignal
 from PyQt4.QtCore import QTime, QTimer
 
 import serial
-import datetime
+import datetime as dt
 import time
 
 import sys, os
@@ -23,8 +23,14 @@ except:
 
 
 class ni_Worker(mp.Process):
-    def __init__(self, resultQueue, killEvent):
+    def __init__(self, resultQueue, killEvent, timer=None):
         super(ni_Worker, self).__init__()
+        if timer is None:
+            timer = QTime.currentTime()
+            timer.start()
+        self.timer = timer
+
+        print(timer.elapsed())
 
         self.resultQueue = resultQueue
         self.killEvent = killEvent
@@ -36,11 +42,20 @@ class ni_Worker(mp.Process):
         self.settings['acq_samples'] = 1000        # every n samples
         self.settings['device'] = "PCI-6251"
         self.settings['channels'] = [[0,-10,10],[1,-10,10],[2,-10,10],[3,-10,10]]
+        self.nChannels = len(self.settings['channels'])
+        self.data = np.zeros(self.nChannels+1)
 
     def run(self):
+        if demo:
+            while not self.killEvent.is_set():
+                time.sleep(0.5)
+                self.data[0] = self.timer.elapsed()
+                self.data[1:] = np.random.rand(self.nChannels)
+                # print('xx', self.data)
+                self.resultQueue.put(self.data)
+            return
+
         DAQmxResetDevice("PCI-6251")
-
-
         self.task = MeasureTask( self.resultQueue , self.settings )
         self.task.StartTask()
 
@@ -54,81 +69,82 @@ class ni_Worker(mp.Process):
         print("DAQ-process %s jsut ended" % os.getpid())
         return
 
-class MeasureTask(Task):
-    def __init__(self, resultQueue= None, settings = None):
-        Task.__init__(self)
-        self.running = False
-        self.resultQueue = resultQueue
-        self.tdelta = 0.0
+if not demo:
+    class MeasureTask(Task):
+        def __init__(self, resultQueue= None, settings = None):
+            Task.__init__(self)
+            self.running = False
+            self.resultQueue = resultQueue
+            self.tdelta = 0.0
 
 
-        self.acq_samples = settings['acq_samples']
+            self.acq_samples = settings['acq_samples']
 
-        self.num_chans = len(settings['channels'])
-        self.ch_out = []
+            self.num_chans = len(settings['channels'])
+            self.ch_out = []
 
-        for i in settings['channels']:
-            chan = settings['device']+ '/ai' + str(i[0])
-            self.create_chan(chan, i[1], i[2])
-            # print( 'created ', chan )
+            for i in settings['channels']:
+                chan = settings['device']+ '/ai' + str(i[0])
+                self.create_chan(chan, i[1], i[2])
+                # print( 'created ', chan )
 
-        self.CfgSampClkTiming("", settings['acq_rate'], DAQmx_Val_Rising,
-                              DAQmx_Val_ContSamps, settings['buffer_size'])
-        self.AutoRegisterEveryNSamplesEvent(DAQmx_Val_Acquired_Into_Buffer,
-                                            self.acq_samples, 0)
-        self.AutoRegisterDoneEvent(0)
+            self.CfgSampClkTiming("", settings['acq_rate'], DAQmx_Val_Rising,
+                                  DAQmx_Val_ContSamps, settings['buffer_size'])
+            self.AutoRegisterEveryNSamplesEvent(DAQmx_Val_Acquired_Into_Buffer,
+                                                self.acq_samples, 0)
+            self.AutoRegisterDoneEvent(0)
 
-    def create_chan(self, chan, v_min=-10, v_max=10):
-        self.CreateAIVoltageChan( chan,
-                                  "",
-                                  DAQmx_Val_Diff,
-                                  v_min,
-                                  v_max,
-                                  DAQmx_Val_Volts,
-                                  None)
+        def create_chan(self, chan, v_min=-10, v_max=10):
+            self.CreateAIVoltageChan( chan,
+                                      "",
+                                      DAQmx_Val_Diff,
+                                      v_min,
+                                      v_max,
+                                      DAQmx_Val_Volts,
+                                      None)
 
-    def EveryNCallback(self):
-        read = int32()
-        if self.running:
-            # This is to have at least some samples in the buffer. else one might read more samples than available, EveryNSamplesEvent is x +- 100 samples!
-            data = np.zeros(5*self.num_chans*self.acq_samples)
-            self.ReadAnalogF64(-1,
-                               -1,
-                               DAQmx_Val_GroupByChannel,
-                               data,
-                               data.size,
-                               byref(read),
-                               None)
-        else:
-            self.running = True
-            data = np.zeros(10*self.num_chans*self.acq_samples)
-            self.ReadAnalogF64(-1,
-                               -1,
-                               DAQmx_Val_GroupByChannel,
-                               data,
-                               data.size,
-                               byref(read),
-                               None)
-        meas_data = np.reshape(data[:read.value*self.num_chans],(self.num_chans,-1))
+        def EveryNCallback(self):
+            read = int32()
+            if self.running:
+                # This is to have at least some samples in the buffer. else one might read more samples than available, EveryNSamplesEvent is x +- 100 samples!
+                data = np.zeros(5*self.num_chans*self.acq_samples)
+                self.ReadAnalogF64(-1,
+                                   -1,
+                                   DAQmx_Val_GroupByChannel,
+                                   data,
+                                   data.size,
+                                   byref(read),
+                                   None)
+            else:
+                self.running = True
+                data = np.zeros(10*self.num_chans*self.acq_samples)
+                self.ReadAnalogF64(-1,
+                                   -1,
+                                   DAQmx_Val_GroupByChannel,
+                                   data,
+                                   data.size,
+                                   byref(read),
+                                   None)
+            meas_data = np.reshape(data[:read.value*self.num_chans],(self.num_chans,-1))
 
-        av_data = np.mean(meas_data,1)
+            av_data = np.mean(meas_data,1)
 
-        av_data = av_data.reshape((self.num_chans,-1))
+            av_data = av_data.reshape((self.num_chans,-1))
 
-        # print('callback')
+            # print('callback')
 
-        # tdelta = settings['time'].elapsed()/1000.0
-        # if self.tdelta<=tdelta:
-            # self.tdelta = tdelta
-        self.resultQueue.put(av_data)
-        # print(np.array([av_data[0],av_data[1]]))
-        # self.resultQueue.append(np.array([av_data[0],av_data[1]]))
-        # settings['buff'].append(np.array([av_data[0],av_data[1]]))
-        return 0  # The function should return an integer
+            # tdelta = settings['time'].elapsed()/1000.0
+            # if self.tdelta<=tdelta:
+                # self.tdelta = tdelta
+            self.resultQueue.put(av_data)
+            # print(np.array([av_data[0],av_data[1]]))
+            # self.resultQueue.append(np.array([av_data[0],av_data[1]]))
+            # settings['buff'].append(np.array([av_data[0],av_data[1]]))
+            return 0  # The function should return an integer
 
-    def DoneCallback(self, status):
-        # print( "Status", status.value )
-        return 0  # The function should return an integer
+        def DoneCallback(self, status):
+            # print( "Status", status.value )
+            return 0  # The function should return an integer
 
 
 class dht_Worker(QtCore.QObject):

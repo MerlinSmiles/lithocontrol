@@ -1,6 +1,5 @@
 import numpy as np
 class RingBuffer2():
-    "A 1D ring buffer using numpy arrays"
     def __init__(self, length, cols = 1):
         self.length = length
         self.columns = cols

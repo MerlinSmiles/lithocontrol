@@ -1,3 +1,6 @@
+
+print('\n\n')
+
 import multiprocessing as mp
 from multiprocessing import Process, Queue
 from PyQt4 import QtCore, QtGui
@@ -5,29 +8,7 @@ from PyQt4 import QtCore, QtGui
 import sys, os
 import numpy as np
 from source.ni_measurement2 import *
-
-from source.ringbuffer2 import *
-
-
-
-
-class jobProcess(mp.Process):
-    # def __init__(self, taskQueue, resultQueue, processName):
-    def __init__(self, resultQueue, killEvent):
-        super(jobProcess, self).__init__()
-        # self.taskQueue      = taskQueue
-        self.resultQueue = resultQueue
-        self.killEvent = killEvent
-        # self.processName    = processName
-
-    def run(self):
-        print("pid %s of process that could be killed" % os.getpid())
-
-        while not self.killEvent.is_set():
-            time.sleep(0.02)
-            self.resultQueue.put(np.random.rand(1,5))
-        print("pid %s of process that jsut ended" % os.getpid())
-        return
+from source.ringbuffer import *
 
 
 
@@ -38,17 +19,18 @@ class Runner(QtCore.QObject):
     """
     msg_from_job = QtCore.pyqtSignal(object)
 
-    def __init__(self, start_signal,kill_event, parent=None):
+    def __init__(self, start_signal,kill_event, timer = None, parent=None):
         super(Runner, self).__init__(parent)
         self.kill_event = kill_event
         self.queue = Queue()
+        self.timer = timer
         start_signal.connect(self._run)
 
     def _run(self):
         print('inrun')
         self.kill_event.clear()
         # self.p = jobProcess(self.queue, self.kill_event)
-        self.p = ni_Worker(self.queue, self.kill_event)
+        self.p = ni_Worker(self.queue, self.kill_event, timer = self.timer)
         # self.p = Process(target=ni_Worker, args=(self.queue, self.kill_event))
         self.p.start()
         self.get()
@@ -61,40 +43,31 @@ class Runner(QtCore.QObject):
         else:
             msg = self.queue.get()
             self.msg_from_job.emit(msg)
-            # if msg == 'done':
-            #     print('donedone')
-            #     break
 
             QtCore.QTimer.singleShot(0, self.get)
 
-
-    # def _stop(self):
-        # print('stopping')
-        # self.kill_event.set()
-        # self.running = False
-
-# Things below live on the main thread
 
 class MainWindow(QtGui.QWidget):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         # Setup the OQ listener thread and move the OQ runner object to it
 
-        win = self
         layout = QtGui.QGridLayout()
-        win.setLayout(layout)
+        self.setLayout(layout)
         bs = QtGui.QPushButton('Start')
         be = QtGui.QPushButton('End')
         layout.addWidget(bs)
         layout.addWidget(be)
 
         self.timer = QTime.currentTime()
-        self.buffer = RingBuffer2(200000,4)
+        self.timer.start()
+        self.buffer = np.empty((2000,5))
+        self.buffer2 = RingBuffer(3600, cols = ['time','a','b','c','d'])
 
 
         self.kill_event = mp.Event()
         self.runner_thread = QtCore.QThread()
-        self.runner = Runner(start_signal=self.runner_thread.started, kill_event=self.kill_event)
+        self.runner = Runner(start_signal=self.runner_thread.started, kill_event=self.kill_event, timer=self.timer)
 
         self.runner.msg_from_job.connect(self.handle_msg)
         self.runner.moveToThread(self.runner_thread)
@@ -132,19 +105,37 @@ class MainWindow(QtGui.QWidget):
         # print('quit 3')
 
     def handle_msg(self, msg):
-        self.buffer.append(msg)
-        self.cnt += 1
-        if self.cnt>100:
-            self.cnt = 0
-            # t = self.timer.elapsed()
-            # print (self.buffer.data.shape)
-            print (self.buffer.get_partial_clear())
-            # print(type(msg))
-            # self.t = t
-            # print(self.timer.elapsed()/1000)
+        # self.buffer[self.cnt] = msg
+        self.buffer2.append(msg)
+        # self.cnt += 1
         # print(msg)
+        # if self.cnt%10 == 0:
+            # print(self.buffer[:self.cnt])
 
-        # self.timer.restart()
+            # print(self.buffer2.get_partial_clear())
+
+
+
+
+
+
+class jobProcess(mp.Process):
+    # def __init__(self, taskQueue, resultQueue, processName):
+    def __init__(self, resultQueue, killEvent):
+        super(jobProcess, self).__init__()
+        # self.taskQueue      = taskQueue
+        self.resultQueue = resultQueue
+        self.killEvent = killEvent
+        # self.processName    = processName
+
+    def run(self):
+        print("pid %s of process that could be killed" % os.getpid())
+
+        while not self.killEvent.is_set():
+            time.sleep(0.02)
+            self.resultQueue.put(np.random.rand(1,5))
+        print("pid %s of process that jsut ended" % os.getpid())
+        return
 
 
 if __name__ == '__main__':
