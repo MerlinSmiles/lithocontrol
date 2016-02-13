@@ -277,7 +277,7 @@ class MainWindow(QtGui.QMainWindow):
         # self.ni_store = RingBuffer2(3600000, cols = len(self.ni_store_columns))
 
         self.ni_buffer = Buffer(1000000, cols=5)
-        self.ni_stepper = 100
+        self.ni_stepper = 1000
         self.ni_plot_counter = -1
 
         self.dht_store_columns = ['time', 'temperature', 'humidity']
@@ -672,7 +672,7 @@ class MainWindow(QtGui.QMainWindow):
                 if current_buffer.shape[0] > self.ni_stepper:
                     self.ni_plot_counter += current_buffer.shape[0]-3
                     # self.initplot()
-                    print('newplot')
+                    # print('newplot')
                     time =    raw_buffer[:,0]
                     # self.ni_pi.set
                     self.adder +=1
