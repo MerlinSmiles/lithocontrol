@@ -31,21 +31,19 @@ if demo:
     config['storage'] = config['demo_storage']
 print(config['storage'])
 
+import multiprocessing as mp
+from source.ni_measurement2 import *
+from source.buffer import *
+from source.ringbuffer2 import *
+
 import os
 import time
 from time import sleep
 import socket
 
 from source.helpers import *
-if not demo:
-    from source.ni_measurement import *
-else:
-    from source.ni_measurement_demo import *
 from source.socketworker import *
-from source.ringbuffer import *
-from source.ringbuffer2 import *
 from source.DataStore import *
-
 # from source.treeclass import *
 from source.niPlotFrame import *
 # from source.afmHandler import AFMWorker
@@ -141,6 +139,19 @@ class MainWindow(QtGui.QMainWindow):
         self.newstores = False
 
         self.splash.showMessage("Initialize Measurement",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+
+############
+        self.stopMeasEvent = mp.Event()
+        self.timer = QTime.currentTime()
+        self.timer.start()
+        self.ni_runner_thread = QtCore.QThread()
+        self.ni_runner = Runner(start_signal=self.ni_runner_thread.started, stopMeasEvent=self.stopMeasEvent, timer=self.timer)
+        self.ni_runner.new_data.connect(self.handle_msg)
+        self.ni_runner.moveToThread(self.ni_runner_thread)
+
+        self.cnt = 0
+############
+
         self.init_measurement()
 
         self.splash.showMessage("Initialize Plot",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
@@ -262,9 +273,12 @@ class MainWindow(QtGui.QMainWindow):
         self.log_store = DataStore(filename=self.storeFolder+c_time +'_ni_logging.h5')
 
         self.ni_store_columns = ['time', 'current','r2p','r4p']
-        self.ni_store = RingBuffer2(3600000, cols = len(self.ni_store_columns))
+        # self.ni_store = RingBuffer2(3600000, cols = len(self.ni_store_columns))
+
+        self.ni_buffer = Buffer(864000, cols=5)
+
         self.dht_store_columns = ['time', 'temperature', 'humidity']
-        self.dht_store = RingBuffer2(3600000, cols = len(self.dht_store_columns))
+        self.dht_store = RingBuffer(3600000, cols = len(self.dht_store_columns))
 
     def log(self, column, value):
         # return
@@ -295,55 +309,16 @@ class MainWindow(QtGui.QMainWindow):
 
         self.plotlist = {}
         self.update_plotting()
-        self.plot_counter = 0
 
-        self.settings['measure']['buffer_size'] = 10000000
-        self.settings['measure']['acq_rate'] = 30000          # samples/second
-        self.settings['measure']['acq_samples'] = 2000        # every n samples
-        self.settings['measure']['device_input'] = "PCI-6251"
-
-        self.settings['measure']['in'] = {}
-        ch0 = self.settings['measure']['in'][0] = {}
-        ch1 = self.settings['measure']['in'][1] = {}
-
-
-        ch0['channel'] = "ai0"
-        ch0['name'] = 'Current'
-        ch0['curr_amp'] = 0
-        ch0['amplitude'] = 1e-3
-        # amplification = 200mV / 10V
-        amplification = 10e-9/10.0
-        ch0['multiplier'] = amplification
-        ch0['min'] = -10 # +/- 100 mV is the minimum bipolar range
-        ch0['max'] = 10
-        ch0['plot_raw'] = True
-        ch0['freq_chan'] = 0
-
-        ch1['channel'] = "ai1"
-        ch1['name'] = 'A-B'
-        ch1['amplitude'] = 1*1e-3
-        amplification = 0.001/10.0
-        ch1['multiplier'] = amplification
-        ch1['min'] = -10
-        ch1['max'] = 10
-        ch1['plot_raw'] = True
-        ch1['freq_chan'] = 0
-        ch1['curr_amp'] = 0
-        # self.cAmpSpinBox.setValue(self.settings['measure']['in'][0]['curr_amp'])
-        # (self._gen_meas_amplitude, self._normamplitudes, self._normphases)
-
-        columns = len(['time'] + list(self.settings['measure']['in'].keys()))
-        self.ni_buff = RingBuffer2(200000, cols = columns)
-        self.settings['measure']['buff'] = self.ni_buff
 
         columns = len(self.dht_store_columns)
-        self.dht_buff = RingBuffer2(10000, cols = columns)
+        self.dht_buff = RingBuffer(10000, cols = columns)
         self.settings['measure']['dht_buff'] = self.dht_buff
 
         self.initSerial()
 
-        self.ni_worker = ni_Worker(self.settings['measure'])
-        self.ni_workerThread = None
+        # self.ni_worker = ni_Worker(self.settings['measure'])
+        # self.ni_workerThread = None
         if not demo:
             self.dht_Worker = dht_Worker(self.settings['measure'])
             self.dht_WorkerThread = None
@@ -379,7 +354,22 @@ class MainWindow(QtGui.QMainWindow):
             self.plotlist[nme] = self.ni_pi.plot(name=nme)
         for nme in self.plotG_names:
             self.plotlist[nme] = self.pltG_pi.plot(name=nme)
+        self.initplot()
 
+    def start_runner(self):
+        self.ni_runner_thread.start()
+
+    def quit_runner(self):
+        print('ending')
+        self.stopMeasEvent.set()
+        self.ni_runner_thread.exit()
+        self.ni_runner_thread.wait()
+        print(self.ni_runner_thread.isRunning())
+
+    def handle_msg(self, msg):
+        # self.ni_buffer[self.cnt] = msg
+        self.ni_buffer.append(msg)
+        self.cnt += 1
 
     @QtCore.pyqtSlot("QString")
     def updateStatus(self,line):
@@ -397,12 +387,14 @@ class MainWindow(QtGui.QMainWindow):
 
 
         QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.measure_start )
+        QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.start_runner )
         QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.graficar )
         QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.dhticar )
         QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.savicar )
         QtCore.QObject.connect(favoriteMeasureAction,  QtCore.SIGNAL('triggered()'), self.measure_save )
         QtCore.QObject.connect(acceptMeasureAction,    QtCore.SIGNAL('triggered()'), self.measure_save )
         QtCore.QObject.connect(stopMeasureAction,      QtCore.SIGNAL('triggered()'), self.measure_stop )
+        QtCore.QObject.connect(stopMeasureAction,      QtCore.SIGNAL('triggered()'), self.quit_runner )
 
 
         iconSize = QtCore.QSize(32,32)
@@ -435,7 +427,8 @@ class MainWindow(QtGui.QMainWindow):
             # QtCore.QTimer.singleShot(5000, self.initSerial)
 
     def closeEvent(self,event):
-        self.ni_workerThread.quit()
+        self.quit_runner()
+        # self.ni_workerThread.quit()
         if demo:
             event.accept()
             return
@@ -479,6 +472,7 @@ class MainWindow(QtGui.QMainWindow):
             self.dht_WorkerThread.start()
 
     def run_ni(self):
+        return
         # if not demo:
         self.ni_workerThread = QtCore.QThread()
         self.ni_worker.terminate.connect(self.setterminate)
@@ -514,12 +508,12 @@ class MainWindow(QtGui.QMainWindow):
         self.measure_terminate = True
         self.sig_measure_stop.emit(500)
         self.sig_dht_measure_stop.emit(500)
-        try:
-            self.ni_store.clear()
-            self.ni_buff.clear()
-        except:
-            print( 'Error clearing ni_store' )
-            print( sys.exc_info() )
+        # try:
+        #     self.ni_store.clear()
+        #     self.ni_buff.clear()
+        # except:
+        #     print( 'Error clearing ni_store' )
+        #     print( sys.exc_info() )
         try:
             # self.dht_store.clear()
             # self.dht_buff.clear()
@@ -558,7 +552,7 @@ class MainWindow(QtGui.QMainWindow):
     def dhticar(self):
         if self.settings['measure']['dht_buff'].size > 0:
             raw_buffer = self.settings['measure']['dht_buff'].get_partial_clear()
-            # dtime = raw_buffer[0]
+            # dtime = time
             # raw_buffer[1] = raw_buffer[1]
             # raw_buffer[2] = raw_buffer[2]
             self.dht_store.append(raw_buffer[0:2])
@@ -577,49 +571,66 @@ class MainWindow(QtGui.QMainWindow):
         if not self.measure_terminate:
             QtCore.QTimer.singleShot(self.p.param('Plotting', 'DHT Timing').value()*1000, self.dhticar)
 
+    def initplot(self):
+        start_buffer = np.zeros((1,4))
+        time =    start_buffer[:,0]
+        current = start_buffer[:,1]
+        r2pt =    start_buffer[:,2]
+        r4pt =    start_buffer[:,3]
+
+        n = 1
+        self.plotlist['Current1'].setData(x=time, y=current)
+        self.plotlist['Current1'].setPen(color=kelly_colors[colors[n]])
+        self.plotlist['Current2'].setData(x=time, y=current)
+        self.plotlist['Current2'].setPen(color=kelly_colors[colors[n]])
+
+        n = 2
+        self.plotlist['R2pt'].setData(x=time, y=r2pt)
+        self.plotlist['R2pt'].setPen(color=kelly_colors[colors[n]])
+
+        n = 3
+        self.plotlist['R4pt'].setData(x=time, y=r4pt)
+        self.plotlist['R4pt'].setPen(color=kelly_colors[colors[n]])
+
+        g2pt = 1.0/r2pt
+        g4pt = 1.0/r4pt
+
+        n = 2
+        self.plotlist['G2pt'].setData(x=time, y=g2pt)
+        self.plotlist['G2pt'].setPen(color=kelly_colors[colors[n]])
+        n = 4
+        self.plotlist['G4pt'].setData(x=time, y=g4pt)
+        self.plotlist['G4pt'].setPen(color=kelly_colors[colors[n]])
 
 
     def graficar(self):
 
         if self.p.param('Plotting', 'Enable').value():
-            if self.settings['measure']['buff'].size > 0:
-                raw_buffer = self.settings['measure']['buff'].get_partial().T
-                raw_buffer[~np.isnan(raw_buffer).any(axis=1)]
+            raw_buffer = self.ni_buffer.get()
+
+            time =    raw_buffer[:,0]
+            current = raw_buffer[:,1]
+            r2pt =    raw_buffer[:,2]
+            r4pt =    raw_buffer[:,3]
+            g2pt = 1.0/r2pt
+            g4pt = 1.0/r4pt
 
 
-                if 2>1:
-                    n = 0
-                    self.plot_counter +=1
-                    # raw_buffer = self.ni_store.get_partial_clear().T
+            if self.p.param('Plotting', 'Plot Current').value() == True:
+                n = 1
+                self.plotlist['Current1'].setData(x=time, y=current)
+                self.plotlist['Current2'].setData(x=time, y=current)
 
-                    # raw_buffer[0] = raw_buffer[0]
-                    current = raw_buffer[1]
-                    # print(current)
-                    r2pt = raw_buffer[2]
-                    # r4pt = raw_buffer[3]
+            if self.p.param('Plotting', 'Plot 2p').value() == True:
+                n = 2
+                self.plotlist['R2pt'].setData(x=time, y=r2pt)
+                self.plotlist['G2pt'].setData(x=time, y=g2pt)
 
-                    n = 1
-                    if self.p.param('Plotting', 'Plot Current').value() == True:
+            if self.p.param('Plotting', 'Plot 4p').value() == True:
+                n = 3
+                self.plotlist['R4pt'].setData(x=time, y=r4pt)
+                self.plotlist['G4pt'].setData(x=time, y=g4pt)
 
-                        self.plotlist['Current1'].setData(x=raw_buffer[0], y=current*1e9)
-                        self.plotlist['Current1'].setPen(color=kelly_colors[colors[n]])
-                        self.plotlist['Current2'].setData(x=raw_buffer[0], y=current*1e9)
-                        self.plotlist['Current2'].setPen(color=kelly_colors[colors[n]])
-
-                    n = 2
-                    if self.p.param('Plotting', 'Plot 2p').value() == True:
-
-                        self.plotlist['R2pt'].setData(x=raw_buffer[0], y=r2pt/1000.0)
-                        self.plotlist['R2pt'].setPen(color=kelly_colors[colors[n]])
-
-                    g2pt = 1.0/r2pt *1e6
-                    # g4pt = 1.0/r4pt *1e6
-
-                    n = 2
-                    if self.p.param('Plotting', 'Plot 2p').value() == True:
-
-                        self.plotlist['G2pt'].setData(x=raw_buffer[0], y=g2pt)
-                        self.plotlist['G2pt'].setPen(color=kelly_colors[colors[n]])
 
 
         if not self.measure_terminate:

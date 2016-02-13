@@ -1,5 +1,5 @@
 import numpy as np
-class RingBuffer2():
+class RingBuffer():
     def __init__(self, length, cols = 1):
         self.length = length
         self.columns = cols
@@ -37,11 +37,11 @@ class RingBuffer2():
         if self.size == 0:
             return np.ndarray(0)
         tsize = self.size
-        dat = self.get_partial()
+        dat = self.get()[-tsize:,:]
         self.size = 0
         return dat
 
-class RingBufferFull2(RingBuffer2):
+class RingBufferFull2(RingBuffer):
     def append(self, value):
         """append an element when buffer is full"""
         x_index = (self.index + np.arange(x.shape[0])) % self.data.shape[0]

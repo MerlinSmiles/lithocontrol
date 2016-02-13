@@ -1,12 +1,11 @@
 import numpy as np
 
 import multiprocessing as mp
-from PyQt4 import QtCore, QtGui,uic
+from multiprocessing import Queue
+from PyQt4 import QtCore
 from PyQt4.QtCore import pyqtSignal
-from PyQt4.QtCore import QTime, QTimer
+from PyQt4.QtCore import QTime
 
-import serial
-import datetime as dt
 import time
 
 import sys, os
@@ -18,12 +17,39 @@ try:
     # from PyDAQmx import Task
     from PyDAQmx.DAQmxCallBack import *
 except:
-    print('FAIL')
+    print('DAQmx Demo')
     demo = True
 
 
+class Runner(QtCore.QObject):
+
+    new_data = QtCore.pyqtSignal(object)
+
+    def __init__(self, start_signal, stopMeasEvent, timer=None, parent=None):
+        super(Runner, self).__init__(parent)
+        self.stopMeasEvent = stopMeasEvent
+        self.queue = Queue()
+        self.timer = timer
+        start_signal.connect(self._run)
+
+    def _run(self):
+        self.stopMeasEvent.clear()
+        self.p = ni_Worker(self.queue, self.stopMeasEvent, timer=self.timer)
+        self.p.start()
+        self.get()
+
+    def get(self):
+        # print('inget')
+        if self.stopMeasEvent.is_set():
+            self.p.join()
+            print('Measurement Process ended')
+        else:
+            msg = self.queue.get()
+            self.new_data.emit(msg)
+            QtCore.QTimer.singleShot(0, self.get)
+
 class ni_Worker(mp.Process):
-    def __init__(self, resultQueue, killEvent, timer=None):
+    def __init__(self, resultQueue, stopMeasEvent, timer=None):
         super(ni_Worker, self).__init__()
         if timer is None:
             timer = QTime.currentTime()
@@ -33,7 +59,7 @@ class ni_Worker(mp.Process):
         print(timer.elapsed())
 
         self.resultQueue = resultQueue
-        self.killEvent = killEvent
+        self.stopMeasEvent = stopMeasEvent
         print("initializing DAQ-process")
 
         self.settings = {}
@@ -47,9 +73,9 @@ class ni_Worker(mp.Process):
 
     def run(self):
         if demo:
-            while not self.killEvent.is_set():
-                time.sleep(0.5)
-                self.data[0] = self.timer.elapsed()
+            while not self.stopMeasEvent.is_set():
+                time.sleep(0.04)
+                self.data[0] = self.timer.elapsed()/1000.0
                 self.data[1:] = np.random.rand(self.nChannels)
                 # print('xx', self.data)
                 self.resultQueue.put(self.data)
@@ -59,7 +85,7 @@ class ni_Worker(mp.Process):
         self.task = MeasureTask( self.resultQueue , self.settings )
         self.task.StartTask()
 
-        while not self.killEvent.is_set():
+        while not self.stopMeasEvent.is_set():
             time.sleep(1)
             # commandQueue.get() to update settings
             # self.resultQueue.put('m')

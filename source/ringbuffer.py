@@ -3,17 +3,17 @@ import pandas as pd
 import os
 
 class RingBuffer(object):
-    def __init__(self, size_max, default_value=0.0, dtype=np.float, filename='', cols=['d_time', 'current', 'r2pt', 'r4pt']):
+    def __init__(self, size_max, default_value=0.0, dtype=np.float, filename='', cols=1):
         """initialization"""
         self.size_max = size_max
         self.default_value = default_value
         self.dtype = dtype
         self.filename = filename
         self.cols = cols
-        self._num_cols = len(self.cols)
+        self._num_cols = self.cols
 
-        self._data = np.empty((self._num_cols,self.size_max), dtype=dtype)
-        self.dataFrame = pd.DataFrame()
+        self._data = np.empty((self.size_max,self._num_cols), dtype=dtype)
+        # self.dataFrame = pd.DataFrame()
         self._data.fill(default_value)
         self.size = 0
         self.data_store_index = 0
@@ -21,21 +21,22 @@ class RingBuffer(object):
 
     def append(self, value):
         """append an element"""
-        if not self.saving:
-            value = np.reshape(value,(self._num_cols,-1)).astype(self.dtype)
-            if np.shape(value)[0] != self._num_cols:
-                return
-            lenvalue = np.shape(value)[1]
-            self._data = np.roll(self._data, -lenvalue)
-            self._data[:,-lenvalue:] = value
+        # if not self.saving:
+        # value = np.reshape(value,(self._num_cols,-1)).astype(self.dtype)
+        # if np.shape(value)[0] != self._num_cols:
+        #     return
+        lenvalue = value.size/self._num_cols
+        # print('x',lenvalue)
+        self._data = np.roll(self._data, -lenvalue)
+        self._data[-lenvalue:] = value
 
-            self.data_store_index += lenvalue
-            self.size += lenvalue
-            if self.data_store_index >= self.size_max:
-                self.save_data()
-            if self.size >= self.size_max:
-                self.size = self.size_max
-                self.__class__  = RingBufferFull
+        # self.data_store_index += lenvalue
+        self.size += lenvalue
+        # if self.data_store_index >= self.size_max:
+        #     self.save_data()
+        if self.size >= self.size_max:
+            self.size = self.size_max
+            self.__class__  = RingBufferFull
 
     def get_all(self):
         """return a list of elements from the oldest to the newest"""
@@ -50,7 +51,7 @@ class RingBuffer(object):
         if self.size == 0:
             return np.ndarray(0)
         tsize = self.size
-        dat = self.get_all()[:,-tsize:]
+        dat = self.get_all()[-tsize:]
         self.size = 0
         return dat
 
