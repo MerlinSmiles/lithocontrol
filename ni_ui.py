@@ -52,25 +52,25 @@ from source.settingstree import *
 
 colors = ['vivid_yellow','strong_purple','vivid_orange','very_light_blue','vivid_red','grayish_yellow','medium_gray','vivid_green','strong_purplish_pink','strong_blue','strong_yellowish_pink','strong_violet','vivid_orange_yellow','strong_purplish_red','vivid_greenish_yellow','strong_reddish_brown','vivid_yellowish_green','deep_yellowish_brown','vivid_reddish_orange','dark_olive_green']
 kelly_colors = dict(vivid_yellow=(255, 179, 0),
-            strong_purple=(128, 62, 117),
-            vivid_orange=(255, 104, 0),
-            very_light_blue=(166, 189, 215),
-            vivid_red=(193, 0, 32),
-            grayish_yellow=(206, 162, 98),
-            medium_gray=(129, 112, 102),
-            vivid_green=(0, 125, 52),
-            strong_purplish_pink=(246, 118, 142),
-            strong_blue=(0, 83, 138),
-            strong_yellowish_pink=(255, 122, 92),
-            strong_violet=(83, 55, 122),
-            vivid_orange_yellow=(255, 142, 0),
-            strong_purplish_red=(179, 40, 81),
-            vivid_greenish_yellow=(244, 200, 0),
-            strong_reddish_brown=(127, 24, 13),
-            vivid_yellowish_green=(147, 170, 0),
-            deep_yellowish_brown=(89, 51, 21),
-            vivid_reddish_orange=(241, 58, 19),
-            dark_olive_green=(35, 44, 22))
+                    strong_purple=(128, 62, 117),
+                    vivid_orange=(255, 104, 0),
+                    very_light_blue=(166, 189, 215),
+                    vivid_red=(193, 0, 32),
+                    grayish_yellow=(206, 162, 98),
+                    medium_gray=(129, 112, 102),
+                    vivid_green=(0, 125, 52),
+                    strong_purplish_pink=(246, 118, 142),
+                    strong_blue=(0, 83, 138),
+                    strong_yellowish_pink=(255, 122, 92),
+                    strong_violet=(83, 55, 122),
+                    vivid_orange_yellow=(255, 142, 0),
+                    strong_purplish_red=(179, 40, 81),
+                    vivid_greenish_yellow=(244, 200, 0),
+                    strong_reddish_brown=(127, 24, 13),
+                    vivid_yellowish_green=(147, 170, 0),
+                    deep_yellowish_brown=(89, 51, 21),
+                    vivid_reddish_orange=(241, 58, 19),
+                    dark_olive_green=(35, 44, 22))
 
 
 class MainWindow(QtGui.QMainWindow):
@@ -275,7 +275,9 @@ class MainWindow(QtGui.QMainWindow):
         self.ni_store_columns = ['time', 'current','r2p','r4p']
         # self.ni_store = RingBuffer2(3600000, cols = len(self.ni_store_columns))
 
-        self.ni_buffer = Buffer(864000, cols=5)
+        self.ni_buffer = Buffer(1000000, cols=5)
+        self.ni_stepper = 100
+        self.ni_plot_counter = -1
 
         self.dht_store_columns = ['time', 'temperature', 'humidity']
         self.dht_store = RingBuffer(3600000, cols = len(self.dht_store_columns))
@@ -307,7 +309,7 @@ class MainWindow(QtGui.QMainWindow):
     def init_measurement(self):
         self.measure_terminate = False
 
-        self.plotlist = {}
+        self.plotlist = []
         self.update_plotting()
 
 
@@ -324,7 +326,8 @@ class MainWindow(QtGui.QMainWindow):
             self.dht_WorkerThread = None
 
         self.ni_pi = self.plotFrame.mResistanceeasurePlot.getPlotItem()
-        # self.ni_pi.setDownsampling(auto=True)
+        self.ni_pi.setClipToView(True)
+        self.ni_pi.setDownsampling(auto = True)
 
         # self.ni_pi = self.plotView.getPlotItem()
         self.ni_pi.addLegend()
@@ -337,12 +340,13 @@ class MainWindow(QtGui.QMainWindow):
         # self.ni_pi.setXRange(990000, 1000000)
 
         self.pltG_pi = self.plotFrame.mConductancePlot.getPlotItem()
-        # self.pltG_pi.setDownsampling(auto=True)
+
         self.pltG_pi.setXLink(self.ni_pi)
         self.pltG_pi.addLegend()
         self.pltG_pi_legend = self.pltG_pi.legend
         # self.pltG_pi.enableAutoRange('x', True)
         self.pltG_pi.enableAutoRange('y', True)
+
         # li_data = np.array([[gen_meas_amplitude], [normamplitudes], [normphases], [li_r/1e6], [li_g]])
         self.ni_pi_names = ['ch0','ch1','ch2','ch3','ch4','ch5','ch6','ch7','ch8','ch9',]
         self.plotR_names = ['Current1', 'R2pt', 'R4pt']
@@ -350,10 +354,10 @@ class MainWindow(QtGui.QMainWindow):
         # for i in range(5):
         #     self.plotlist.append({'plot': self.ni_pi.plot(name=self.ni_pi_names[i]), 'channel': i})
 
-        for nme in self.plotR_names:
-            self.plotlist[nme] = self.ni_pi.plot(name=nme)
-        for nme in self.plotG_names:
-            self.plotlist[nme] = self.pltG_pi.plot(name=nme)
+        # for nme in self.plotR_names:
+        #     self.plotlist[-1][nme] = self.ni_pi.plot(name=nme)
+        # for nme in self.plotG_names:
+        #     self.plotlist[-1][nme] = self.pltG_pi.plot(name=nme)
         self.initplot()
 
     def start_runner(self):
@@ -578,59 +582,118 @@ class MainWindow(QtGui.QMainWindow):
         r2pt =    start_buffer[:,2]
         r4pt =    start_buffer[:,3]
 
-        n = 1
-        self.plotlist['Current1'].setData(x=time, y=current)
-        self.plotlist['Current1'].setPen(color=kelly_colors[colors[n]])
-        self.plotlist['Current2'].setData(x=time, y=current)
-        self.plotlist['Current2'].setPen(color=kelly_colors[colors[n]])
+        self.plotlist.append({})
+        self.plotlist.append({})
+        print('newplots')
 
-        n = 2
-        self.plotlist['R2pt'].setData(x=time, y=r2pt)
-        self.plotlist['R2pt'].setPen(color=kelly_colors[colors[n]])
+        for n, nme in enumerate(self.plotR_names):
+            if self.ni_plot_counter == 0:
+                label = nme
+            else:
+                label = None
+            color = kelly_colors[colors[n+1]]
+            self.plotlist[-1][nme] = self.ni_pi.plot(pen = color, name=label)
+            self.plotlist[-2][nme] = self.ni_pi.plot(pen = color, name=label)
+        for n, nme in enumerate(self.plotG_names):
+            if self.ni_plot_counter == 0:
+                label = nme
+            else:
+                label = None
+            color = kelly_colors[colors[n+1]]
+            self.plotlist[-1][nme] = self.pltG_pi.plot(pen = color, name=label)
+            self.plotlist[-2][nme] = self.pltG_pi.plot(pen = color, name=label)
 
-        n = 3
-        self.plotlist['R4pt'].setData(x=time, y=r4pt)
-        self.plotlist['R4pt'].setPen(color=kelly_colors[colors[n]])
+        # n = 1
+        # self.plotlist[-1]['Current1'].setData(x=time, y=current)
+        # # self.plotlist[-1]['Current1'].setPen(color=kelly_colors[colors[n]])
+        # self.plotlist[-1]['Current2'].setData(x=time, y=current)
+        # # self.plotlist[-1]['Current2'].setPen(color=kelly_colors[colors[n]])
 
-        g2pt = 1.0/r2pt
-        g4pt = 1.0/r4pt
+        # n = 2
+        # self.plotlist[-1]['R2pt'].setData(x=time, y=r2pt)
+        # self.plotlist[-1]['R2pt'].setPen(color=kelly_colors[colors[n]])
 
-        n = 2
-        self.plotlist['G2pt'].setData(x=time, y=g2pt)
-        self.plotlist['G2pt'].setPen(color=kelly_colors[colors[n]])
-        n = 4
-        self.plotlist['G4pt'].setData(x=time, y=g4pt)
-        self.plotlist['G4pt'].setPen(color=kelly_colors[colors[n]])
+        # n = 3
+        # self.plotlist[-1]['R4pt'].setData(x=time, y=r4pt)
+        # self.plotlist[-1]['R4pt'].setPen(color=kelly_colors[colors[n]])
+
+        # g2pt = 1.0/r2pt
+        # g4pt = 1.0/r4pt
+
+        # n = 2
+        # self.plotlist[-1]['G2pt'].setData(x=time, y=g2pt)
+        # self.plotlist[-1]['G2pt'].setPen(color=kelly_colors[colors[n]])
+        # n = 4
+        # self.plotlist[-1]['G4pt'].setData(x=time, y=g4pt)
+        # self.plotlist[-1]['G4pt'].setPen(color=kelly_colors[colors[n]])
+
+        # for c in self.plotlist:
+        #     for nme in self.plotR_names:
+        #         print(c[nme].data.shape)
+        self.adder = 0
+        self.ni_plot_counter = 0
 
 
     def graficar(self):
 
         if self.p.param('Plotting', 'Enable').value():
+
             raw_buffer = self.ni_buffer.get()
+            current_buffer = raw_buffer[self.ni_plot_counter:]
+            print('here')
 
-            time =    raw_buffer[:,0]
-            current = raw_buffer[:,1]
-            r2pt =    raw_buffer[:,2]
-            r4pt =    raw_buffer[:,3]
-            g2pt = 1.0/r2pt
-            g4pt = 1.0/r4pt
+            if current_buffer.shape[0] >2:
+                time =    current_buffer[:,0]
+                print('here too')
+                # self.ni_pi.set
+                current = current_buffer[:,1]
+                r2pt =    current_buffer[:,2]
+                r4pt =    current_buffer[:,3]
+                g2pt = 1.0/r2pt
+                g4pt = 1.0/r4pt
 
+                if self.p.param('Plotting', 'Plot Current').value() == True:
+                    n = 1
+                    self.plotlist[-1]['Current1'].setData(x=time, y=current)
+                    self.plotlist[-1]['Current2'].setData(x=time, y=current)
 
-            if self.p.param('Plotting', 'Plot Current').value() == True:
-                n = 1
-                self.plotlist['Current1'].setData(x=time, y=current)
-                self.plotlist['Current2'].setData(x=time, y=current)
+                if self.p.param('Plotting', 'Plot 2p').value() == True:
+                    n = 2
+                    self.plotlist[-1]['R2pt'].setData(x=time, y=r2pt)
+                    self.plotlist[-1]['G2pt'].setData(x=time, y=g2pt)
 
-            if self.p.param('Plotting', 'Plot 2p').value() == True:
-                n = 2
-                self.plotlist['R2pt'].setData(x=time, y=r2pt)
-                self.plotlist['G2pt'].setData(x=time, y=g2pt)
+                if self.p.param('Plotting', 'Plot 4p').value() == True:
+                    n = 3
+                    self.plotlist[-1]['R4pt'].setData(x=time, y=r4pt)
+                    self.plotlist[-1]['G4pt'].setData(x=time, y=g4pt)
 
-            if self.p.param('Plotting', 'Plot 4p').value() == True:
-                n = 3
-                self.plotlist['R4pt'].setData(x=time, y=r4pt)
-                self.plotlist['G4pt'].setData(x=time, y=g4pt)
+                if current_buffer.shape[0] > self.ni_stepper:
+                    self.ni_plot_counter += current_buffer.shape[0]-3
+                    # self.initplot()
+                    print('newplot')
+                    time =    raw_buffer[:,0]
+                    # self.ni_pi.set
+                    self.adder +=1
+                    current = raw_buffer[:,1]
+                    r2pt =    raw_buffer[:,2]
+                    r4pt =    raw_buffer[:,3]
+                    g2pt = 1.0/r2pt
+                    g4pt = 1.0/r4pt
 
+                    if self.p.param('Plotting', 'Plot Current').value() == True:
+                        n = 1
+                        self.plotlist[-2]['Current1'].setData(x=time, y=current)
+                        self.plotlist[-2]['Current2'].setData(x=time, y=current)
+
+                    if self.p.param('Plotting', 'Plot 2p').value() == True:
+                        n = 2
+                        self.plotlist[-2]['R2pt'].setData(x=time, y=r2pt)
+                        self.plotlist[-2]['G2pt'].setData(x=time, y=g2pt)
+
+                    if self.p.param('Plotting', 'Plot 4p').value() == True:
+                        n = 3
+                        self.plotlist[-2]['R4pt'].setData(x=time, y=r4pt)
+                        self.plotlist[-2]['G4pt'].setData(x=time, y=g4pt)
 
 
         if not self.measure_terminate:
