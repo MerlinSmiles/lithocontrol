@@ -233,6 +233,7 @@ class MainWindow(QtGui.QMainWindow):
                 ch2.sigValueChanging.connect(self.valueChanging)
 
         t = ParameterTree()
+        t.setIndentation(10)
         t.setParameters(self.p, showTop=False)
         t.setWindowTitle('pyqtgraph example: Parameter Tree')
 
