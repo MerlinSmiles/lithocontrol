@@ -327,7 +327,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.ni_pi = self.plotFrame.mResistanceeasurePlot.getPlotItem()
         self.ni_pi.setClipToView(True)
-        self.ni_pi.setDownsampling(auto = True)
+        # self.ni_pi.setDownsampling(auto = True)
 
         # self.ni_pi = self.plotView.getPlotItem()
         self.ni_pi.addLegend()
@@ -340,6 +340,7 @@ class MainWindow(QtGui.QMainWindow):
         # self.ni_pi.setXRange(990000, 1000000)
 
         self.pltG_pi = self.plotFrame.mConductancePlot.getPlotItem()
+        self.pltG_pi.setClipToView(True)
 
         self.pltG_pi.setXLink(self.ni_pi)
         self.pltG_pi.addLegend()
@@ -593,6 +594,7 @@ class MainWindow(QtGui.QMainWindow):
                 label = None
             color = kelly_colors[colors[n+1]]
             self.plotlist[-1][nme] = self.ni_pi.plot(pen = color, name=label)
+            color = kelly_colors[colors[n+5]]
             self.plotlist[-2][nme] = self.ni_pi.plot(pen = color, name=label)
         for n, nme in enumerate(self.plotG_names):
             if self.ni_plot_counter == 0:
@@ -601,6 +603,7 @@ class MainWindow(QtGui.QMainWindow):
                 label = None
             color = kelly_colors[colors[n+1]]
             self.plotlist[-1][nme] = self.pltG_pi.plot(pen = color, name=label)
+            color = kelly_colors[colors[n+5]]
             self.plotlist[-2][nme] = self.pltG_pi.plot(pen = color, name=label)
 
         # n = 1
@@ -640,11 +643,9 @@ class MainWindow(QtGui.QMainWindow):
 
             raw_buffer = self.ni_buffer.get()
             current_buffer = raw_buffer[self.ni_plot_counter:]
-            print('here')
 
             if current_buffer.shape[0] >2:
                 time =    current_buffer[:,0]
-                print('here too')
                 # self.ni_pi.set
                 current = current_buffer[:,1]
                 r2pt =    current_buffer[:,2]
