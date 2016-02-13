@@ -60,9 +60,9 @@ class mGroupParameter(Parameter):
 
 registerParameterType('group', mGroupParameter, override=True)
 
-class MainWindow(QtGui.QWidget):
+class parametertreeMainWindow(QtGui.QWidget):
     def __init__(self, parent=None):
-        super(MainWindow, self).__init__(parent)
+        super(parametertreeMainWindow, self).__init__(parent)
         ## Create two ParameterTree widgets, both accessing the same data
 
 
@@ -144,7 +144,7 @@ class MainWindow(QtGui.QWidget):
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
-    window = MainWindow()
+    window = parametertreeMainWindow()
     # window.show()
     sys.exit(app.exec_())
 

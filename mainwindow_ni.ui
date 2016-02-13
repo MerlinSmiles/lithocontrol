@@ -51,20 +51,6 @@
        <property name="orientation">
         <enum>Qt::Vertical</enum>
        </property>
-       <widget class="QWidget" name="gridLayoutWidget">
-        <layout class="QGridLayout" name="gridLayout_2">
-         <item row="0" column="3">
-          <layout class="QVBoxLayout" name="verticalLayout_4" stretch="">
-           <property name="leftMargin">
-            <number>10</number>
-           </property>
-           <property name="rightMargin">
-            <number>10</number>
-           </property>
-          </layout>
-         </item>
-        </layout>
-       </widget>
       </widget>
       <widget class="QWidget" name="verticalLayoutWidget">
        <layout class="QVBoxLayout" name="plotSplitter"/>
