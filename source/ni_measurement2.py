@@ -97,17 +97,22 @@ class ni_Worker(mp.Process):
 
 if not demo:
     class MeasureTask(Task):
-        def __init__(self, resultQueue= None, settings = None):
+        def __init__(self, resultQueue= None, settings = None, timer = None):
             Task.__init__(self)
             self.running = False
             self.resultQueue = resultQueue
             self.tdelta = 0.0
-
+            if timer is None:
+                timer = QTime.currentTime()
+                timer.start()
+            self.timer = timer
 
             self.acq_samples = settings['acq_samples']
 
             self.num_chans = len(settings['channels'])
             self.ch_out = []
+
+            self.data = np.zeros(self.num_chans+1)
 
             for i in settings['channels']:
                 chan = settings['device']+ '/ai' + str(i[0])
@@ -155,14 +160,16 @@ if not demo:
 
             av_data = np.mean(meas_data,1)
 
-            av_data = av_data.reshape((self.num_chans,-1))
+            av_data = av_data.reshape((-1,self.num_chans))
 
             # print('callback')
 
             # tdelta = settings['time'].elapsed()/1000.0
             # if self.tdelta<=tdelta:
                 # self.tdelta = tdelta
-            self.resultQueue.put(av_data)
+            self.data[0] = self.timer.elapsed()/1000.0
+            self.data[1:] = av_data
+            self.resultQueue.put(self.data)
             # print(np.array([av_data[0],av_data[1]]))
             # self.resultQueue.append(np.array([av_data[0],av_data[1]]))
             # settings['buff'].append(np.array([av_data[0],av_data[1]]))
