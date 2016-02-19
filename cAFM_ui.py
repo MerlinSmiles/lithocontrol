@@ -104,6 +104,11 @@ class MainWindow(QtGui.QMainWindow):
 
         super(MainWindow, self).__init__(parent)
 
+        self.offset_angle = 0
+        self.offset_center = [0,0]
+        self.dxf_design = None
+        self.designPltHandle = []
+
 
         splash_pix = QtGui.QPixmap(r'./source/splash2.png')
         self.splash = QtGui.QSplashScreen(splash_pix)
@@ -238,11 +243,6 @@ class MainWindow(QtGui.QMainWindow):
         mainMenu = menubar.addMenu('&Main')
         mainMenu.addAction(exitAction)
 
-
-        self.offset_angle = 0
-        self.offset_center = [0,0]
-        self.dxf_design = None
-        self.designPltHandle = []
 
         self.reoffset()
         self.pltDesign()
@@ -410,7 +410,8 @@ class MainWindow(QtGui.QMainWindow):
             self.dht_WorkerThread = None
 
         self.ni_pi = self.plotFrame.measurePlot.getPlotItem()
-        self.ni_pi.setDownsampling(auto=True)
+        # self.ni_pi.setDownsampling(auto=True)
+        self.ni_pi.setClipToView(True)
 
         # self.ni_pi = self.plotView.getPlotItem()
         self.ni_pi.addLegend()
@@ -423,7 +424,8 @@ class MainWindow(QtGui.QMainWindow):
         # self.ni_pi.setXRange(990000, 1000000)
 
         self.pltG_pi = self.plotFrame.mConductancePlot.getPlotItem()
-        self.pltG_pi.setDownsampling(auto=True)
+        # self.pltG_pi.setDownsampling(auto=True)
+        self.pltG_pi.setClipToView(True)
         self.pltG_pi.setXLink(self.ni_pi)
         self.pltG_pi.addLegend()
         self.pltG_pi_legend = self.pltG_pi.legend
@@ -552,6 +554,7 @@ class MainWindow(QtGui.QMainWindow):
             self.copy = int(line[1])
             self.log(['sketch','copy'],['copy', self.copy])
             print( 'VTIP ' , self.vtip )
+            self.afmPoints.clear()
 
         elif line.startswith('# start'):
             self.statusBar().showMessage(line)
@@ -747,7 +750,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def pickFile(self):
         # http://stackoverflow.com/questions/20928023/how-to-use-qfiledialog-options-and-retreive-savefilename
-        filename = QtGui.QFileDialog.getOpenFileName(self, 'Select design file', self.inFile, selectedFilter='*.dxf')
+        filename = QtGui.QFileDialog.getOpenFileName(self, 'Select design file', self.dxffileName, filter='*.dxf')
         if filename:
             self.dxffileName = str(filename)
             self.readDXFFile()
@@ -875,7 +878,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def pltDesign(self):
-        print('in pltdesign')
+        # print('in pltdesign')
         if self.dxf_design == None:
             self.dxf_design = ezdxf.readfile('./layout/design.dxf')
 
@@ -919,14 +922,14 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def reoffset(self):
-        print('in reoffset')
+        # print('in reoffset')
         dx = -self.offset_dx_spin.value()
         dy = -self.offset_dy_spin.value()
 
         self.offset_angle = -self.offset_angle_spin.value()
         self.offset_center = [dx,dy]
 
-        self.plotFrame.setAfmImage(angle = self.offset_angle, offset = self.offset_center )
+        self.plotFrame.setAfmImage(angle = self.offset_angle, offset = self.offset_center, updateRange=False )
 
         # print(self.plotFrame.afmIm.rect)
         # self.replot()
@@ -952,10 +955,34 @@ class MainWindow(QtGui.QMainWindow):
             c = np.add(c, direction*offset)
         return c
 
+    def remulti_angle(self):
+
+        distance = self.multi_distance.value()
+        angle = self.multi_angle.value()
+        angle = (angle/180.) * np.pi
+        dx = distance * np.cos(angle)
+        dy = distance * np.sin(angle)
+
+        self.multi_dx.setValue(dx)
+        self.multi_dy.setValue(dy)
+        self.remulti()
 
 
     def remulti(self):
-        print('in remulti')
+
+        dx = self.multi_dx.value()
+        dy = self.multi_dy.value()
+
+        if dx != 0:
+            theta = np.arctan(dy/dx)
+            theta *= 180/np.pi
+        else:
+            theta = np.sign(dy) * 90
+
+        self.multi_angle.setValue(theta)
+        self.multi_distance.setValue(np.sqrt(dx**2 + dy**2))
+        # print('in remulti')
+
         root = self.tree_file.rootIndex()
         for i in range(0,self.model.rowCount(root)):
             index = self.model.index(i, 0)
@@ -970,7 +997,7 @@ class MainWindow(QtGui.QMainWindow):
 
     @QtCore.pyqtSlot("QModelIndex", "QModelIndex")
     def replot(self, index = None):
-        print('in replot')
+        # print('in replot')
         if index == None:
             root = self.tree_file.rootIndex()
             for i in range(0,self.model.rowCount(root)):
@@ -978,7 +1005,7 @@ class MainWindow(QtGui.QMainWindow):
                 item  = self.model.getItem(index)
                 for ch in range(0,item.childCount()):
                     index2 = self.model.index(ch, 0,  self.model.index(i))
-                    print(index2)
+                    # print(index2)
                     self.replot(index2)
             return
 
@@ -1193,6 +1220,7 @@ class MainWindow(QtGui.QMainWindow):
     #         self.updateActions()
 
     def updateActions(self):
+        self.pltDesign()
         return
         # hasSelection = not self.tree_file.selectionModel().selection().isEmpty()
         # self.removeRowAction.setEnabled(hasSelection)
@@ -1429,6 +1457,9 @@ class MainWindow(QtGui.QMainWindow):
         self.multi_time.editingFinished.connect(self.remulti)
         self.multi_dx.editingFinished.connect(self.remulti)
         self.multi_dy.editingFinished.connect(self.remulti)
+
+        self.multi_angle.editingFinished.connect(self.remulti_angle)
+        self.multi_distance.editingFinished.connect(self.remulti_angle)
 
 
         self.offset_check_lock.stateChanged.connect(self.lockOffset)

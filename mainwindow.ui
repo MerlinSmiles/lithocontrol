@@ -86,7 +86,7 @@
        <widget class="QWidget" name="gridLayoutWidget">
         <layout class="QGridLayout" name="gridLayout_2">
          <item row="0" column="3">
-          <layout class="QVBoxLayout" name="verticalLayout_4" stretch="0,0">
+          <layout class="QVBoxLayout" name="verticalLayout_4" stretch="0,0,0">
            <property name="leftMargin">
             <number>10</number>
            </property>
@@ -217,6 +217,84 @@
                 </property>
                 <property name="text">
                  <string>timing</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="groupBox_2">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="title">
+              <string>Back-Gate</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_3">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_14">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Enable</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_15">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Vbg</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QCheckBox" name="bg_check">
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QDoubleSpinBox" name="bg_volt">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="decimals">
+                 <number>2</number>
+                </property>
+                <property name="minimum">
+                 <double>-200.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>200.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3">
+               <widget class="QLabel" name="label_16">
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QLabel" name="label_17">
+                <property name="text">
+                 <string>V</string>
                 </property>
                </widget>
               </item>
@@ -527,10 +605,44 @@
                  <double>-99.989999999999995</double>
                 </property>
                 <property name="singleStep">
-                 <double>0.100000000000000</double>
+                 <double>0.010000000000000</double>
                 </property>
                 <property name="value">
                  <double>0.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QLabel" name="label_12">
+                <property name="text">
+                 <string># copies</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="4">
+               <widget class="QLabel" name="label_19">
+                <property name="text">
+                 <string>s</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="3">
+               <widget class="QDoubleSpinBox" name="multi_time">
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <double>99999.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.500000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="1">
+               <widget class="QLabel" name="label_28">
+                <property name="text">
+                 <string>Angle</string>
                 </property>
                </widget>
               </item>
@@ -549,7 +661,7 @@
                  <double>-99.989999999999995</double>
                 </property>
                 <property name="singleStep">
-                 <double>0.100000000000000</double>
+                 <double>0.010000000000000</double>
                 </property>
                 <property name="value">
                  <double>0.000000000000000</double>
@@ -583,13 +695,6 @@
                 </property>
                </widget>
               </item>
-              <item row="1" column="1">
-               <widget class="QLabel" name="label_12">
-                <property name="text">
-                 <string># copies</string>
-                </property>
-               </widget>
-              </item>
               <item row="2" column="1">
                <widget class="QLabel" name="label_18">
                 <property name="text">
@@ -597,101 +702,36 @@
                 </property>
                </widget>
               </item>
-              <item row="2" column="4">
-               <widget class="QLabel" name="label_19">
+              <item row="7" column="1">
+               <widget class="QLabel" name="label_29">
                 <property name="text">
-                 <string>s</string>
+                 <string>Distance</string>
                 </property>
                </widget>
               </item>
-              <item row="2" column="3">
-               <widget class="QDoubleSpinBox" name="multi_time">
-                <property name="decimals">
-                 <number>1</number>
+              <item row="6" column="3">
+               <widget class="QDoubleSpinBox" name="multi_angle">
+                <property name="minimum">
+                 <double>-720.000000000000000</double>
                 </property>
                 <property name="maximum">
-                 <double>99999.000000000000000</double>
+                 <double>720.000000000000000</double>
                 </property>
                 <property name="singleStep">
                  <double>0.500000000000000</double>
                 </property>
                </widget>
               </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
-            <widget class="QGroupBox" name="groupBox_2">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="title">
-              <string>Back-Gate</string>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_3">
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_14">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Enable</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_15">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Vbg</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QCheckBox" name="bg_check">
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QDoubleSpinBox" name="bg_volt">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
+              <item row="7" column="3">
+               <widget class="QDoubleSpinBox" name="multi_distance">
                 <property name="decimals">
-                 <number>2</number>
+                 <number>3</number>
                 </property>
                 <property name="minimum">
-                 <double>-200.000000000000000</double>
+                 <double>-99.989999999999995</double>
                 </property>
-                <property name="maximum">
-                 <double>200.000000000000000</double>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="3">
-               <widget class="QLabel" name="label_16">
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="2">
-               <widget class="QLabel" name="label_17">
-                <property name="text">
-                 <string>V</string>
+                <property name="singleStep">
+                 <double>0.010000000000000</double>
                 </property>
                </widget>
               </item>
@@ -779,22 +819,6 @@
               </property>
              </spacer>
             </item>
-            <item row="3" column="1">
-             <widget class="QDoubleSpinBox" name="offset_angle_spin">
-              <property name="enabled">
-               <bool>true</bool>
-              </property>
-              <property name="minimum">
-               <double>-720.000000000000000</double>
-              </property>
-              <property name="maximum">
-               <double>720.000000000000000</double>
-              </property>
-              <property name="singleStep">
-               <double>0.050000000000000</double>
-              </property>
-             </widget>
-            </item>
             <item row="4" column="1">
              <widget class="QDoubleSpinBox" name="offset_dx_spin">
               <property name="minimum">
@@ -838,6 +862,22 @@
               </property>
              </widget>
             </item>
+            <item row="3" column="1">
+             <widget class="QDoubleSpinBox" name="offset_angle_spin">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="minimum">
+               <double>-720.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>720.000000000000000</double>
+              </property>
+              <property name="singleStep">
+               <double>0.500000000000000</double>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
          </item>
@@ -857,7 +897,7 @@
      <x>0</x>
      <y>0</y>
      <width>1059</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <property name="nativeMenuBar">

@@ -34,7 +34,7 @@ def dxf2shape(item, threshold = 1e-9, fillStep = None, fillAngle = None, pathDir
     if item.entity.dxftype() == 'SPLINE':
         with item.entity.edit_data() as data:
             pts = np.array(data.fit_points)
-            print(np.array(data.control_points)[:,:2])
+            # print(np.array(data.control_points)[:,:2])
         item.entity.points = pts
         data = item.entity.points[:,:2]
         # print(data)
@@ -48,7 +48,7 @@ def dxf2shape(item, threshold = 1e-9, fillStep = None, fillAngle = None, pathDir
     outer_collection = []
     for angle in fill_angle:
         fill_angle = float(angle)
-        print (angle)
+        # print (angle)
 
         pts  = data
 
@@ -141,7 +141,7 @@ def dxf2shape(item, threshold = 1e-9, fillStep = None, fillAngle = None, pathDir
                 collection[i] = Rotate2D(collection[i], -fill_angle)
         except:
             print('ff', collection, fill_angle)
-            print(lines)
+            # print(lines)
         outer_collection.append(collection)
 
     item.pltData = [k.reshape((-1,2)) for k in outer_collection]
