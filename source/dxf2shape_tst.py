@@ -142,9 +142,16 @@ def dxf2shape(item, threshold = 1e-9, fillStep = None, fillAngle = None, pathDir
         except:
             print('ff', collection, fill_angle)
             # print(lines)
-        outer_collection.append(collection)
+        # print(collection.shape)
+        for k in collection:
+            try:
+                c = k.reshape((-1,2))
+                outer_collection.append(c)
+            except:
+                print('code 1234221')
+                print(k)
 
-    item.pltData = [k.reshape((-1,2)) for k in outer_collection]
+    item.pltData = [k for k in outer_collection]
     return item.pltData
 
     # sorted_collection = []

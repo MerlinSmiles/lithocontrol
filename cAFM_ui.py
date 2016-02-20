@@ -1619,6 +1619,14 @@ class MainWindow(QtGui.QMainWindow):
                 r2pt = raw_buffer[2]
                 r4pt = raw_buffer[3]
 
+                g2pt = 1.0/r2pt *1e6
+                g4pt = 1.0/r4pt *1e6
+                mask = numpy.isfinite(g2pt) & numpy.isfinite(g4pt)
+                g2pt = g2pt[mask]
+                g4pt = g4pt[mask]
+                current2 = current[mask]
+                d_time = d_time[mask]
+
                 n = 1
                 av_len = -10
                 if self.plot_counter>11:
@@ -1639,7 +1647,7 @@ class MainWindow(QtGui.QMainWindow):
 
                     self.plotlist['Current1'].setData(x=d_time, y=current*1e9)
                     self.plotlist['Current1'].setPen(color=kelly_colors[colors[n]])
-                    self.plotlist['Current2'].setData(x=d_time, y=current*1e9)
+                    self.plotlist['Current2'].setData(x=d_time, y=current2*1e9)
                     self.plotlist['Current2'].setPen(color=kelly_colors[colors[n]])
 
                 n = 2
@@ -1668,8 +1676,8 @@ class MainWindow(QtGui.QMainWindow):
                     self.plotlist['R4pt'].setData(x=d_time, y=r4pt/1000.0)
                     self.plotlist['R4pt'].setPen(color=kelly_colors[colors[n]])
 
-                g2pt = 1.0/r2pt *1e6
-                g4pt = 1.0/r4pt *1e6
+
+
 
                 n = 2
                 if self.settings['plot']['plot_2pt'] == True:

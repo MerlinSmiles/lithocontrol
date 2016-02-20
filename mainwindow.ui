@@ -867,6 +867,12 @@
               <property name="enabled">
                <bool>true</bool>
               </property>
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="minimum">
                <double>-720.000000000000000</double>
               </property>
@@ -874,7 +880,7 @@
                <double>720.000000000000000</double>
               </property>
               <property name="singleStep">
-               <double>0.500000000000000</double>
+               <double>0.100000000000000</double>
               </property>
              </widget>
             </item>
@@ -897,7 +903,7 @@
      <x>0</x>
      <y>0</y>
      <width>1059</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
