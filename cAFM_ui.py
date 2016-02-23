@@ -553,7 +553,7 @@ class MainWindow(QtGui.QMainWindow):
             line = line.split( )
             self.copy = int(line[2])
             self.log(['sketch','copy'],['copy', self.copy])
-            print( 'VTIP ' , self.vtip )
+            print( 'Copy ' , self.copy )
             self.afmPoints.clear()
 
         elif line.startswith('# start'):
@@ -649,6 +649,7 @@ class MainWindow(QtGui.QMainWindow):
                 # if item.data(6) == 'Layer':
                 self.sAdd('')
                 self.sComment(item.data())
+                print('fix layer comment')
 
                 if len(chitems) != 0:
                     nfile = True
@@ -1632,7 +1633,7 @@ class MainWindow(QtGui.QMainWindow):
 
                 g2pt = 1.0/r2pt *1e6
                 g4pt = 1.0/r4pt *1e6
-                mask = numpy.isfinite(g2pt) & numpy.isfinite(g4pt)
+                mask = np.isfinite(g2pt) & np.isfinite(g4pt) & np.isfinite(d_time) & (d_time > 0.1)
                 g2pt = g2pt[mask]
                 g4pt = g4pt[mask]
                 current2 = current[mask]
