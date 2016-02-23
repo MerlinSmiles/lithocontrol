@@ -551,7 +551,7 @@ class MainWindow(QtGui.QMainWindow):
 
         elif line.startswith('# copy'):
             line = line.split( )
-            self.copy = int(line[1])
+            self.copy = int(line[2])
             self.log(['sketch','copy'],['copy', self.copy])
             print( 'VTIP ' , self.vtip )
             self.afmPoints.clear()
@@ -665,20 +665,31 @@ class MainWindow(QtGui.QMainWindow):
                         self.sComment(startline)
                         # self.sComment()
                         if child.checkState == 2:
-                            for chpath in child.pltData[::child.pathOrder]:
 
-                                path = self.transformData( chpath[::child.pathOrder] ,direction=1)
-                                x,y = np.add(path[0],offset)
-                                self.sAdd('vtip\t%f' %(0.0))
-                                self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
-                                self.sAdd('vtip\t%f' %float(child.data('Volt')))
-                                r = child.data('Rate')
-                                for x,y in np.add(path,offset):
-                                # Maybe go from [1:] but going to the startpoint twice should reduce vtip lag
-                                    self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,r))
+                            data = child.pltData
+                            if data != []:
+                                for i in data:
+                                    print (np.array(i).shape)
+                                    # dta = self.transformData(i[::item.pathOrder])
+                                    dta = np.add(i[::child.pathOrder],offset)
+                                    # pdi = self.pi.plot(dta, pen = showPen)
 
-                                self.sAdd('vtip\t%f' %(0.0))
-                                self.sComment(['end',child.data('Name')])
+                            # for chpath in child.pltData[::child.pathOrder]:
+                                # dta = chpath[::child.pathOrder]
+
+                                    path = self.transformData( dta ,direction=1)
+                                    # print(path)
+                                    x,y = path[0]
+                                    self.sAdd('vtip\t%f' %(0.0))
+                                    self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
+                                    self.sAdd('vtip\t%f' %float(child.data('Volt')))
+                                    r = child.data('Rate')
+                                    for x,y in path:
+                                    # Maybe go from [1:] but going to the startpoint twice should reduce vtip lag
+                                        self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,r))
+
+                                    self.sAdd('vtip\t%f' %(0.0))
+                                    self.sComment(['end',child.data('Name')])
             x0,y0 = self.offset_center
             self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(-x0,-y0,self.freerate))
             # self.sAdd('vtip\t%f' %(0.0))
