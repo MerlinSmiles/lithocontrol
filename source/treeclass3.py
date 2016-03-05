@@ -698,7 +698,7 @@ class TreeItem(object):
             value = colname
         else:
             if colname == 'Angle':
-                value= float(value)
+                value= str(value)
                 if self.fillAngle != value:
                     self.fillAngle = value
                     recalc = True
@@ -1190,7 +1190,7 @@ class TreeModel(QtCore.QAbstractItemModel):
         self.dxf = data
 
         for layer in self.dxf.layers:
-            print(layer.dxf.name)
+            # print(layer.dxf.name)
             if layer.dxf.name == 'Design':
                 continue
             query = self.layerquery(layer.dxf.name)

@@ -6,6 +6,7 @@
 import matplotlib.pyplot as plt
 # %matplotlib inline
 import numpy as np
+import ast
 # from scipy.interpolate import interp1d
 from helpers import *
 
@@ -25,20 +26,15 @@ def dxf2shape(item, threshold = 1e-9, fillStep = None, fillAngle = None, pathDir
         fill_step = item.fillStep
     if fillAngle == None:
         fill_angle = item.fillAngle
+    fill_angle = ast.literal_eval('['+fill_angle+']')
+    # print(fill_angle)
+    # angle = 0
 
-    # if pathDirection == None:
-    #     pathDirection = item.pathDirection
-
-    # if pathDirection == 0:
-    #     pathDirection = 1
-    # else:
-    #     pathDirection = -1
-    # print(pathDirection)
 
     if item.entity.dxftype() == 'SPLINE':
         with item.entity.edit_data() as data:
             pts = np.array(data.fit_points)
-            print(np.array(data.control_points)[:,:2])
+            # print(np.array(data.control_points)[:,:2])
         item.entity.points = pts
         data = item.entity.points[:,:2]
         # print(data)
@@ -48,100 +44,114 @@ def dxf2shape(item, threshold = 1e-9, fillStep = None, fillAngle = None, pathDir
         data = np.array(item.entity.points)[:,:2]
     else:
         return 0
-    pts  = data[:]
 
-    # return
-    if not item.is_closed:
-        item.pltData = [pts.reshape((-1,2))]
-        return [pts.reshape((-1,2))]
-    else:
-        pts = np.append(pts,[pts[0]],axis = 0)
-    if fill_step<=0 :
-        self.error('Tools diameter must be greater than 0!', 'error')
+    outer_collection = []
+    for angle in fill_angle:
+        fill_angle = float(angle)
+        # print (angle)
+
+        pts  = data
+
+        # return
+        if not item.is_closed:
+            item.pltData = [pts.reshape((-1,2))]
+            return [pts.reshape((-1,2))]
+        else:
+            pts = np.append(pts,[pts[0]],axis = 0)
+        if fill_step<=0 :
+            self.error('Tools diameter must be greater than 0!', 'error')
 
 
-    pts = Rotate2D(pts,fill_angle)
-    ll = []
-    bounds = [min(pts[:,0]), min(pts[:,1]), max(pts[:,0]), max(pts[:,1])]
-    line_x = bounds[0]-fill_step/2.0
-    top = True
-    while (line_x<=bounds[2]+fill_step) :
-        if top :
-            ll.append([[line_x,line_x], [bounds[1],bounds[3]]])
-        else :
-            ll.append([[line_x,line_x], [bounds[3],bounds[1]]])
-        line_x += fill_step
-        top = not top
+        pts = Rotate2D(pts,fill_angle)
+        ll = []
+        bounds = [min(pts[:,0]), min(pts[:,1]), max(pts[:,0]), max(pts[:,1])]
+        line_x = bounds[0]-fill_step/2.0
+        top = True
+        while (line_x<=bounds[2]+fill_step) :
+            if top :
+                ll.append([[line_x,line_x], [bounds[1],bounds[3]]])
+            else :
+                ll.append([[line_x,line_x], [bounds[3],bounds[1]]])
+            line_x += fill_step
+            top = not top
 
-    # plt.plot(pts[:,0],pts[:,1],'-')
-    # for u in ll:
-    #     pass
-    #     plt.plot(u[0], u[1])
-    lines = []
-    ll = np.array(ll)
-    # print( pts[:,1] )
-    for i in ll:
-        a1 = np.array([i[0][0], i[1][0]])
-        a2 = np.array([i[0][1], i[1][1]])
-        b1 = pts[0]
-        ints = []
-        for b2 in pts[1:]:
-            inter = intersect( a1,a2, b1, b2 )
+        # plt.plot(pts[:,0],pts[:,1],'-')
+        # for u in ll:
+        #     pass
+        #     plt.plot(u[0], u[1])
+        lines = []
+        ll = np.array(ll)
+        # print( pts[:,1] )
+        for i in ll:
+            a1 = np.array([i[0][0], i[1][0]])
+            a2 = np.array([i[0][1], i[1][1]])
+            b1 = pts[0]
+            ints = []
+            for b2 in pts[1:]:
+                inter = intersect( a1,a2, b1, b2 )
 
-            # print( a1,a2, b1, b2 )
-            if inter != 0:
-                ints.append(inter)
-                # print( inter,  a1,a2, b1, b2 )
-            b1 = b2
-        # print( ints )
-        if len(ints) > 1:
-            ints = np.array(ints)
-            # print(ints)
-            ints.view('float32,float32').sort(order=['f1'], axis=0)
-            # it actually might happen, that there is an uneven number of points, so if there are two points very close
-            if len(ints)%2 !=0:
-                pt = 0
-                for j, i in enumerate(ints):
-                    if j>0:
-                        if abs(ints[j-1,1] - i[1]) <= threshold:
-                            pt = j
-                if pt != 0:
-                    ints = np.delete(ints,pt,0)
-            for i in np.arange(0,len(ints),2):
-                lines.append( np.array([ints[i],ints[i+1]]) )
+                # print( a1,a2, b1, b2 )
+                if inter != 0:
+                    ints.append(inter)
+                    # print( inter,  a1,a2, b1, b2 )
+                b1 = b2
+            # print( ints )
+            if len(ints) > 1:
+                ints = np.array(ints)
+                # print(ints)
+                ints.view('float32,float32').sort(order=['f1'], axis=0)
+                # it actually might happen, that there is an uneven number of points, so if there are two points very close
+                if len(ints)%2 !=0:
+                    pt = 0
+                    for j, i in enumerate(ints):
+                        if j>0:
+                            if abs(ints[j-1,1] - i[1]) <= threshold:
+                                pt = j
+                    if pt != 0:
+                        ints = np.delete(ints,pt,0)
+                for i in np.arange(0,len(ints),2):
+                    lines.append( np.array([ints[i],ints[i+1]]) )
 
-    # lines = lines
-    # print(lines)
-    collection = []
-    npath = []
-    while len(lines)>0:
-        if len(npath) == 0:
-            npath.append(lines[0])
-            lines = np.delete(lines,0,0)
-        a,b,l = get_nearest_point(lines,npath[-1][1])
-        if a == None:
-            continue
-        last_line = npath[-1]
-        this_line = lines[b][::1-(2*a)]
+        # lines = lines
+        # print(lines)
+        collection = []
+        npath = []
+        while len(lines)>0:
+            if len(npath) == 0:
+                npath.append(lines[0])
+                lines = np.delete(lines,0,0)
+            a,b,l = get_nearest_point(lines,npath[-1][1])
+            if a == None:
+                continue
+            last_line = npath[-1]
+            this_line = lines[b][::1-(2*a)]
 
-        if abs(last_line[0][0] - this_line[0][0]) > (fill_step+1e-9):
-            collection.append(np.array(npath))
-            npath = []
+            if abs(last_line[0][0] - this_line[0][0]) > (fill_step+1e-9):
+                collection.append(np.array(npath))
+                npath = []
 
-        npath.append(this_line)
-        lines = np.delete(lines,b,0)
+            npath.append(this_line)
+            lines = np.delete(lines,b,0)
 
-    collection.append(np.array(npath))
-    collection = np.array(collection)
+        collection.append(np.array(npath))
+        collection = np.array(collection)
 
-    try:
-        for i in range(len(collection)):
-            collection[i] = Rotate2D(collection[i], -fill_angle)
-    except:
-        print('ff', collection, fill_angle)
-        print(lines)
+        try:
+            for i in range(len(collection)):
+                collection[i] = Rotate2D(collection[i], -fill_angle)
+        except:
+            print('ff', collection, fill_angle)
+            # print(lines)
+        # print(collection.shape)
+        for k in collection:
+            try:
+                c = k.reshape((-1,2))
+                outer_collection.append(c)
+            except:
+                print('code 1234221')
+                print(k)
 
-    item.pltData = [k.reshape((-1,2)) for k in collection]
+    item.pltData = [k for k in outer_collection]
     return item.pltData
 
     # sorted_collection = []

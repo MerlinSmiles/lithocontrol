@@ -9,7 +9,7 @@
     "temp_color": {
       "color": "vivid_orange"
     },
-    "plot_timing": 100,
+    "plot_timing": 250,
     "current_color": {
       "color": "strong_purple"
     },
