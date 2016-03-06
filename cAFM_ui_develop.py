@@ -89,6 +89,7 @@ kelly_colors = dict(vivid_yellow=(255, 179, 0),
 # mkPen for selected
 # selectPen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
 sketchPen = pg.mkPen(color='FF0000DD',width=2.5)  #, style=QtCore.Qt.DotLine
+sketchedPen = pg.mkPen(color='FF000077',width=3)  #, style=QtCore.Qt.DotLine
 movePen = pg.mkPen(color='1E4193',width=2, style=QtCore.Qt.DotLine)  #, style=QtCore.Qt.DotLine
 showPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine , width=
 selectPen = pg.mkPen(color='00FF00',width=3)  #, style=QtCore.Qt.DotLine , width=
@@ -106,6 +107,11 @@ class MainWindow(QtGui.QMainWindow):
         self.timer = self.dateTime.time()
         self.dater = self.dateTime.date()
         self.lastpostime = 0
+        self.offset_angle = 0
+        self.offset_center = [0,0]
+        self.dxf_design = None
+        self.designPltHandle = []
+
         print(self.dateTime.toPyDateTime())
 
         # str(QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss'))
@@ -247,10 +253,6 @@ class MainWindow(QtGui.QMainWindow):
         mainMenu.addAction(exitAction)
 
 
-        self.offset_angle = 0
-        self.offset_center = [0,0]
-        self.dxf_design = None
-        self.designPltHandle = []
 
         self.reoffset()
         self.pltDesign()
@@ -308,17 +310,17 @@ class MainWindow(QtGui.QMainWindow):
 
         self.afminfo = {}
 
-        self.afmPosition = pg.PlotDataItem(size=5, pen=sketchPen, brush=pg.mkBrush(255, 0, 0, 255))
-        self.afmPosition.setZValue(100)
-        self.afmNow = pg.PlotDataItem(size=2, pen=sketchPen, brush=pg.mkBrush(0, 0, 255, 255))
-        self.afmAll = pg.PlotDataItem(size=2, pen=sketchPen, brush=pg.mkBrush(0, 0, 255, 255))
+        # self.afmPosition = pg.PlotDataItem(size=5, pen=sketchedPen)
+        # self.afmPosition.setZValue(100)
+        self.afmNow = pg.PlotDataItem(size=2, pen=sketchPen)
+        # self.afmAll = pg.PlotDataItem(size=2, pen=showPen)
         self.afmNow.setZValue(110)
-        self.afmAll.setZValue(110)
+        # self.afmAll.setZValue(110)
 
         self.preservePlots = []
-        self.preservePlots.append(self.afmPosition)
+        # self.preservePlots.append(self.afmPosition)
         self.preservePlots.append(self.afmNow)
-        self.preservePlots.append(self.afmAll)
+        # self.preservePlots.append(self.afmAll)
 
         self.dxffileName = def_dxf_file
 
@@ -479,9 +481,9 @@ class MainWindow(QtGui.QMainWindow):
             QtCore.QTimer.singleShot(self.settings['plot']['plot_timing']/1.0, self.sketchicar)
 
     def afmReady(self):
-        self.afmPosition.clear()
+        # self.afmPosition.clear()
         self.afmNow.clear()
-        self.afmAll.clear()
+        # self.afmAll.clear()
         for i in self.sketchPoints:
             self.pi.removeItem(i)
         self.sketchPoints = []
@@ -501,7 +503,6 @@ class MainWindow(QtGui.QMainWindow):
 
         elif line.startswith('# start'):
             print('Started')
-            print(line)
             self.sketching = True
             line = line.split( )
             self.status_entity = line[2]
@@ -517,11 +518,12 @@ class MainWindow(QtGui.QMainWindow):
             print(points.shape)
             xl,yl,rl = np.copy(points).T
 
-            ti = pg.PlotDataItem(xl,yl, size=2, pen=sketchPen, brush=pg.mkBrush(0, 0, 255, 100))
+            ti = pg.PlotDataItem(xl,yl, pen=sketchedPen)
             self.sketchPoints.append(ti)
             self.pi = self.plotFrame.sketchPlot.getPlotItem()
             self.pi.addItem(ti)
 
+            self.afmNow.clear()
             self.afmPoints.clear()
             self.log(['sketch','ID'],['end', line[2]])
             print('Finished '+line[2])
@@ -586,9 +588,9 @@ class MainWindow(QtGui.QMainWindow):
             # r = float(line[3])
 
     def sketchNow(self, index=None):
-        self.afmPosition.clear()
+        # self.afmPosition.clear()
         self.afmNow.clear()
-        self.afmAll.clear()
+        # self.afmAll.clear()
         self.sketchFile = ''
         if index == None:
             index = self.model
@@ -642,20 +644,32 @@ class MainWindow(QtGui.QMainWindow):
                         self.sComment(child.data(), 'entity ')
                         # self.sComment()
                         if child.checkState == 2:
-                            for chpath in child.pltData[::child.pathOrder]:
 
-                                path = self.transformData( chpath[::child.pathOrder] ,direction=1)
-                                x,y = np.add(path[0],offset)
-                                self.sAdd('vtip\t%f' %(0.0))
-                                self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
-                                self.sAdd('vtip\t%f' %float(child.data('Volt')))
-                                r = child.data('Rate')
-                                for x,y in np.add(path,offset):
-                                # Maybe go from [1:] but going to the startpoint twice should reduce vtip lag
-                                    self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,r))
+                            data = child.pltData
+                            if data != []:
+                                for i in data:
+                                    print (np.array(i).shape)
+                                    # dta = self.transformData(i[::item.pathOrder])
+                                    dta = np.add(i[::child.pathOrder],offset)
+                                    # pdi = self.pi.plot(dta, pen = showPen)
 
-                                self.sAdd('vtip\t%f' %(0.0))
-                                self.sComment(['end',child.data('Name')])
+                            # for chpath in child.pltData[::child.pathOrder]:
+                                # dta = chpath[::child.pathOrder]
+
+                                    path = self.transformData( dta ,direction=1)
+                                    # print(path)
+                                    x,y = path[0]
+                                    self.sAdd('vtip\t%f' %(0.0))
+                                    self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
+                                    self.sAdd('vtip\t%f' %float(child.data('Volt')))
+                                    r = child.data('Rate')
+                                    for x,y in path:
+                                    # Maybe go from [1:] but going to the startpoint twice should reduce vtip lag
+                                        self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,r))
+
+                                    self.sAdd('vtip\t%f' %(0.0))
+                                    self.sComment(['end',child.data('Name')])
+
             x0,y0 = self.offset_center
             self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(-x0,-y0,self.freerate))
             # self.sAdd('vtip\t%f' %(0.0))
@@ -676,7 +690,7 @@ class MainWindow(QtGui.QMainWindow):
                 self.SocketThread.send_message(transmit + self.sketchFile)
 
     def saveSketch(self):
-        self.sketchSubFolder = 'sketch_%i'%(self.timer.elapsed()/1000.0) #QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss')
+        self.sketchSubFolder = 'sketch_%i'%(self.timer.elapsed()/1000.0)
 
         if not os.path.exists(self.storeFolder + self.sketchSubFolder):
             os.makedirs(str(self.storeFolder + self.sketchSubFolder))
@@ -728,10 +742,11 @@ class MainWindow(QtGui.QMainWindow):
 
     def pickFile(self):
         # http://stackoverflow.com/questions/20928023/how-to-use-qfiledialog-options-and-retreive-savefilename
-        filename = QtGui.QFileDialog.getOpenFileName(self, 'Select design file', self.inFile, selectedFilter='*.dxf')
+        filename = QtGui.QFileDialog.getOpenFileName(self, 'Select design file', self.dxffileName, filter='*.dxf')
         if filename:
             self.dxffileName = str(filename)
             self.readDXFFile()
+
 
     def pickDirectory(self):
         outDir = QtGui.QFileDialog.getExistingDirectory(self, 'Select output Directory', self.outDir)
@@ -786,7 +801,7 @@ class MainWindow(QtGui.QMainWindow):
             colnum = self.headers.index(col)
             self.tree_file.setItemDelegateForColumn(colnum,CheckBoxDelegate(self, column = col))
 
-        for col in ['Volt', 'Rate', 'Angle', 'Step']:
+        for col in ['Volt', 'Rate', 'Step']:
             colnum = self.headers.index(col)
             self.tree_file.setItemDelegateForColumn(colnum,DoubleSpinBoxDelegate(self))
 
@@ -818,9 +833,9 @@ class MainWindow(QtGui.QMainWindow):
         ####################
         self.pi = self.plotFrame.sketchPlot.getPlotItem()
         self.plotFrame.clearSketchPlot()
-        self.pi.addItem(self.afmPosition)
+        # self.pi.addItem(self.afmPosition)
         self.pi.addItem(self.afmNow)
-        self.pi.addItem(self.afmAll)
+        # self.pi.addItem(self.afmAll)
 
         self.pi.enableAutoRange('x', True)
         self.pi.enableAutoRange('y', True)
@@ -856,7 +871,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def pltDesign(self):
-        print('in pltdesign')
+        # print('in pltdesign')
         if self.dxf_design == None:
             self.dxf_design = ezdxf.readfile('./layout/design.dxf')
 
@@ -907,7 +922,7 @@ class MainWindow(QtGui.QMainWindow):
         self.offset_angle = -self.offset_angle_spin.value()
         self.offset_center = [dx,dy]
 
-        self.plotFrame.setAfmImage(angle = self.offset_angle, offset = self.offset_center )
+        self.plotFrame.setAfmImage(angle = self.offset_angle, offset = self.offset_center, updateRange=False  )
 
         # print(self.plotFrame.afmIm.rect)
         # self.replot()
@@ -935,8 +950,34 @@ class MainWindow(QtGui.QMainWindow):
 
 
 
+    def remulti_angle(self):
+
+        distance = self.multi_distance.value()
+        angle = self.multi_angle.value()
+        angle = (angle/180.) * np.pi
+        dx = distance * np.cos(angle)
+        dy = distance * np.sin(angle)
+
+        self.multi_dx.setValue(dx)
+        self.multi_dy.setValue(dy)
+        self.remulti()
+
+
     def remulti(self):
-        print('in remulti')
+
+        dx = self.multi_dx.value()
+        dy = self.multi_dy.value()
+
+        if dx != 0:
+            theta = np.arctan(dy/dx)
+            theta *= 180/np.pi
+        else:
+            theta = np.sign(dy) * 90
+
+        self.multi_angle.setValue(theta)
+        self.multi_distance.setValue(np.sqrt(dx**2 + dy**2))
+        # print('in remulti')
+
         root = self.tree_file.rootIndex()
         for i in range(0,self.model.rowCount(root)):
             index = self.model.index(i, 0)
@@ -1174,6 +1215,7 @@ class MainWindow(QtGui.QMainWindow):
     #         self.updateActions()
 
     def updateActions(self):
+        self.pltDesign()
         return
         # hasSelection = not self.tree_file.selectionModel().selection().isEmpty()
         # self.removeRowAction.setEnabled(hasSelection)
@@ -1204,7 +1246,7 @@ class MainWindow(QtGui.QMainWindow):
         frame_upAction        = QtGui.QAction(QtGui.QIcon('icons/afm/a_0003_frame_up.png'), 'Frame Up', self)
         engageAction          = QtGui.QAction(QtGui.QIcon('icons/afm/a_0005_engage.png'), 'Engage', self)
         withdrawAction        = QtGui.QAction(QtGui.QIcon('icons/afm/a_0000_withdraw.png'), 'Withdraw', self)
-        measureAction         = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_merlin.png'), 'New Measurement', self)
+        measureAction         = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_merlin.png'), 'Start Measurement Process', self)
         acceptMeasureAction   = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_accept_merlin.png'), 'Save Measurement', self)
         favoriteMeasureAction = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_favourite_merlin.png'), 'Save as Favorite', self)
         stopMeasureAction     = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_deny.png'), 'Stop Measure', self)
@@ -1230,6 +1272,7 @@ class MainWindow(QtGui.QMainWindow):
         # QtCore.QObject.connect(scClose, QtCore.SIGNAL('triggered()'), self.close)
         # QtCore.QObject.connect(scClose2, QtCore.SIGNAL('triggered()'), self.close)
 
+        QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.measurementProcess)
 
         QtCore.QObject.connect(captureAction,          QtCore.SIGNAL('triggered()'), self.doCapture )
         QtCore.QObject.connect(capture_abortAction,    QtCore.SIGNAL('triggered()'), self.doCaptureAbort )
@@ -1273,6 +1316,8 @@ class MainWindow(QtGui.QMainWindow):
         plttoolbar.addAction(dxfLoadAction)
         plttoolbar.addAction(dxfReloadAction)
         plttoolbar.addAction(dxfClearAction)
+        plttoolbar.addSeparator()
+        plttoolbar.addAction(measureAction)
         plttoolbar.addSeparator()
         plttoolbar.addAction(loadStageAction)
         plttoolbar.addAction(unloadStageAction)
@@ -1376,6 +1421,9 @@ class MainWindow(QtGui.QMainWindow):
         self.multi_time.editingFinished.connect(self.remulti)
         self.multi_dx.editingFinished.connect(self.remulti)
         self.multi_dy.editingFinished.connect(self.remulti)
+
+        self.multi_angle.editingFinished.connect(self.remulti_angle)
+        self.multi_distance.editingFinished.connect(self.remulti_angle)
 
         self.offset_check_lock.stateChanged.connect(self.lockOffset)
         self.offset_check_design.stateChanged.connect(self.pltDesign)

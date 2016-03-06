@@ -304,11 +304,11 @@ class MainWindow(QtGui.QMainWindow):
                 {'name': 'Plot Current', 'type': 'bool', 'value': 1},
                 {'name': 'Plot 2p', 'type': 'bool', 'value': 1},
                 {'name': 'Plot 4p', 'type': 'bool', 'value': 1},
-                {'name': 'Plot Timing', 'type': 'float', 'value': 0.15, 'siPrefix': True, 'suffix': 's', 'step':0.05, 'limits': (0, 999.99)},
+                {'name': 'Plot Timing', 'type': 'float', 'value': 0.15, 'siPrefix': True, 'suffix': 's', 'step':0.01, 'limits': (0, 1000)},
                 {'name': 'R-limit', 'type': 'float', 'value': 1e8, 'siPrefix': True, 'suffix': 'ohm', 'step':1000, 'limits': (0, np.inf)},
                 {'name': 'G-limit', 'type': 'float', 'value': 100e-6, 'siPrefix': True, 'suffix': 'S', 'step':1000, 'limits': (0, np.inf)},
                 {'name': 'Plot DHT', 'type': 'bool', 'value': 1},
-                {'name': 'DHT Timing', 'type': 'float', 'value': 0.4, 'siPrefix': True, 'suffix': 's', 'step':0.05, 'limits': (0, 999.99)},
+                {'name': 'DHT Timing', 'type': 'float', 'value': 0.4, 'siPrefix': True, 'suffix': 's', 'step':0.01, 'limits': (0, 1000)},
             ]},
             {'name': 'Measurements', 'type': 'group', 'children': [
               {'name': 'Current Data', 'type': 'group', 'children': [
@@ -727,8 +727,8 @@ class MainWindow(QtGui.QMainWindow):
 
             if len(temp) > 10:
                 self.dht_pi.legend.items = []
-                self.dht_pi.legend.addItem(self.hplot, 'Humidity' + ' = ' + '%.1f %%RH' % temp[-10:].mean())
-                self.dht_pi.legend.addItem(self.tplot, 'Temperature' + ' = ' + '%.1f ' % humi[-10:].mean() +u"\u00b0"+'C')
+                self.dht_pi.legend.addItem(self.tplot, 'Temperature' + ' = ' +  '%.1f ' % temp[-10:].mean() +u"\u00b0"+'C')
+                self.dht_pi.legend.addItem(self.hplot, 'Humidity' + ' = ' + '%.1f %%RH' % humi[-10:].mean())
 
         # if not self.measurement_pause:
         QtCore.QTimer.singleShot(self.p.param('Plotting', 'DHT Timing').value()*1000, self.dhticar)

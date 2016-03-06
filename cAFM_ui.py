@@ -1596,8 +1596,8 @@ class MainWindow(QtGui.QMainWindow):
 
 
             self.dht_pi.legend.items = []
-            self.dht_pi.legend.addItem(self.hplot, 'Humidity' + ' = ' + '%.1f %%RH' % dhum.mean())
             self.dht_pi.legend.addItem(self.tplot, 'Temperature' + ' = ' + '%.1f ' % dtmp.mean() +u"\u00b0"+'C')
+            self.dht_pi.legend.addItem(self.hplot, 'Humidity' + ' = ' + '%.1f %%RH' % dhum.mean())
 
         if not self.ni_terminate:
             QtCore.QTimer.singleShot(500, self.dhticar)

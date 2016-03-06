@@ -93,12 +93,25 @@ class PlotFrame(QtGui.QWidget):
         # print(self.image_data.shape)
         self.afmIm.setTransformOriginPoint(self.image_shape[0]/2.0,self.image_shape[1]/2.0)
         self.afmIm.setRotation(self.afmAngle)
+
+
+        # plt.plot(x[d],y[d],'.-')
         # self.histWidget.setImageItem(self.afmIm)
         # self.histWidget.imageChanged()
         #
-        # if updateRange == False:
-            # print(viewRange)
-            # self.histWidget.vb.setYRange(min(viewRange), max(viewRange),padding=0, update=True)
+        if updateRange == True:
+            x,y = self.afmIm.getHistogram()
+            mask = y>np.mean(y)
+            center = y.argmax()
+            width = int(len(y[mask]))
+            # print(width)
+            d = slice(center-width,center+2*width)
+            ymin = x[d][0]
+            ymax = x[d][-1]
+
+            self.afmIm.setLevels([ymin, ymax])
+
+            self.histWidget.item.setHistogramRange(ymin, ymax, padding=0.3)
 
         # print(self.histWidget.vb.viewRange()) #[[xmin, xmax], [ymin, ymax]]
 
