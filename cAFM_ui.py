@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-demo = True
+demo = False
 import sys
 sys.path.append(".\\source")
 
@@ -52,8 +52,6 @@ from source.helpers import *
 if not demo:
     from source.convertAFM import *
     from source.ni_measurement import *
-else:
-    from source.ni_measurement_demo import *
 from source.socketworker import *
 from source.ringbuffer import *
 from source.DataStore import *
@@ -61,7 +59,8 @@ from source.DataStore import *
 # from source.treeclass import *
 from source.treeclass3 import *
 from source.PlotFrame import *
-from source.afmHandler import AFMWorker
+if not demo:
+    from source.afmHandler import AFMWorker
 
 
 colors = ['vivid_yellow','strong_purple','vivid_orange','very_light_blue','vivid_red','grayish_yellow','medium_gray','vivid_green','strong_purplish_pink','strong_blue','strong_yellowish_pink','strong_violet','vivid_orange_yellow','strong_purplish_red','vivid_greenish_yellow','strong_reddish_brown','vivid_yellowish_green','deep_yellowish_brown','vivid_reddish_orange','dark_olive_green']
@@ -104,6 +103,11 @@ class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
 
         super(MainWindow, self).__init__(parent)
+
+        self.offset_angle = 0
+        self.offset_center = [0,0]
+        self.dxf_design = None
+        self.designPltHandle = []
 
 
         splash_pix = QtGui.QPixmap(r'./source/splash2.png')
@@ -187,7 +191,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
         self.afmPoints_columns = ['x', 'y', 'rate']
-        self.afmPoints = RingBuffer(36000, cols = self.afmPoints_columns)
+        self.afmPoints = RingBuffer(36000, cols = len(self.afmPoints_columns))
         self.sketchPoints = []
         self.vtip = 0
 
@@ -240,11 +244,6 @@ class MainWindow(QtGui.QMainWindow):
         mainMenu.addAction(exitAction)
 
 
-        self.offset_angle = 0
-        self.offset_center = [0,0]
-        self.dxf_design = None
-        self.designPltHandle = []
-
         self.reoffset()
         self.pltDesign()
 
@@ -277,10 +276,10 @@ class MainWindow(QtGui.QMainWindow):
         self.log_store = DataStore(filename=self.storeFolder+c_time +'_logging.h5')
 
         self.ni_store_columns = ['time', 'current','r2p','r4p']
-        self.ni_store = RingBuffer(3600000, filename=self.storeFolder+c_time +'_ni_data.h5',cols = self.ni_store_columns)
+        self.ni_store = RingBuffer(3600000, filename=self.storeFolder+c_time +'_ni_data.h5',cols = len(self.ni_store_columns))
 
         self.dht_store_columns = ['time', 'temperature', 'humidity']
-        self.dht_store = RingBuffer(360000, filename=self.storeFolder+c_time +'_dht_data.h5',cols = self.dht_store_columns)
+        self.dht_store = RingBuffer(360000, filename=self.storeFolder+c_time +'_dht_data.h5',cols = len(self.dht_store_columns))
 
     def log(self, column, value):
         # return
@@ -393,25 +392,26 @@ class MainWindow(QtGui.QMainWindow):
         # self.cAmpSpinBox.setValue(self.settings['measure']['in'][0]['curr_amp'])
         # (self._gen_meas_amplitude, self._normamplitudes, self._normphases)
 
-        self.ni_buff = RingBuffer(200000, cols = ['time'] + list(self.settings['measure']['in'].keys()))
+        self.ni_buff = RingBuffer(200000, cols = len(['time'] + list(self.settings['measure']['in'].keys())))
         self.settings['measure']['buff'] = self.ni_buff
 
-        self.dht_buff = RingBuffer(200000, cols = self.dht_store_columns)
+        self.dht_buff = RingBuffer(200000, cols = len(self.dht_store_columns))
         self.settings['measure']['dht_buff'] = self.dht_buff
 
         self.initSerial()
         self.init_dht_plot()
 
-        self.ni_worker = ni_Worker(self.settings['measure'])
-        self.ni_workerThread = None
         if not demo:
 
+            self.ni_worker = ni_Worker(self.settings['measure'])
+            self.ni_workerThread = None
 
             self.dht_Worker = dht_Worker(self.settings['measure'])
             self.dht_WorkerThread = None
 
         self.ni_pi = self.plotFrame.measurePlot.getPlotItem()
-        self.ni_pi.setDownsampling(auto=True)
+        # self.ni_pi.setDownsampling(auto=True)
+        self.ni_pi.setClipToView(True)
 
         # self.ni_pi = self.plotView.getPlotItem()
         self.ni_pi.addLegend()
@@ -424,7 +424,8 @@ class MainWindow(QtGui.QMainWindow):
         # self.ni_pi.setXRange(990000, 1000000)
 
         self.pltG_pi = self.plotFrame.mConductancePlot.getPlotItem()
-        self.pltG_pi.setDownsampling(auto=True)
+        # self.pltG_pi.setDownsampling(auto=True)
+        self.pltG_pi.setClipToView(True)
         self.pltG_pi.setXLink(self.ni_pi)
         self.pltG_pi.addLegend()
         self.pltG_pi_legend = self.pltG_pi.legend
@@ -542,21 +543,29 @@ class MainWindow(QtGui.QMainWindow):
         # print(line)
         # return
         if line.startswith('vtip'):
+            self.statusBar().showMessage(line)
             line = line.split( )
             self.vtip = float(line[1])
             self.log(['sketch','vtip'],['vtip', self.vtip])
             print( 'VTIP ' , self.vtip )
-            # self.statusBar().showMessage(line)
+
+        elif line.startswith('# copy'):
+            line = line.split( )
+            self.copy = int(line[2])
+            self.log(['sketch','copy'],['copy', self.copy])
+            print( 'Copy ' , self.copy )
+            self.afmPoints.clear()
 
         elif line.startswith('# start'):
+            self.statusBar().showMessage(line)
             self.sketching = True
             self.sketchicar()
             line = line.split( )
             self.log(['sketch','ID'],['start', line[2]])
             self.afmPoints.clear()
             print('Started '+line[2])
-            # self.statusBar().showMessage(line)
         elif line.startswith('# end'):
+            self.statusBar().showMessage(line)
             line = line.split( )
             xl,yl,rl = np.copy(self.afmPoints.get_partial())
 
@@ -568,15 +577,16 @@ class MainWindow(QtGui.QMainWindow):
             self.afmPoints.clear()
             self.log(['sketch','ID'],['end', line[2]])
             print('Finished '+line[2])
-            # self.statusBar().showMessage(line)
 
         elif line.startswith('Ready'):
+            self.statusBar().showMessage(line)
             self.sketching = False
             self.afmReady()
             print( "\nREADY\n" )
-            # self.statusBar().showMessage(line)
 
         elif line.startswith('xyAbs'):
+            print(line)
+            self.statusBar().showMessage(line)
             self.sketching = True
             self.timer.restart()
             line = line.split( )
@@ -586,7 +596,6 @@ class MainWindow(QtGui.QMainWindow):
             self.log(['sketch','x','y','r'], ['xyAbs', x, y, r])
             xo, yo = self.transformData([x,y], direction = -1)
             self.afmPoints.append([xo,yo,r])
-            # self.statusBar().showMessage(line)
         else:
             print('unknown', line)
 
@@ -641,6 +650,7 @@ class MainWindow(QtGui.QMainWindow):
                 # if item.data(6) == 'Layer':
                 self.sAdd('')
                 self.sComment(item.data())
+                print('fix layer comment')
 
                 if len(chitems) != 0:
                     nfile = True
@@ -657,20 +667,31 @@ class MainWindow(QtGui.QMainWindow):
                         self.sComment(startline)
                         # self.sComment()
                         if child.checkState == 2:
-                            for chpath in child.pltData[::child.pathOrder]:
 
-                                path = self.transformData( chpath[::child.pathOrder] ,direction=1)
-                                x,y = np.add(path[0],offset)
-                                self.sAdd('vtip\t%f' %(0.0))
-                                self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
-                                self.sAdd('vtip\t%f' %float(child.data('Volt')))
-                                r = child.data('Rate')
-                                for x,y in np.add(path,offset):
-                                # Maybe go from [1:] but going to the startpoint twice should reduce vtip lag
-                                    self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,r))
+                            data = child.pltData
+                            if data != []:
+                                for i in data:
+                                    print (np.array(i).shape)
+                                    # dta = self.transformData(i[::item.pathOrder])
+                                    dta = np.add(i[::child.pathOrder],offset)
+                                    # pdi = self.pi.plot(dta, pen = showPen)
 
-                                self.sAdd('vtip\t%f' %(0.0))
-                                self.sComment(['end',child.data('Name')])
+                            # for chpath in child.pltData[::child.pathOrder]:
+                                # dta = chpath[::child.pathOrder]
+
+                                    path = self.transformData( dta ,direction=1)
+                                    # print(path)
+                                    x,y = path[0]
+                                    self.sAdd('vtip\t%f' %(0.0))
+                                    self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
+                                    self.sAdd('vtip\t%f' %float(child.data('Volt')))
+                                    r = child.data('Rate')
+                                    for x,y in path:
+                                    # Maybe go from [1:] but going to the startpoint twice should reduce vtip lag
+                                        self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,r))
+
+                                    self.sAdd('vtip\t%f' %(0.0))
+                                    self.sComment(['end',child.data('Name')])
             x0,y0 = self.offset_center
             self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(-x0,-y0,self.freerate))
             # self.sAdd('vtip\t%f' %(0.0))
@@ -742,7 +763,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def pickFile(self):
         # http://stackoverflow.com/questions/20928023/how-to-use-qfiledialog-options-and-retreive-savefilename
-        filename = QtGui.QFileDialog.getOpenFileName(self, 'Select design file', self.inFile, selectedFilter='*.dxf')
+        filename = QtGui.QFileDialog.getOpenFileName(self, 'Select design file', self.dxffileName, filter='*.dxf')
         if filename:
             self.dxffileName = str(filename)
             self.readDXFFile()
@@ -800,7 +821,7 @@ class MainWindow(QtGui.QMainWindow):
             colnum = self.headers.index(col)
             self.tree_file.setItemDelegateForColumn(colnum,CheckBoxDelegate(self, column = col))
 
-        for col in ['Volt', 'Rate', 'Angle', 'Step']:
+        for col in ['Volt', 'Rate', 'Step']:
             colnum = self.headers.index(col)
             self.tree_file.setItemDelegateForColumn(colnum,DoubleSpinBoxDelegate(self))
 
@@ -870,7 +891,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def pltDesign(self):
-        print('in pltdesign')
+        # print('in pltdesign')
         if self.dxf_design == None:
             self.dxf_design = ezdxf.readfile('./layout/design.dxf')
 
@@ -914,14 +935,14 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def reoffset(self):
-        print('in reoffset')
+        # print('in reoffset')
         dx = -self.offset_dx_spin.value()
         dy = -self.offset_dy_spin.value()
 
         self.offset_angle = -self.offset_angle_spin.value()
         self.offset_center = [dx,dy]
 
-        self.plotFrame.setAfmImage(angle = self.offset_angle, offset = self.offset_center )
+        self.plotFrame.setAfmImage(angle = self.offset_angle, offset = self.offset_center, updateRange=False )
 
         # print(self.plotFrame.afmIm.rect)
         # self.replot()
@@ -947,10 +968,34 @@ class MainWindow(QtGui.QMainWindow):
             c = np.add(c, direction*offset)
         return c
 
+    def remulti_angle(self):
+
+        distance = self.multi_distance.value()
+        angle = self.multi_angle.value()
+        angle = (angle/180.) * np.pi
+        dx = distance * np.cos(angle)
+        dy = distance * np.sin(angle)
+
+        self.multi_dx.setValue(dx)
+        self.multi_dy.setValue(dy)
+        self.remulti()
 
 
     def remulti(self):
-        print('in remulti')
+
+        dx = self.multi_dx.value()
+        dy = self.multi_dy.value()
+
+        if dx != 0:
+            theta = np.arctan(dy/dx)
+            theta *= 180/np.pi
+        else:
+            theta = np.sign(dy) * 90
+
+        self.multi_angle.setValue(theta)
+        self.multi_distance.setValue(np.sqrt(dx**2 + dy**2))
+        # print('in remulti')
+
         root = self.tree_file.rootIndex()
         for i in range(0,self.model.rowCount(root)):
             index = self.model.index(i, 0)
@@ -965,7 +1010,7 @@ class MainWindow(QtGui.QMainWindow):
 
     @QtCore.pyqtSlot("QModelIndex", "QModelIndex")
     def replot(self, index = None):
-        print('in replot')
+        # print('in replot')
         if index == None:
             root = self.tree_file.rootIndex()
             for i in range(0,self.model.rowCount(root)):
@@ -973,7 +1018,7 @@ class MainWindow(QtGui.QMainWindow):
                 item  = self.model.getItem(index)
                 for ch in range(0,item.childCount()):
                     index2 = self.model.index(ch, 0,  self.model.index(i))
-                    print(index2)
+                    # print(index2)
                     self.replot(index2)
             return
 
@@ -1188,6 +1233,7 @@ class MainWindow(QtGui.QMainWindow):
     #         self.updateActions()
 
     def updateActions(self):
+        self.pltDesign()
         return
         # hasSelection = not self.tree_file.selectionModel().selection().isEmpty()
         # self.removeRowAction.setEnabled(hasSelection)
@@ -1381,8 +1427,8 @@ class MainWindow(QtGui.QMainWindow):
 
             self.measure_save()
             self.measure_stop()
-            self.ni_workerThread.quit()
             if not demo:
+                self.ni_workerThread.quit()
                 self.dht_WorkerThread.quit()
                 try:
                     self.settings['measure']['dht_serial'].close()
@@ -1397,10 +1443,10 @@ class MainWindow(QtGui.QMainWindow):
         pass
 
     def run(self):
-        self.ni_workerThread = QtCore.QThread()
-        self.ni_worker.terminate.connect(self.setterminate)
-        self.ni_worker.moveToThread(self.ni_workerThread)
         if not demo:
+            self.ni_workerThread = QtCore.QThread()
+            self.ni_worker.terminate.connect(self.setterminate)
+            self.ni_worker.moveToThread(self.ni_workerThread)
             self.dht_WorkerThread = QtCore.QThread()
             self.dht_Worker.terminate.connect(self.setterminate)
             self.dht_Worker.moveToThread(self.dht_WorkerThread)
@@ -1425,6 +1471,9 @@ class MainWindow(QtGui.QMainWindow):
         self.multi_dx.editingFinished.connect(self.remulti)
         self.multi_dy.editingFinished.connect(self.remulti)
 
+        self.multi_angle.editingFinished.connect(self.remulti_angle)
+        self.multi_distance.editingFinished.connect(self.remulti_angle)
+
 
         self.offset_check_lock.stateChanged.connect(self.lockOffset)
         self.offset_check_design.stateChanged.connect(self.pltDesign)
@@ -1434,15 +1483,15 @@ class MainWindow(QtGui.QMainWindow):
 
 
 
-        self.sig_measure.connect(self.ni_worker.run)
-        self.sig_measure_stop.connect(self.ni_worker.stop)
-        self.ni_workerThread.start()
         if not demo:
+            self.sig_measure.connect(self.ni_worker.run)
+            self.sig_measure_stop.connect(self.ni_worker.stop)
 
             self.sig_dhtmeasure.connect(self.dht_Worker.run)
             self.sig_dhtmeasure.connect(self.dhticar)
             # self.sig_measure_stop.connect(self.dht_Worker.stop)
 
+            self.ni_workerThread.start()
             self.dht_WorkerThread.start()
 
 
@@ -1582,6 +1631,16 @@ class MainWindow(QtGui.QMainWindow):
                 current = raw_buffer[1]
                 r2pt = raw_buffer[2]
                 r4pt = raw_buffer[3]
+                g2pt = 1.0/r2pt *1e6
+                g4pt = 1.0/r4pt *1e6
+
+                mask = np.isfinite(r2pt) & np.isfinite(r4pt) & np.isfinite(g2pt) & np.isfinite(g4pt) & np.isfinite(d_time) & (d_time > 0.1)
+                r2pt = r2pt[mask]
+                r4pt = r4pt[mask]
+                g2pt = g2pt[mask]
+                g4pt = g4pt[mask]
+                current = current[mask]
+                d_time = d_time[mask]
 
                 n = 1
                 av_len = -10
@@ -1632,8 +1691,8 @@ class MainWindow(QtGui.QMainWindow):
                     self.plotlist['R4pt'].setData(x=d_time, y=r4pt/1000.0)
                     self.plotlist['R4pt'].setPen(color=kelly_colors[colors[n]])
 
-                g2pt = 1.0/r2pt *1e6
-                g4pt = 1.0/r4pt *1e6
+
+
 
                 n = 2
                 if self.settings['plot']['plot_2pt'] == True:

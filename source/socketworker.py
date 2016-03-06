@@ -12,14 +12,15 @@ import time
 
 class SocketWorker(QtCore.QThread):
 
-    def __init__(self, parent = None):
+    new_data = QtCore.pyqtSignal(object)
 
+    def __init__(self, host, port, parent = None):
         QtCore.QThread.__init__(self, parent)
         self.exiting = False
 
-        self.host = 'nanoman'
+        self.host = host
+        self.port = port
         self.remote_ip = None
-        self.port = 12345
         self.sock = None
         self.init = False
         self.connected = False
@@ -63,7 +64,7 @@ class SocketWorker(QtCore.QThread):
     def disconnectSocket(self):
         try:
             self.sock.close()
-            print( 'Socket disconnected' )
+            print( 'Socket disconnected from ' + self.host + ' on ip ' + self.remote_ip )
             self.connected = False
         except:
             pass
@@ -124,5 +125,6 @@ class SocketWorker(QtCore.QThread):
                 for line in lines:
                     # print(line)
                     # self.statusBar().showMessage(line)
-                    self.emit(QtCore.SIGNAL("AFMStatus(QString)"), line)
+                    self.new_data.emit(line)
+                    # self.emit(QtCore.SIGNAL("AFMStatus(QString)"), line)
 

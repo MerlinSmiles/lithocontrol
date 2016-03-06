@@ -2,11 +2,11 @@ import numpy as np
 import pandas as pd
 
 class DataStore(object):
-    def __init__(self, filename):
+    def __init__(self, filename, columns):
         """initialization"""
         self.filename = filename
-        self.cols = []
-        self.data = pd.DataFrame()
+        self.columns = columns
+        self.data = pd.DataFrame(columns = self.columns)
         self.data_store_index = 0
 
     def append(self, value, column):
@@ -20,14 +20,21 @@ class DataStore(object):
         return self.data.keys()
 
     def save_data(self):
-        print( 'saving store: ' + self.filename )
+        # print( 'saving store: ' + self.filename )
         self.data_store = pd.HDFStore(self.filename)
 
         df = pd.DataFrame(self.data[self.data_store_index:])
 
         self.data_store_index += df.shape[0]
-
-        self.data_store.append('data',df,append=True, ignore_index=True)
+        # print(df)
+        try:
+            self.data_store.append('data',df,append=True, ignore_index=True)
+        except:
+            print(dict(df.dtypes))
+            print(dict(self.data_store['data'].dtypes))
+            print(df)
+            print(self.data_store['data'])
+            self.data_store.append('data',df,append=True, ignore_index=True)
         self.data_store.close()
 
     def __repr__(self):

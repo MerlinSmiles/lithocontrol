@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 demo = False
-import sys
+import sys, getopt
 sys.path.append(".\\source")
 
 import sip
@@ -14,7 +14,7 @@ from pprint import pprint
 
 
 from PyQt4 import QtCore, QtGui, uic
-from PyQt4.QtCore import QTime, QTimer, QDate
+from PyQt4.QtCore import QTime, QTimer, QDate, QDateTime
 from PyQt4.QtCore import pyqtSignal
 
 import pyqtgraph as pg
@@ -33,13 +33,15 @@ print(config['storage'])
 
 import multiprocessing as mp
 from source.ni_measurement2 import *
+from source.dht_measurement import *
 from source.buffer import *
 from source.ringbuffer2 import *
 
 import os
 import time
 from time import sleep
-import socket
+# import socket
+import serial
 
 from source.helpers import *
 from source.socketworker import *
@@ -80,14 +82,36 @@ class MainWindow(QtGui.QMainWindow):
     sig_measure_stop = pyqtSignal(int)
     sig_dht_measure_stop = pyqtSignal(int)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, time=None):
 
         super(MainWindow, self).__init__(parent)
-        self.timer = QTime.currentTime()
-        self.timer.start()
+
+        if time==None:
+            print('No time received')
+            self.dateTime = QDateTime.currentDateTime()
+        else:
+            self.dateTime = QDateTime.fromString(time, 'yyyy-MM-dd HH:mm:ss.zzz')
+            # print('Got time')
+        print(self.dateTime.toPyDateTime())
+
+        self.timer = self.dateTime.time()
+        self.dater = self.dateTime.date()
+
+        self.s_time = str(self.dateTime.toString('yyyy-MM-dd_HH-mm-ss'))
+        print(self.s_time)
+
+        frameGm = self.frameGeometry()
+        # screen = QtGui.QApplication.desktop().screenNumber(2)
+        centerPoint = QtGui.QApplication.desktop().screenGeometry(1).center()
+        # centerPoint = screen.center()
+        frameGm.moveCenter(centerPoint)
+        self.move(frameGm.topLeft())
+
 
         splash_pix = QtGui.QPixmap(r'./source/splash2.png')
         self.splash = QtGui.QSplashScreen(splash_pix)
+        # self.splash.moveCenter(centerPoint)
+        self.splash.move(frameGm.topLeft())
         # adding progress bar
         # progressBar = QProgressBar(self.splash)
         self.splash.setMask(splash_pix.mask())
@@ -131,7 +155,6 @@ class MainWindow(QtGui.QMainWindow):
         print( '' )
         print('make time of main and this program synced')
         print( '' )
-        self.s_time = str(QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss'))
 
         self.p.param("Measurements","Storage",'Folder').setValue(config['storage']['storeFolder'])
         self.p.param("Measurements","Storage",'Subfolder').setValue(self.s_time)
@@ -150,32 +173,52 @@ class MainWindow(QtGui.QMainWindow):
         self.ni_runner = Runner(start_signal=self.ni_runner_thread.started, stopMeasEvent=self.stopMeasEvent, timer=self.timer)
         self.ni_runner.new_data.connect(self.handle_msg)
         self.ni_runner.moveToThread(self.ni_runner_thread)
-
+        self.sig_measure.connect(self.ni_runner_thread.start)
+        # self.ni_runner_thread.start()
+        self.sig_measure.emit(500)
         self.cnt = 0
+
+
+
+        # self.dht_stopMeasEvent = mp.Event()
+        # self.dht_runner_thread = QtCore.QThread()
+        # self.dht_runner = DhtRunner(start_signal=self.dht_runner_thread.started, stopMeasEvent=self.dht_stopMeasEvent, timer=self.timer, port=5)
+        # self.dht_runner.new_data.connect(self.handle_msg_dht)
+        # self.dht_runner.moveToThread(self.dht_runner_thread)
+        # self.dht_runner_thread.start()
+        # self.dht_cnt = 0
+
+
+        self.initSerial()
+        self.init_dht_plot()
+
+        self.dht_Worker = dht_Worker(self.dht_serial, self.dht_store, self.timer)
+        # self.dht_WorkerThread = None
+        self.dht_WorkerThread = QtCore.QThread()
+        self.dht_Worker.moveToThread(self.dht_WorkerThread)
+
+        self.sig_dht_measure.connect(self.dht_Worker.run)
+        # self.sig_dht_measure.connect(self.dhticar)
+        self.sig_dht_measure_stop.connect(self.dht_Worker.stop)
+
+        self.dht_WorkerThread.start()
+
+        self.sig_dht_measure.emit(500)
+
+        # columns = len(self.dht_store_columns)
+        # self.dht_buff = RingBuffer(10000, cols = columns)
+        # self.settings['measure']['dht_buff'] = self.dht_store
+
 ############
 
         # self.init_measurement()
 
         self.splash.showMessage("Initialize Plot",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
-        self.init_dht_plot()
 
         self.log('log', 'init')
 
-        # sleep(2)
-        self.splash.showMessage("Showing GUI",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
-        # self.showMaximized()
-
-        frameGm = self.frameGeometry()
-        # screen = QtGui.QApplication.desktop().screenNumber(2)
-        centerPoint = QtGui.QApplication.desktop().screenGeometry(0).center()
-        frameGm.moveCenter(centerPoint)
-        self.move(frameGm.topLeft())
-        self.showMaximized()
 
         # self.show()
-        self.splash.showMessage("Starting Program",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
-        self.run()
-        self.splash.finish(self)
 
         exitAction = QtGui.QAction('&Exit', self)
         exitAction.setShortcut('Ctrl+Q')
@@ -186,9 +229,72 @@ class MainWindow(QtGui.QMainWindow):
         mainMenu = menubar.addMenu('&Main')
         mainMenu.addAction(exitAction)
 
+        self.measurement_pause = True
+
+
         # self.splitter.setStretchFactor(3,2)
 
 
+
+
+        self.init_measurement()
+        # if self.newstores == True:
+        # self.init_stores()
+        # self.newstores = False
+
+
+
+        # self.splash.showMessage("Initialize SocketWorker",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        # self.SocketThread = SocketWorker(host = 'localhost', port = 23456)
+        # self.SocketThread.new_data.connect(self.socket_msg)
+        # self.SocketThread.monitor()
+
+
+
+
+        # sleep(2)
+        self.splash.showMessage("Showing GUI",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        # self.showMaximized()
+
+        self.move(frameGm.topLeft())
+        self.showMaximized()
+        self.splash.showMessage("Starting Program",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        self.run()
+        self.splash.finish(self)
+
+        self.savicar()
+        self.graficar()
+        self.dhticar()
+
+        # if self.settings['measure']['dht_serial'] == None:
+        #     self.initSerial()
+
+
+        # if self.measurement_pause:
+        # print('########', self.ni_store.get().shape)
+
+        # self.SocketThread.send_message('Capture\n')
+
+
+
+
+    def initSerial(self):
+        print('serial init called')
+        try:
+            print(self.settings['measure']['dht_serial'])
+        except:
+            pass
+        try:
+            port = self.p.param('Measurements','Instruments','DHT-arduino','Serial Port').value()
+            self.dht_serial = serial.Serial(port-1, baudrate=115200, timeout=5) # opens, too.
+            # if self.dht_serial != None:
+                # self.run_dht()
+            # self.sig_dht_measure.emit(500)
+
+        except:
+            print( 'dht failed' )
+            self.dht_serial = None
+            # QtCore.QTimer.singleShot(5000, self.initSerial)
 
 
     def initParamTree(self):
@@ -199,6 +305,8 @@ class MainWindow(QtGui.QMainWindow):
                 {'name': 'Plot 2p', 'type': 'bool', 'value': 1},
                 {'name': 'Plot 4p', 'type': 'bool', 'value': 1},
                 {'name': 'Plot Timing', 'type': 'float', 'value': 0.15, 'siPrefix': True, 'suffix': 's', 'step':0.05, 'limits': (0, 999.99)},
+                {'name': 'R-limit', 'type': 'float', 'value': 1e8, 'siPrefix': True, 'suffix': 'ohm', 'step':1000, 'limits': (0, np.inf)},
+                {'name': 'G-limit', 'type': 'float', 'value': 100e-6, 'siPrefix': True, 'suffix': 'S', 'step':1000, 'limits': (0, np.inf)},
                 {'name': 'Plot DHT', 'type': 'bool', 'value': 1},
                 {'name': 'DHT Timing', 'type': 'float', 'value': 0.4, 'siPrefix': True, 'suffix': 's', 'step':0.05, 'limits': (0, 999.99)},
             ]},
@@ -213,10 +321,12 @@ class MainWindow(QtGui.QMainWindow):
                     {'name': 'G4pt', 'type': 'str', 'value': '', 'readonly': True},
                     # {'name': 'GMMM', 'type': 'float', 'value': 11.1, 'siPrefix': True, 'suffix': 'A', 'readonly': True},
               ]},
-              {'name': 'Storage', 'type': 'group', 'expanded': False, 'children': [
+              {'name': 'Storage', 'type': 'group', 'expanded': True, 'children': [
                     {'name': 'Folder', 'type': 'str', 'value': '', 'readonly': True},
                     {'name': 'Subfolder', 'type': 'str', 'value': '', 'readonly': True},
-                    {'name': 'Log Prefix', 'type': 'str', 'value': '', 'readonly': True},
+                    {'name': 'Logfile prefix', 'type': 'str', 'value': '', 'readonly': True},
+                    {'name': 'Saving interval', 'type': 'float', 'value': 10, 'siPrefix': True, 'suffix': 's', 'step':1, 'limits': (5, 10000)},
+                    {'name': 'Last saved', 'type': 'str', 'value': '', 'readonly': True},
               ]},
               {'name': 'Instruments', 'type': 'group', 'expanded': False, 'children': [
                 {'name': 'DHT-arduino', 'type': 'group', 'children': [
@@ -249,19 +359,24 @@ class MainWindow(QtGui.QMainWindow):
         self.tree_splitter.insertWidget(0, t)
 
     def change(self, param, changes):
+        for param, change, data in changes:
+            path = self.p.childPath(param)
+            if path is not None:
+                childName = '.'.join(path)
+            else:
+                childName = param.name()
+            # print('  parameter: %s'% childName)
+            # print('  change:    %s'% change)
+            # print('  data:      %s'% str(data))
+            # print('  ----------')
+            if childName == 'Plotting.R-limit':
+                self.pltR_pi.setLimits(yMax=self.p.param("Plotting",'R-limit').value())
+            elif childName == 'Plotting.G-limit':
+                self.pltG_pi.setLimits(yMax=self.p.param("Plotting",'G-limit').value())
+
         pass
         # print('tree changes:')
         # print(param, changes)
-        # for param, change, data in changes:
-        #     path = self.p.childPath(param)
-        #     if path is not None:
-        #         childName = '.'.join(path)
-        #     else:
-        #         childName = param.name()
-        #     print('  parameter: %s'% childName)
-        #     print('  change:    %s'% change)
-        #     print('  data:      %s'% str(data))
-        #     print('  ----------')
 
 
 
@@ -274,27 +389,29 @@ class MainWindow(QtGui.QMainWindow):
         print( bla )
 
     def init_stores(self):
+        print('init_stores')
         # c_time = str(QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss'))
         c_time = str(int(self.timer.elapsed()/1000.0))
         # tdelta = self.settings['measure']['time'].elapsed()/1000.0
 
-        self.p.param("Measurements","Storage",'Log Prefix').setValue(c_time)
+        self.p.param("Measurements","Storage",'Logfile prefix').setValue(c_time)
         if not os.path.exists(self.storeFolder):
             os.makedirs(self.storeFolder)
 
         nifile = self.storeFolder+c_time +'_ni_data.h5'
         dhtfile = self.storeFolder+c_time +'_dht_data.h5'
-        logname = self.storeFolder+c_time +'_logging.h5'
+        logname = self.storeFolder+c_time +'_log-data.h5'
 
-        self.log_store = DataStore(filename=logname)
+        self.log_store = DataStore(filename=logname, columns=['time', 'log'])
 
         self.ni_store_columns = ['time', 'current','r2p','r4p']
-        self.ni_store = Buffer(1000000, cols=self.ni_store_columns, filename=nifile)
+        self.ni_store = Buffer(3600000, cols=self.ni_store_columns, filename=nifile)
         self.ni_stepper = 1000
         self.ni_plot_counter = 0
 
         self.dht_store_columns = ['time', 'temperature', 'humidity']
         self.dht_store = Buffer(3600000, cols = self.dht_store_columns, filename=dhtfile)
+
 
     def log(self, column, value):
         # return
@@ -323,16 +440,9 @@ class MainWindow(QtGui.QMainWindow):
     def init_measurement(self):
         print('init_measurement')
         self.stopMeasEvent.clear()
+        # self.dht_stopMeasEvent.clear()
 
-        columns = len(self.dht_store_columns)
-        self.dht_buff = RingBuffer(10000, cols = columns)
-        self.settings['measure']['dht_buff'] = self.dht_buff
-
-        self.initSerial()
-
-        if not demo:
-            self.dht_Worker = dht_Worker(self.settings['measure'])
-            self.dht_WorkerThread = None
+        # self.initSerial()
 
         self.pltR_pi = self.plotFrame.mResistanceeasurePlot.getPlotItem()
         self.pltR_pi.clear()
@@ -354,6 +464,9 @@ class MainWindow(QtGui.QMainWindow):
         # self.pltG_pi.enableAutoRange('x', True)
         self.pltG_pi.enableAutoRange('y', True)
 
+        self.pltR_pi.setLimits(yMin=0, yMax=self.p.param("Plotting",'R-limit').value())
+        self.pltG_pi.setLimits(yMin=0, yMax=self.p.param("Plotting",'G-limit').value())
+
         # li_data = np.array([[gen_meas_amplitude], [normamplitudes], [normphases], [li_r/1e6], [li_g]])
         self.pltR_pi_names = ['ch0','ch1','ch2','ch3','ch4','ch5','ch6','ch7','ch8','ch9',]
         self.plotR_names = ['Current1', 'R2pt', 'R4pt']
@@ -366,7 +479,6 @@ class MainWindow(QtGui.QMainWindow):
         # for nme in self.plotG_names:
         #     self.plotlist[-1][nme] = self.pltG_pi.plot(name=nme)
 
-        self.measure_terminate = False
         self.initplot()
 
     # def start_runner(self):
@@ -374,12 +486,16 @@ class MainWindow(QtGui.QMainWindow):
     def quit_runner(self):
         print('ending')
         self.stopMeasEvent.set()
+        print('set')
+        # self.dht_stopMeasEvent.set()
         self.ni_runner_thread.exit()
+        print('exit')
         self.ni_runner_thread.wait()
+        print('wait')
         # print(self.ni_runner_thread.isRunning())
 
     def handle_msg(self, msg):
-        if self.measure_terminate:
+        if self.measurement_pause:
             return
         time, ch0, ch1, ch2, ch3 = msg
 
@@ -397,6 +513,22 @@ class MainWindow(QtGui.QMainWindow):
         self.ni_store.append(data)
         self.cnt += 1
 
+    def handle_msg_dht(self, msg):
+        if self.measurement_pause:
+            return
+        data = msg
+        self.dht_store.append(data)
+        self.dht_cnt += 1
+
+    # def socket_msg(self, msg):
+    #     print(msg)
+        # if self.measurement_pause:
+        #     return
+        # data = msg
+        # self.dht_store.append(data)
+        # self.dht_cnt += 1
+
+
     @QtCore.pyqtSlot("QString")
     def updateStatus(self,line):
         line = str(line)
@@ -404,10 +536,10 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def addToolbars(self):
-        measureAction         = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_merlin.png'), 'New Measurement', self)
-        acceptMeasureAction   = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_accept_merlin.png'), 'Save Measurement', self)
-        favoriteMeasureAction = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_favourite_merlin.png'), 'Save as Favorite', self)
-        stopMeasureAction     = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_deny.png'), 'Stop Measure', self)
+        measureAction         = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_merlin.png'), 'Start Measurement', self)
+        acceptMeasureAction   = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_accept_merlin.png'), 'Save Measurement now', self)
+        # favoriteMeasureAction = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_favourite_merlin.png'), 'Save as Favorite', self)
+        stopMeasureAction     = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_deny.png'), 'Stop Measurement', self)
 
         # QtCore.QObject.connect(closeConnectionAction, QtCore.SIGNAL('triggered()'), self.shutLithoNow )
 
@@ -417,10 +549,10 @@ class MainWindow(QtGui.QMainWindow):
         # QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.graficar )
         # QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.dhticar )
         # QtCore.QObject.connect(measureAction,          QtCore.SIGNAL('triggered()'), self.savicar )
-        QtCore.QObject.connect(favoriteMeasureAction,  QtCore.SIGNAL('triggered()'), self.measure_save )
+        # QtCore.QObject.connect(favoriteMeasureAction,  QtCore.SIGNAL('triggered()'), self.measure_save )
         QtCore.QObject.connect(acceptMeasureAction,    QtCore.SIGNAL('triggered()'), self.measure_save )
         QtCore.QObject.connect(stopMeasureAction,      QtCore.SIGNAL('triggered()'), self.measure_stop )
-        QtCore.QObject.connect(stopMeasureAction,      QtCore.SIGNAL('triggered()'), self.quit_runner )
+        # QtCore.QObject.connect(stopMeasureAction,      QtCore.SIGNAL('triggered()'), self.quit_runner )
 
 
         iconSize = QtCore.QSize(32,32)
@@ -429,7 +561,7 @@ class MainWindow(QtGui.QMainWindow):
 
         plttoolbar = self.addToolBar('Measurement')
         plttoolbar.addAction(measureAction)
-        plttoolbar.addAction(favoriteMeasureAction)
+        # plttoolbar.addAction(favoriteMeasureAction)
         plttoolbar.addAction(acceptMeasureAction)
         plttoolbar.addAction(stopMeasureAction)
 
@@ -438,70 +570,77 @@ class MainWindow(QtGui.QMainWindow):
         print('in measrue thing')
         pass
 
-    def initSerial(self):
-        print('serial init called')
-        try:
-            print(self.settings['measure']['dht_serial'])
-        except:
-            pass
-        try:
-            port = self.p.param('Measurements','Instruments','DHT-arduino','Serial Port').value()
-            self.settings['measure']['dht_serial'] = serial.Serial(port-1, baudrate=115200, timeout=5) # opens, too.
-            if self.settings['measure']['dht_serial'] != None:
-                self.run_dht()
-            self.sig_dht_measure.emit(500)
-
-        except:
-            print( 'dht failed' )
-            self.settings['measure']['dht_serial'] = None
-            # QtCore.QTimer.singleShot(5000, self.initSerial)
 
     def closeEvent(self,event):
-        self.quit_runner()
+
+        # splash_pix = QtGui.QPixmap(r'./source/splash2.png')
+        # self.splash = QtGui.QSplashScreen(splash_pix)
+        # adding progress bar
+        # progressBar = QProgressBar(self.splash)
+        # self.splash.setMask(splash_pix.mask())
+
+        self.splash.show()
+        # self.hide()
+        self.splash.showMessage("Closing",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+
+        self.splash.showMessage("measure_save",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        self.measure_save()
+
+        # self.splash.showMessage("quit_runner",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        # print(event)
+        # self.quit_runner()
+        self.splash.showMessage("measure_stop",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        self.measure_stop()
+        self.splash.showMessage("ni_workerThread",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        try:
+            self.ni_workerThread.quit()
+        except:
+            pass
+        self.splash.showMessage("dht_WorkerThread",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        try:
+            self.dht_WorkerThread.quit()
+        except:
+            pass
+        self.splash.showMessage("dht_serial",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        try:
+            self.dht_serial.close()
+        except:
+            pass
+
+        self.splash.showMessage("Cleaning up",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+
+        self.splash.finish(self)
+        # time.sleep(5)
+        # reply=QtGui.QMessageBox.question(self,'Message',"Closing!",QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+
+        # reply=QtGui.QMessageBox.question(self,'Message',"Are you sure to quit?",QtGui.QMessageBox.Yes | QtGui.QMessageBox.No , QtGui.QMessageBox.Yes)
+        # if reply==QtGui.QMessageBox.Yes:
+        event.accept()
+
         # self.ni_workerThread.quit()
-        if demo:
-            event.accept()
-            return
+        # if demo:
+        #     event.accept()
+        #     return
 
-        reply=QtGui.QMessageBox.question(self,'Message',"Are you sure to quit?",QtGui.QMessageBox.Yes | QtGui.QMessageBox.No , QtGui.QMessageBox.Yes)
-        if reply==QtGui.QMessageBox.Yes:
-            # self.SocketThread.send_message('ClientClose\n')
-            # sleep(1)
-            # self.SocketThread.stop()
 
-            self.measure_save()
-            self.measure_stop()
 
-            try:
-                self.ni_workerThread.quit()
-            except:
-                pass
-            try:
-                self.dht_WorkerThread.quit()
-            except:
-                pass
-            try:
-                self.settings['measure']['dht_serial'].close()
-            except:
-                pass
-            event.accept()
-        else:
-            event.ignore()
 
 
     def run(self):
         self.run_ni()
 
-    def run_dht(self):
-        if not demo:
-            self.dht_WorkerThread = QtCore.QThread()
-            self.dht_Worker.moveToThread(self.dht_WorkerThread)
+    # def run_dht(self):
 
-            self.sig_dht_measure.connect(self.dht_Worker.run)
-            self.sig_dht_measure.connect(self.dhticar)
-            self.sig_dht_measure_stop.connect(self.dht_Worker.stop)
+    #     self.dht_Worker = dht_Worker(self.settings['measure'])
+    #     self.dht_WorkerThread = QtCore.QThread()
+    #     # self.dht_Worker.terminate.connect(sig_dht_measure_stop)
+    #     self.dht_Worker.moveToThread(self.dht_WorkerThread)
+    #     self.sig_dht_measure.connect(self.dht_Worker.run)
+    #     self.sig_dht_measure.connect(self.dhticar)
+    #     self.sig_dht_measure_stop.connect(self.dht_Worker.stop)
 
-            self.dht_WorkerThread.start()
+    #     self.dht_WorkerThread.start()
+    #     self.dhticar()
 
     def run_ni(self):
         return
@@ -515,32 +654,22 @@ class MainWindow(QtGui.QMainWindow):
         # self.ni_workerThread.start()
 
     def savicar(self):
-        if not self.measure_terminate:
+        if not self.measurement_pause:
             self.measure_save()
-        QtCore.QTimer.singleShot(5000, self.savicar)
+        QtCore.QTimer.singleShot(self.p.param("Measurements","Storage",'Saving interval').value()*1000, self.savicar)
 
     def measure_start(self):
         print('measure_start')
-
-        self.ni_runner_thread.start()
 
         if self.newstores == True:
             self.init_stores()
             self.newstores = False
 
-        # if self.settings['measure']['dht_serial'] == None:
-        #     self.initSerial()
-
-        self.init_measurement()
-
-        self.sig_measure.emit(500)
-        self.sig_dht_measure.emit(500)
-
-        # self.measure_terminate = True
+        self.measurement_pause = False
 
 
     def measure_stop(self):
-        self.measure_terminate = True
+        self.measurement_pause = True
         self.newstores = True
         # self.sig_measure_stop.emit(500)
         # self.sig_dht_measure_stop.emit(500)
@@ -563,6 +692,7 @@ class MainWindow(QtGui.QMainWindow):
         self.ni_store.save_data()
         self.dht_store.save_data()
         self.log_store.save_data()
+        self.p.param("Measurements","Storage",'Last saved').setValue(self.timer.elapsed()/1000 )
         # return
 
     def init_dht_plot(self):
@@ -574,33 +704,33 @@ class MainWindow(QtGui.QMainWindow):
 
         self.hplot = pg.PlotDataItem()
         self.tplot = pg.PlotDataItem()
-        self.tplot.setPen(color=kelly_colors['vivid_orange'])
         self.hplot.setPen(color=kelly_colors['vivid_green'])
+        self.tplot.setPen(color=kelly_colors['vivid_orange'])
         self.dht_pi.addItem(self.hplot)
         self.dht_pi.addItem(self.tplot)
-        self.dht_pi.legend.addItem(self.tplot, 'Temperature')
-        self.dht_pi.legend.addItem(self.hplot, 'Humidity')
 
     def dhticar(self):
-        if self.settings['measure']['dht_buff'].size > 0 and not self.measure_terminate:
-            raw_buffer = self.settings['measure']['dht_buff'].get_partial_clear()
-            # dtime = time
-            # raw_buffer[1] = raw_buffer[1]
-            # raw_buffer[2] = raw_buffer[2]
-            self.dht_store.append(raw_buffer[0:2])
+        if self.p.param('Plotting', 'Plot DHT').value():
+            raw_buffer = self.dht_store.get()
 
-            self.p.param("Measurements","Current Data",'Temperature').setValue(raw_buffer[1].mean())
-            self.p.param("Measurements","Current Data",'Humidity').setValue(raw_buffer[2].mean())
+            time = raw_buffer[:,0]
+            temp = raw_buffer[:,1]
+            humi = raw_buffer[:,2]
 
-            self.tplot.setData(x=self.dht_store.get_partial()[0], y=self.dht_store.get_partial()[1])
-            self.hplot.setData(x=self.dht_store.get_partial()[0], y=self.dht_store.get_partial()[2])
+            if len(temp) > 10:
+                self.p.param("Measurements","Current Data",'Temperature').setValue(temp[-10:].mean())
+                self.p.param("Measurements","Current Data",'Humidity').setValue(humi[-10:].mean())
+
+            self.tplot.setData(x=time, y=temp)
+            self.hplot.setData(x=time, y=humi)
 
 
-            self.dht_pi.legend.items = []
-            self.dht_pi.legend.addItem(self.hplot, 'Humidity' + ' = ' + '%.1f %%RH' % raw_buffer[2].mean())
-            self.dht_pi.legend.addItem(self.tplot, 'Temperature' + ' = ' + '%.1f ' % raw_buffer[1].mean() +u"\u00b0"+'C')
+            if len(temp) > 10:
+                self.dht_pi.legend.items = []
+                self.dht_pi.legend.addItem(self.hplot, 'Humidity' + ' = ' + '%.1f %%RH' % temp[-10:].mean())
+                self.dht_pi.legend.addItem(self.tplot, 'Temperature' + ' = ' + '%.1f ' % humi[-10:].mean() +u"\u00b0"+'C')
 
-        # if not self.measure_terminate:
+        # if not self.measurement_pause:
         QtCore.QTimer.singleShot(self.p.param('Plotting', 'DHT Timing').value()*1000, self.dhticar)
 
     def initplot(self):
@@ -615,6 +745,8 @@ class MainWindow(QtGui.QMainWindow):
         self.pltR_pi.clear()
 
         self.plotlist = []
+
+
         self.plotlist.append({})
         self.plotlist.append({})
 
@@ -667,35 +799,33 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def graficar(self):
-
-        if self.p.param('Plotting', 'Enable').value() and not self.measure_terminate:
+        # print('graficar')
+        if self.p.param('Plotting', 'Enable').value():
 
             raw_buffer = self.ni_store.get()
             current_buffer = raw_buffer[self.ni_plot_counter:]
 
 
-            mc = raw_buffer[-100:,1].mean()
-            mr2 = raw_buffer[-100:,2].mean()
-            mr4 = raw_buffer[-100:,3].mean()
+            if len(raw_buffer[:,0]) > 100:
+                mc = raw_buffer[-100:,1].mean()
+                mr2 = raw_buffer[-100:,2].mean()
+                mr4 = raw_buffer[-100:,3].mean()
 
-            self.p.param("Measurements","Current Data",'Current').setValue('%.1f nA' % (mc*1e9))
-            self.p.param("Measurements","Current Data",'R2pt').setValue('%.1f kOhm' % (mr2*1e-3))
-            self.p.param("Measurements","Current Data",'R4pt').setValue('%.1f kOhm' % (mr4*1e-3))
-            self.p.param("Measurements","Current Data",'G2pt').setValue('%.1f uS' % ((1.0/mr2)*1e6))
-            self.p.param("Measurements","Current Data",'G4pt').setValue('%.1f uS' % ((1.0/mr4)*1e6))
+                self.p.param("Measurements","Current Data",'Current').setValue('%.1f nA' % (mc*1e9))
+                self.p.param("Measurements","Current Data",'R2pt').setValue('%.1f kOhm' % (mr2*1e-3))
+                self.p.param("Measurements","Current Data",'R4pt').setValue('%.1f kOhm' % (mr4*1e-3))
+                self.p.param("Measurements","Current Data",'G2pt').setValue('%.1f uS' % ((1.0/mr2)*1e6))
+                self.p.param("Measurements","Current Data",'G4pt').setValue('%.1f uS' % ((1.0/mr4)*1e6))
 
+                self.pltR_pi.legend.items = []
+                self.pltR_pi.legend.addItem(self.plotlist[-1]['Current1'], 'Current' + ' = ' + '%.1f nA' % (mc*1e9))
+                self.pltR_pi.legend.addItem(self.plotlist[-1]['R2pt'], 'R2pt' + ' = ' + '%.1f kOhm' % (mr2*1e-3))
+                self.pltR_pi.legend.addItem(self.plotlist[-1]['R4pt'], 'R4pt' + ' = ' + '%.1f kOhm' % (mr4*1e-3))
 
-                        # self.p.param("Measurements","Current Data",'Humidity').setValue(raw_buffer[2].mean())
-
-            self.pltR_pi.legend.items = []
-            self.pltR_pi.legend.addItem(self.plotlist[-1]['Current1'], 'Current' + ' = ' + '%.1f nA' % (mc*1e9))
-            self.pltR_pi.legend.addItem(self.plotlist[-1]['R2pt'], 'R2pt' + ' = ' + '%.1f kOhm' % (mr2*1e-3))
-            self.pltR_pi.legend.addItem(self.plotlist[-1]['R4pt'], 'R4pt' + ' = ' + '%.1f kOhm' % (mr4*1e-3))
-
-            self.pltG_pi.legend.items = []
-            self.pltG_pi.legend.addItem(self.plotlist[-1]['Current2'], 'Current' + ' = ' + '%.1f nA' % (mc*1e9))
-            self.pltG_pi.legend.addItem(self.plotlist[-1]['G2pt'], 'G2pt' + ' = ' + '%.1f uS' % ((1.0/mr2)*1e6))
-            self.pltG_pi.legend.addItem(self.plotlist[-1]['G4pt'], 'G4pt' + ' = ' + '%.1f uS' % ((1.0/mr4)*1e6))
+                self.pltG_pi.legend.items = []
+                self.pltG_pi.legend.addItem(self.plotlist[-1]['Current2'], 'Current' + ' = ' + '%.1f nA' % (mc*1e9))
+                self.pltG_pi.legend.addItem(self.plotlist[-1]['G2pt'], 'G2pt' + ' = ' + '%.1f uS' % ((1.0/mr2)*1e6))
+                self.pltG_pi.legend.addItem(self.plotlist[-1]['G4pt'], 'G4pt' + ' = ' + '%.1f uS' % ((1.0/mr4)*1e6))
 
             if current_buffer.shape[0] >2:
                 time =    current_buffer[:,0]
@@ -748,11 +878,29 @@ class MainWindow(QtGui.QMainWindow):
                         self.plotlist[-2]['R4pt'].setData(x=time, y=r4pt)
                         self.plotlist[-2]['G4pt'].setData(x=time, y=g4pt)
 
+        # if self.measurement_pause:
+        #     print('******', self.ni_store.get().shape)
+        #     for i in self.plotlist:
+        #         print(i)
+        #         for nme in i.keys():
+        #             i[nme].setData(x=[0],y=[0])
+
+        # if not self.measurement_pause:
         QtCore.QTimer.singleShot(self.p.param('Plotting', 'Plot Timing').value()*1000 , self.graficar)
 
 
 if __name__ == '__main__':
+    argv = sys.argv[1:]
+    time = None
+    try:
+        opts, args = getopt.getopt(argv,"t:",["time="])
+    except getopt.GetoptError:
+        pass
+    for opt, arg in opts:
+        if opt in ("-t", "--time"):
+            time = arg
+
     app = QtGui.QApplication(sys.argv)
-    window = MainWindow()
+    window = MainWindow(time=time)
     # window.show()
     sys.exit(app.exec_())

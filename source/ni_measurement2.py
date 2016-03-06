@@ -56,8 +56,6 @@ class ni_Worker(mp.Process):
             timer.start()
         self.timer = timer
 
-        print(timer.elapsed())
-
         self.resultQueue = resultQueue
         self.stopMeasEvent = stopMeasEvent
         print("initializing DAQ-process")
@@ -92,7 +90,7 @@ class ni_Worker(mp.Process):
 
         self.task.StopTask()
         self.task.ClearTask()
-        print("DAQ-process %s jsut ended" % os.getpid())
+        print("DAQ-process %s just ended" % os.getpid())
         return
 
 if not demo:
@@ -178,92 +176,4 @@ if not demo:
         def DoneCallback(self, status):
             # print( "Status", status.value )
             return 0  # The function should return an integer
-
-
-class dht_Worker(QtCore.QObject):
-
-    terminate = pyqtSignal()
-
-    def __init__(self, settings, parent=None):
-
-        super(dht_Worker, self).__init__(parent)
-        self.settings = settings
-        self.running = True
-        if self.settings['dht_serial'] != None:
-            print( "Monitoring serial port " + self.settings['dht_serial'].name )
-            self.running = True
-
-    def run(self):
-        data = ''
-        while (self.running == True):
-            if (self.settings['dht_serial'] == None):
-                sleep(3)
-            else:
-                try:
-                    self.settings['dht_serial'].write('READ:HUM:TEMP')
-                    ch = self.settings['dht_serial'].readline()
-                    if len(ch) != 0:
-                        data = ch
-                        if data.startswith('DHT:'):
-                            data = data.split()
-                            humidity = float(data[1])
-                            temperature = float(data[2])
-                            if (humidity>9) and (temperature>9 ):
-                                tdelta = self.settings['time'].elapsed()/1000.0
-                                self.settings['dht_buff'].append([tdelta, temperature, humidity])
-                except:
-                    pass
-
-    def update(self,settings):
-        self.settings = settings
-        # self.running = False
-        # if self.settings['dht_serial'] != None:
-        #     print( "Monitoring serial port " + self.settings['dht_serial'].name )
-            # self.running = True
-
-
-    def stop(self):
-        self.running = False
-        try:
-            self.settings['dht_serial'].close()
-        except:
-            pass
-
-
-
-
-##################################################################
-
-
-
-
-class MeasureData():
-    def __init__(self, buffer_size = 10000, columns = ['Data']):
-        self.buffer_size = buffer_size
-        self.columns = columns
-        self.hasfile = False
-
-        tempdata = np.zeros((self.buffer_size,len(self.columns)))
-        self.index = 0
-        self._buffer = pd.DataFrame(data=tempdata, columns = self.columns)
-
-    def saveData(self):
-        if not self.hasfile:
-            self._store = self._buffer
-
-    def get(self):
-        return self._buffer[:self.index]
-
-    def extend(self, rows):
-        tempdata = np.zeros((rows,len(self.columns)))
-        data = pd.DataFrame(data=tempdata, columns = self.columns)
-        self._buffer = pd.concat([self._buffer, data], axis=0, ignore_index=True)
-        self.buffer_size+=rows
-
-
-    def append(self, value):
-        if self.index >= self.buffer_size:
-            self.extend(self.extend_num)
-        self._buffer.iloc[self.index] = value
-        self.index +=1
 
