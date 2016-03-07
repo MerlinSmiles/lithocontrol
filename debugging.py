@@ -1,20 +1,23 @@
 import sys
 from PyQt4 import QtCore, QtGui
 import logging
+# Initialize coloredlogs.
+import coloredlogs
+coloredlogs.install(level='DEBUG')
 
 class QtHandler(logging.Handler):
     def __init__(self):
         logging.Handler.__init__(self)
     def emit(self, record):
         record = self.format(record)
-        # color = 'black'
-        try:
-            if record.levelname == 'DEBUG':
-                color = 'red'
-        except:
-            color = 'black'
+        # # color = 'black'
+        # try:
+        #     if record.levelname == 'DEBUG':
+        #         color = 'red'
+        # except:
+        #     color = 'black'
 
-        if record: XStream.stdout().write("{}{}\n".format(color, record))
+        if record: XStream.stdout().write("%s\n"%record)
         # originally: XStream.stdout().write("{}\n".format(record))
 
 
@@ -23,7 +26,6 @@ handler = QtHandler()
 handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
-
 
 class XStream(QtCore.QObject):
     _stdout = None
