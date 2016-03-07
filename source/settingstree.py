@@ -118,7 +118,7 @@ class parametertreeMainWindow(QtGui.QWidget):
 
     def change(self, param, changes):
         print("tree changes:")
-        print (self.p.param('Plotting', 'Enable').value())
+        print(self.p.param('Plotting', 'Enable').value())
         print(param.value())
         for param, change, data in changes:
             path = self.p.childPath(param)

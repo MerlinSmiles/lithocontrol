@@ -30,7 +30,7 @@ with open('config.json', 'r') as f:
     config = json.load(f)
 if demo:
     config['storage'] = config['demo_storage']
-print(config['storage'])
+# print(config['storage'])
 
 import multiprocessing as mp
 from source.ni_measurement2 import *
@@ -93,13 +93,13 @@ class MainWindow(QtGui.QMainWindow):
         else:
             self.dateTime = QDateTime.fromString(time, 'yyyy-MM-dd HH:mm:ss.zzz')
             # print('Got time')
-        print(self.dateTime.toPyDateTime())
+        # print(self.dateTime.toPyDateTime())
 
         self.timer = self.dateTime.time()
         self.dater = self.dateTime.date()
 
         self.s_time = str(self.dateTime.toString('yyyy-MM-dd_HH-mm-ss'))
-        print(self.s_time)
+        # print(self.s_time)
 
         frameGm = self.frameGeometry()
         # screen = QtGui.QApplication.desktop().screenNumber(2)
@@ -153,9 +153,6 @@ class MainWindow(QtGui.QMainWindow):
         self.settings['measure'] = {}
         self.settings['measure']['time'] = QTime()
         self.settings['measure']['time'].start()
-        print( '' )
-        print('make time of main and this program synced')
-        print( '' )
 
         self.p.param("Measurements","Storage",'Folder').setValue(config['storage']['storeFolder'])
         self.p.param("Measurements","Storage",'Subfolder').setValue(self.s_time)
@@ -283,7 +280,7 @@ class MainWindow(QtGui.QMainWindow):
     def initSerial(self):
         print('serial init called')
         try:
-            print(self.settings['measure']['dht_serial'])
+            print('serial', self.settings['measure']['dht_serial'])
         except:
             pass
         try:
@@ -386,9 +383,9 @@ class MainWindow(QtGui.QMainWindow):
         return
         print("Value changing (not finalized):", param, value)
 
-    @QtCore.pyqtSlot("QModelIndex")
-    def test(self, bla =None):
-        print( bla )
+    # @QtCore.pyqtSlot("QModelIndex")
+    # def test(self, bla =None):
+        # print( bla )
 
     def init_stores(self):
         print('init_stores')

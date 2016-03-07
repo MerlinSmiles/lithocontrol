@@ -38,7 +38,7 @@ with open('config.json', 'r') as f:
     config = json.load(f)
 if demo:
     config['storage'] = config['demo_storage']
-print(config['storage'])
+# print(config['storage'])
 
 def_dxf_file = 'F:/lithography/DesignFiles/current.dxf'
 def_dxf_file = config['storage']['def_dxf_file']
@@ -127,8 +127,8 @@ class MainWindow(QtGui.QMainWindow):
         self.splash.showMessage("Loading GUI",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
 
 
-        self.splash.showMessage("Starting Measurement",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
-        self.measurementProcess()
+        # self.splash.showMessage("Starting Measurement",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        # self.measurementProcess()
 
 
         uic.loadUi('mainwindow.ui', self)
@@ -396,9 +396,9 @@ class MainWindow(QtGui.QMainWindow):
     #     print(arg)
     #     # self.measurementProcess()
 
-    def onFinished(self, exitCode):
-        print('Measurement window closed, restarting')
-        self.measurementProcess()
+    # def onFinished(self, exitCode):
+    #     print('Measurement window closed, restarting')
+    #     self.measurementProcess()
 
     def new_data(self, msg):
         print(msg)
@@ -479,6 +479,8 @@ class MainWindow(QtGui.QMainWindow):
 
         if self.sketching:
             QtCore.QTimer.singleShot(self.settings['plot']['plot_timing']/1.0, self.sketchicar)
+        # else:
+        #     print('FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF')
 
     def afmReady(self):
         # self.afmPosition.clear()
@@ -500,22 +502,40 @@ class MainWindow(QtGui.QMainWindow):
             self.log(['sketch','vtip'],['vtip', self.status_vtip])
             print( 'VTIP %f' %self.status_vtip )
             # self.statusBar().showMessage(line)
-
+        elif line.startswith('xyAbs'):
+            # self.sketching = True
+            self.statusBar().showMessage(line)
+            self.lastpostime = self.timer.elapsed()
+            line = line.split( )
+            x = float(line[1])
+            y = float(line[2])
+            r = float(line[3])
+            self.status_position = [x, y, r]
+            self.log(['sketch','x','y','r'], ['xyAbs', x, y, r])
+            xo, yo = self.transformData([x,y], direction = -1)
+            # print('pojnts:', xo,yo,r)
+            self.afmPoints.append([xo,yo,r])
+        elif line.startswith('# sketching'):
+            # print(line)
+            line = line.split( )
+            stat = line[2]
+            # print(stat)
+            if stat == 'start':
+                self.sketching = True
+                self.sketchicar()
+            elif stat == 'end':
+                self.sketching = False
         elif line.startswith('# start'):
-            print('Started')
-            self.sketching = True
             line = line.split( )
             self.status_entity = line[2]
             self.log(['sketch','ID'],['start', line[2]])
             self.afmPoints.clear()
             print('Started '+line[2])
-            self.sketchicar()
             # self.statusBar().showMessage(line)
         elif line.startswith('# end'):
             self.status_entity = ''
             line = line.split( )
             points = np.array(self.afmPoints.get())
-            print(points.shape)
             xl,yl,rl = np.copy(points).T
 
             ti = pg.PlotDataItem(xl,yl, pen=sketchedPen)
@@ -535,26 +555,13 @@ class MainWindow(QtGui.QMainWindow):
             print( "\nREADY\n" )
             self.statusBar().showMessage(line)
 
-        elif line.startswith('xyAbs'):
-            self.sketching = True
-            self.statusBar().showMessage(line)
-            self.lastpostime = self.timer.elapsed()
-            line = line.split( )
-            x = float(line[1])
-            y = float(line[2])
-            r = float(line[3])
-            self.status_position = [x, y, r]
-            self.log(['sketch','x','y','r'], ['xyAbs', x, y, r])
-            xo, yo = self.transformData([x,y], direction = -1)
-            # print('pojnts:', xo,yo,r)
-            self.afmPoints.append([xo,yo,r])
         elif line.startswith('Parsing Script...'):
             self.status_state = 'Sketching'
         elif line.startswith('# layer'):
             self.log(['sketch','layer'],['layer', line])
         elif line.startswith('# entity'):
             self.log(['sketch','layer'],['entity', line])
-            print(line)
+            # print(line)
         elif line.startswith('# copy'):
             line = line.split( )
             self.status_copy = float(line[2])
@@ -569,7 +576,8 @@ class MainWindow(QtGui.QMainWindow):
             pass
         else:
             if line != '':
-                print('unknown', line)
+                print('unknown')
+                print(line)
 
 
     def doDemo(self):
@@ -608,6 +616,7 @@ class MainWindow(QtGui.QMainWindow):
             dy = 0
 
 
+        self.sComment(['sketching','start'])
         for cpy in range(multiples):
 
             offset = [cpy*dx,cpy*dy]
@@ -648,7 +657,7 @@ class MainWindow(QtGui.QMainWindow):
                             data = child.pltData
                             if data != []:
                                 for i in data:
-                                    print (np.array(i).shape)
+                                    # print (np.array(i).shape)
                                     # dta = self.transformData(i[::item.pathOrder])
                                     dta = np.add(i[::child.pathOrder],offset)
                                     # pdi = self.pi.plot(dta, pen = showPen)
@@ -675,6 +684,7 @@ class MainWindow(QtGui.QMainWindow):
             # self.sAdd('vtip\t%f' %(0.0))
             # time.sleep(sleep)
             self.sAdd('pause\t%.1f' %(sleep))
+        self.sComment(['sketching','end'])
 
 
         if nfile:
@@ -688,6 +698,16 @@ class MainWindow(QtGui.QMainWindow):
                 self.doDemo()
             else:
                 self.SocketThread.send_message(transmit + self.sketchFile)
+
+    def sComment(self, stuff, prefix=''):
+        adding = ''
+        adding += '# '
+        adding += prefix
+        for i in stuff:
+            adding += str(i)+ '\t'
+        adding += '\n'
+        self.sketchFile += adding
+        # print( adding )
 
     def saveSketch(self):
         self.sketchSubFolder = 'sketch_%i'%(self.timer.elapsed()/1000.0)
@@ -718,15 +738,6 @@ class MainWindow(QtGui.QMainWindow):
         except:
             pass
 
-    def sComment(self, stuff, prefix=''):
-        adding = ''
-        adding += '# '
-        adding += prefix
-        for i in stuff:
-            adding += str(i)+ '\t'
-        adding += '\n'
-        self.sketchFile += adding
-        # print( adding )
 
     def sAdd(self, data):
         self.sketchFile += data
@@ -1000,7 +1011,7 @@ class MainWindow(QtGui.QMainWindow):
                 item  = self.model.getItem(index)
                 for ch in range(0,item.childCount()):
                     index2 = self.model.index(ch, 0,  self.model.index(i))
-                    print(index2)
+                    # print(index2)
                     self.replot(index2)
             return
 
@@ -1366,14 +1377,14 @@ class MainWindow(QtGui.QMainWindow):
             # print(self.mprocess)
             # print('aaaaa', self.mprocess.state())
             # print('terminate')
-            self.mprocess.terminate()
+            # self.mprocess.terminate()
             # # self.mprocess.waitForFinished()
             # print('finished')
             # print('aaaaa', self.mprocess.state())
-            self.hide()
+            # self.hide()
             self.measure_save()
-            sleep(5)
-            self.mprocess.kill()
+            # sleep(5)
+            # self.mprocess.kill()
             # print(self.mprocess)
             # try:
             #     pass

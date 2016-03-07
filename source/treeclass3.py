@@ -699,6 +699,7 @@ class TreeItem(object):
         else:
             if colname == 'Angle':
                 value= str(value)
+                # print('val',value)
                 if self.fillAngle != value:
                     self.fillAngle = value
                     recalc = True
@@ -862,7 +863,7 @@ class TreeModel(QtCore.QAbstractItemModel):
 
     def recalc(self, item, index):
         # item2 = self.getItem(index)
-        # print('start',item.name, item2.name)
+        # print('recalc',item.name)
         if item.entity.dxftype() in ['POLYLINE','LINE','SPLINE']:
             dxf2shape(item)
 
