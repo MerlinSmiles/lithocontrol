@@ -47,6 +47,9 @@ def dxf2shape(item, threshold = 1e-9, fillStep = None, fillAngle = None, pathDir
 
     outer_collection = []
     for angle in fill_angle:
+        print('angle: {}'.format(angle))
+        if angle == '':
+            angle = 0
         fill_angle = float(angle)
         # print (angle)
 
