@@ -7,7 +7,7 @@ import colorer
 # coloredlogs.install(level='DEBUG')
 
 
-logging.basicConfig(filename='example.log',level=logging.DEBUG)
+# logging.basicConfig(filename='example.log',level=logging.DEBUG)
 
 
 DEBUG_LEVELV_NUM = 25
