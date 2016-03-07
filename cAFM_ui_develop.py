@@ -564,7 +564,7 @@ class MainWindow(QtGui.QMainWindow):
             # print(line)
         elif line.startswith('# copy'):
             line = line.split( )
-            self.status_copy = float(line[2])
+            self.status_copy = int(line[2])
             self.log(['sketch','copy'],['copy', self.status_copy])
             print( 'copy %f' %self.status_copy )
         elif line.startswith('pause'):
