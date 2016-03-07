@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# unicode characters http://archive.oreilly.com/pub/a/xml/excerpts/unicode-explained/tables-writing-characters.html
 demo = False
 import sys, getopt
 sys.path.append(".\\source")
@@ -174,6 +175,7 @@ class MainWindow(QtGui.QMainWindow):
         self.ni_runner.new_data.connect(self.handle_msg)
         self.ni_runner.moveToThread(self.ni_runner_thread)
         self.sig_measure.connect(self.ni_runner_thread.start)
+        self.sig_measure_stop.connect(self.ni_runner.stop)
         # self.ni_runner_thread.start()
         self.sig_measure.emit(500)
         self.cnt = 0
@@ -514,8 +516,8 @@ class MainWindow(QtGui.QMainWindow):
         self.cnt += 1
 
     def handle_msg_dht(self, msg):
-        if self.measurement_pause:
-            return
+        # if self.measurement_pause:
+        #     return
         data = msg
         self.dht_store.append(data)
         self.dht_cnt += 1
@@ -573,6 +575,8 @@ class MainWindow(QtGui.QMainWindow):
 
     def closeEvent(self,event):
 
+        self.sig_measure_stop.emit(50)
+
         # splash_pix = QtGui.QPixmap(r'./source/splash2.png')
         # self.splash = QtGui.QSplashScreen(splash_pix)
         # adding progress bar
@@ -586,14 +590,14 @@ class MainWindow(QtGui.QMainWindow):
         self.splash.showMessage("measure_save",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
         self.measure_save()
 
-        # self.splash.showMessage("quit_runner",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        self.splash.showMessage("quit_runner",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
         # print(event)
-        # self.quit_runner()
+        self.quit_runner()
         self.splash.showMessage("measure_stop",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
         self.measure_stop()
-        self.splash.showMessage("ni_workerThread",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        self.splash.showMessage("ni_runner_thread",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
         try:
-            self.ni_workerThread.quit()
+            self.ni_runner_thread.quit()
         except:
             pass
         self.splash.showMessage("dht_WorkerThread",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
@@ -662,6 +666,9 @@ class MainWindow(QtGui.QMainWindow):
         print('measure_start')
 
         if self.newstores == True:
+            # self.pltR_pi.clear()
+            # self.pltG_pi.clear()
+            self.initplot()
             self.init_stores()
             self.newstores = False
 
@@ -702,6 +709,10 @@ class MainWindow(QtGui.QMainWindow):
         self.dht_pi.enableAutoRange('x', True)
         self.dht_pi.enableAutoRange('y', True)
 
+        self.dht_pi.setLabel('left', u'Hum (%)  -  Temp (\u00b0C)')
+
+        self.dht_pi.showGrid(1,1,0.3)
+
         self.hplot = pg.PlotDataItem()
         self.tplot = pg.PlotDataItem()
         self.hplot.setPen(color=kelly_colors['vivid_green'])
@@ -728,13 +739,17 @@ class MainWindow(QtGui.QMainWindow):
             if len(temp) > 10:
                 self.dht_pi.legend.items = []
                 self.dht_pi.legend.addItem(self.tplot, 'Temperature' + ' = ' +  '%.1f ' % temp[-10:].mean() +u"\u00b0"+'C')
-                self.dht_pi.legend.addItem(self.hplot, 'Humidity' + ' = ' + '%.1f %%RH' % humi[-10:].mean())
+                self.dht_pi.legend.addItem(self.hplot, 'Humidity' + ' = ' + '%.1f %%' % humi[-10:].mean())
+            else:
+                self.dht_pi.legend.items = []
+                self.dht_pi.legend.addItem(self.tplot, 'Temperature')
+                self.dht_pi.legend.addItem(self.hplot, 'Humidity')
 
         # if not self.measurement_pause:
         QtCore.QTimer.singleShot(self.p.param('Plotting', 'DHT Timing').value()*1000, self.dhticar)
 
     def initplot(self):
-        print('initplot')
+        # print('initplot')
         start_buffer = np.zeros((1,4))
         time =    start_buffer[:,0]
         current = start_buffer[:,1]
@@ -743,7 +758,12 @@ class MainWindow(QtGui.QMainWindow):
 
         self.pltG_pi.clear()
         self.pltR_pi.clear()
+# (axis, text=None, units=None, unitPrefix=None, **args)
+        self.pltR_pi.setLabel('left', 'Resistance', u'\u03a9')
+        self.pltG_pi.setLabel('left', 'Conductance', 'S')
 
+        self.pltR_pi.showGrid(1,1,0.3)
+        self.pltG_pi.showGrid(1,1,0.3)
         self.plotlist = []
 
 
@@ -769,114 +789,102 @@ class MainWindow(QtGui.QMainWindow):
             self.plotlist[-2][nme] = self.pltG_pi.plot(pen = color)
 
         self.ni_plot_counter = 0
-        # n = 1
-        # self.plotlist[-1]['Current1'].setData(x=time, y=current)
-        # # self.plotlist[-1]['Current1'].setPen(color=kelly_colors[colors[n]])
-        # self.plotlist[-1]['Current2'].setData(x=time, y=current)
-        # # self.plotlist[-1]['Current2'].setPen(color=kelly_colors[colors[n]])
-
-        # n = 2
-        # self.plotlist[-1]['R2pt'].setData(x=time, y=r2pt)
-        # self.plotlist[-1]['R2pt'].setPen(color=kelly_colors[colors[n]])
-
-        # n = 3
-        # self.plotlist[-1]['R4pt'].setData(x=time, y=r4pt)
-        # self.plotlist[-1]['R4pt'].setPen(color=kelly_colors[colors[n]])
-
-        # g2pt = 1.0/r2pt
-        # g4pt = 1.0/r4pt
-
-        # n = 2
-        # self.plotlist[-1]['G2pt'].setData(x=time, y=g2pt)
-        # self.plotlist[-1]['G2pt'].setPen(color=kelly_colors[colors[n]])
-        # n = 4
-        # self.plotlist[-1]['G4pt'].setData(x=time, y=g4pt)
-        # self.plotlist[-1]['G4pt'].setPen(color=kelly_colors[colors[n]])
-
-        # for c in self.plotlist:
-        #     for nme in self.plotR_names:
-        #         print(c[nme].data.shape)
 
 
     def graficar(self):
         # print('graficar')
-        if self.p.param('Plotting', 'Enable').value():
+        if not self.measurement_pause:
+            if self.p.param('Plotting', 'Enable').value():
 
-            raw_buffer = self.ni_store.get()
-            current_buffer = raw_buffer[self.ni_plot_counter:]
+                raw_buffer = self.ni_store.get()
+                current_buffer = raw_buffer[self.ni_plot_counter:]
 
 
-            if len(raw_buffer[:,0]) > 100:
-                mc = raw_buffer[-100:,1].mean()
-                mr2 = raw_buffer[-100:,2].mean()
-                mr4 = raw_buffer[-100:,3].mean()
+                if len(raw_buffer[:,0]) > 100:
+                    mc = raw_buffer[-100:,1].mean()
+                    mr2 = raw_buffer[-100:,2].mean()
+                    mr4 = raw_buffer[-100:,3].mean()
 
-                self.p.param("Measurements","Current Data",'Current').setValue('%.1f nA' % (mc*1e9))
-                self.p.param("Measurements","Current Data",'R2pt').setValue('%.1f kOhm' % (mr2*1e-3))
-                self.p.param("Measurements","Current Data",'R4pt').setValue('%.1f kOhm' % (mr4*1e-3))
-                self.p.param("Measurements","Current Data",'G2pt').setValue('%.1f uS' % ((1.0/mr2)*1e6))
-                self.p.param("Measurements","Current Data",'G4pt').setValue('%.1f uS' % ((1.0/mr4)*1e6))
+                    self.p.param("Measurements","Current Data",'Current').setValue('%.1f nA' % (mc*1e9))
+                    self.p.param("Measurements","Current Data",'R2pt').setValue(u'%.1f k\u03a9' % (mr2*1e-3))
+                    self.p.param("Measurements","Current Data",'R4pt').setValue(u'%.1f k\u03a9' % (mr4*1e-3))
+                    self.p.param("Measurements","Current Data",'G2pt').setValue(u'%.1f \u00b5S' % ((1.0/mr2)*1e6))
+                    self.p.param("Measurements","Current Data",'G4pt').setValue(u'%.1f \u00b5S' % ((1.0/mr4)*1e6))
 
-                self.pltR_pi.legend.items = []
-                self.pltR_pi.legend.addItem(self.plotlist[-1]['Current1'], 'Current' + ' = ' + '%.1f nA' % (mc*1e9))
-                self.pltR_pi.legend.addItem(self.plotlist[-1]['R2pt'], 'R2pt' + ' = ' + '%.1f kOhm' % (mr2*1e-3))
-                self.pltR_pi.legend.addItem(self.plotlist[-1]['R4pt'], 'R4pt' + ' = ' + '%.1f kOhm' % (mr4*1e-3))
+                    self.pltR_pi.legend.items = []
+                    self.pltR_pi.legend.addItem(self.plotlist[-1]['Current1'], 'Current' + ' = ' + '%.1f nA' % (mc*1e9))
+                    self.pltR_pi.legend.addItem(self.plotlist[-1]['R2pt'], 'R2pt' + ' = ' + u'%.1f k\u03a9' % (mr2*1e-3))
+                    self.pltR_pi.legend.addItem(self.plotlist[-1]['R4pt'], 'R4pt' + ' = ' + u'%.1f k\u03a9' % (mr4*1e-3))
 
-                self.pltG_pi.legend.items = []
-                self.pltG_pi.legend.addItem(self.plotlist[-1]['Current2'], 'Current' + ' = ' + '%.1f nA' % (mc*1e9))
-                self.pltG_pi.legend.addItem(self.plotlist[-1]['G2pt'], 'G2pt' + ' = ' + '%.1f uS' % ((1.0/mr2)*1e6))
-                self.pltG_pi.legend.addItem(self.plotlist[-1]['G4pt'], 'G4pt' + ' = ' + '%.1f uS' % ((1.0/mr4)*1e6))
+                    self.pltG_pi.legend.items = []
+                    self.pltG_pi.legend.addItem(self.plotlist[-1]['Current2'], 'Current' + ' = ' + '%.1f nA' % (mc*1e9))
+                    self.pltG_pi.legend.addItem(self.plotlist[-1]['G2pt'], 'G2pt' + ' = ' + u'%.1f \u00b5S' % ((1.0/mr2)*1e6))
+                    self.pltG_pi.legend.addItem(self.plotlist[-1]['G4pt'], 'G4pt' + ' = ' + u'%.1f \u00b5S' % ((1.0/mr4)*1e6))
+                else:
+                    self.p.param("Measurements","Current Data",'Current').setValue('')
+                    self.p.param("Measurements","Current Data",'R2pt').setValue('')
+                    self.p.param("Measurements","Current Data",'R4pt').setValue('')
+                    self.p.param("Measurements","Current Data",'G2pt').setValue('')
+                    self.p.param("Measurements","Current Data",'G4pt').setValue('')
 
-            if current_buffer.shape[0] >2:
-                time =    current_buffer[:,0]
-                # self.pltR_pi.set
-                current = current_buffer[:,1]
-                r2pt =    current_buffer[:,2]
-                r4pt =    current_buffer[:,3]
-                g2pt = 1.0/r2pt
-                g4pt = 1.0/r4pt
+                    self.pltR_pi.legend.items = []
+                    self.pltR_pi.legend.addItem(self.plotlist[-1]['Current1'], 'Current')
+                    self.pltR_pi.legend.addItem(self.plotlist[-1]['R2pt'], 'R2pt')
+                    self.pltR_pi.legend.addItem(self.plotlist[-1]['R4pt'], 'R4pt')
 
-                if self.p.param('Plotting', 'Plot Current').value() == True:
-                    n = 1
-                    self.plotlist[-1]['Current1'].setData(x=time, y=current)
-                    self.plotlist[-1]['Current2'].setData(x=time, y=current)
+                    self.pltG_pi.legend.items = []
+                    self.pltG_pi.legend.addItem(self.plotlist[-1]['Current2'], 'Current')
+                    self.pltG_pi.legend.addItem(self.plotlist[-1]['G2pt'], 'G2pt')
+                    self.pltG_pi.legend.addItem(self.plotlist[-1]['G4pt'], 'G4pt')
 
-                if self.p.param('Plotting', 'Plot 2p').value() == True:
-                    n = 2
-                    self.plotlist[-1]['R2pt'].setData(x=time, y=r2pt)
-                    self.plotlist[-1]['G2pt'].setData(x=time, y=g2pt)
-
-                if self.p.param('Plotting', 'Plot 4p').value() == True:
-                    n = 3
-                    self.plotlist[-1]['R4pt'].setData(x=time, y=r4pt)
-                    self.plotlist[-1]['G4pt'].setData(x=time, y=g4pt)
-
-                if current_buffer.shape[0] > self.ni_stepper:
-                    self.ni_plot_counter += current_buffer.shape[0]-3
-                    # self.initplot()
-                    # print('newplot')
-                    time =    raw_buffer[:,0]
-                    # self.pltR_pi.set
-                    current = raw_buffer[:,1]
-                    r2pt =    raw_buffer[:,2]
-                    r4pt =    raw_buffer[:,3]
+                if current_buffer.shape[0] >2:
+                    time =    current_buffer[:,0]
+                    current = current_buffer[:,1]
+                    r2pt =    current_buffer[:,2]
+                    r4pt =    current_buffer[:,3]
                     g2pt = 1.0/r2pt
                     g4pt = 1.0/r4pt
 
                     if self.p.param('Plotting', 'Plot Current').value() == True:
                         n = 1
-                        self.plotlist[-2]['Current1'].setData(x=time, y=current)
-                        self.plotlist[-2]['Current2'].setData(x=time, y=current)
+                        self.plotlist[-1]['Current1'].setData(x=time, y=current)
+                        self.plotlist[-1]['Current2'].setData(x=time, y=current)
 
                     if self.p.param('Plotting', 'Plot 2p').value() == True:
                         n = 2
-                        self.plotlist[-2]['R2pt'].setData(x=time, y=r2pt)
-                        self.plotlist[-2]['G2pt'].setData(x=time, y=g2pt)
+                        self.plotlist[-1]['R2pt'].setData(x=time, y=r2pt)
+                        self.plotlist[-1]['G2pt'].setData(x=time, y=g2pt)
 
                     if self.p.param('Plotting', 'Plot 4p').value() == True:
                         n = 3
-                        self.plotlist[-2]['R4pt'].setData(x=time, y=r4pt)
-                        self.plotlist[-2]['G4pt'].setData(x=time, y=g4pt)
+                        self.plotlist[-1]['R4pt'].setData(x=time, y=r4pt)
+                        self.plotlist[-1]['G4pt'].setData(x=time, y=g4pt)
+
+                    if current_buffer.shape[0] > self.ni_stepper:
+                        self.ni_plot_counter += current_buffer.shape[0]-3
+                        # self.initplot()
+                        # print('newplot')
+                        time =    raw_buffer[:,0]
+                        current = raw_buffer[:,1]
+                        r2pt =    raw_buffer[:,2]
+                        r4pt =    raw_buffer[:,3]
+                        g2pt = 1.0/r2pt
+                        g4pt = 1.0/r4pt
+
+                        if self.p.param('Plotting', 'Plot Current').value() == True:
+                            n = 1
+                            self.plotlist[-2]['Current1'].setData(x=time, y=current)
+                            self.plotlist[-2]['Current2'].setData(x=time, y=current)
+
+                        if self.p.param('Plotting', 'Plot 2p').value() == True:
+                            n = 2
+                            self.plotlist[-2]['R2pt'].setData(x=time, y=r2pt)
+                            self.plotlist[-2]['G2pt'].setData(x=time, y=g2pt)
+
+                        if self.p.param('Plotting', 'Plot 4p').value() == True:
+                            n = 3
+                            self.plotlist[-2]['R4pt'].setData(x=time, y=r4pt)
+                            self.plotlist[-2]['G4pt'].setData(x=time, y=g4pt)
 
         # if self.measurement_pause:
         #     print('******', self.ni_store.get().shape)

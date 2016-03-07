@@ -89,7 +89,7 @@ kelly_colors = dict(vivid_yellow=(255, 179, 0),
 # mkPen for selected
 # selectPen = pg.mkPen(color='FF750A')  #, style=QtCore.Qt.DotLine
 sketchPen = pg.mkPen(color='FF0000DD',width=2.5)  #, style=QtCore.Qt.DotLine
-sketchedPen = pg.mkPen(color='FF000077',width=3)  #, style=QtCore.Qt.DotLine
+sketchedPen = pg.mkPen(color='FF000077',width=3.5)  #, style=QtCore.Qt.DotLine
 movePen = pg.mkPen(color='1E4193',width=2, style=QtCore.Qt.DotLine)  #, style=QtCore.Qt.DotLine
 showPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine , width=
 selectPen = pg.mkPen(color='00FF00',width=3)  #, style=QtCore.Qt.DotLine , width=

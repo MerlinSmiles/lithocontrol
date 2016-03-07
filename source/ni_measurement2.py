@@ -22,6 +22,7 @@ except:
 
 
 class Runner(QtCore.QObject):
+    terminate = pyqtSignal()
 
     new_data = QtCore.pyqtSignal(object)
 
@@ -47,6 +48,15 @@ class Runner(QtCore.QObject):
             msg = self.queue.get()
             self.new_data.emit(msg)
             QtCore.QTimer.singleShot(0, self.get)
+
+    def stop(self):
+        self.running = False
+        try:
+            self.stopMeasEvent.set()
+            self.p.join()
+            print('Measurement Process ended 2')
+        except:
+            pass
 
 class ni_Worker(mp.Process):
     def __init__(self, resultQueue, stopMeasEvent, timer=None):
