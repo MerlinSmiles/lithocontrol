@@ -7,7 +7,6 @@ import colorer
 # coloredlogs.install(level='DEBUG')
 
 
-# logging.basicConfig(filename='example.log',level=logging.DEBUG)
 
 
 DEBUG_LEVELV_NUM = 25
@@ -29,19 +28,28 @@ class QtHandler(logging.Handler):
         if record: XStream.stdout().write("{}\n".format(record))#"{}\n".format(record))#"%s\n"%record)
         # originally: XStream.stdout().write("{}\n".format(record))
 
+class MyFormatter(logging.Formatter):
+    width = 10
+    def format(self, record):
+        a = "%s:%s" % (record.filename, record.lineno)
+        return "[%s] %s" % (a.ljust(self.width), record.msg)
+
 loglevel = logging.INFO
 logger = logging.getLogger(__name__)
 handler = QtHandler()
-handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
+# handler.setFormatter(logging.Formatter("%(levelname)-7s %(message)s"))
+handler.setFormatter(logging.Formatter("%(levelname)s %(message)s"))
 logger.addHandler(handler)
 logger.setLevel(loglevel)
 
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(loglevel)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+mformat = '%(asctime)s - %(name)s - %(levelname)-8s - %(message)s'
+formatter = logging.Formatter(mformat)
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
+logging.basicConfig(format=mformat, filename='example.log',level=logging.DEBUG)
 
 class XStream(QtCore.QObject):
     _stdout = None
@@ -72,6 +80,11 @@ class MyDialog(QtGui.QDialog):
         super(MyDialog, self).__init__(parent)
 
         self._console = QtGui.QTextBrowser(self)
+
+        font = QtGui.QFont("Monospace",8)
+        font.setStyleHint(QtGui.QFont.TypeWriter);
+
+        self._console.setCurrentFont(font)
 
         self._button  = QtGui.QPushButton(self)
         self._button.setText('Test Me')

@@ -74,7 +74,7 @@ class MyDialog(QtGui.QDialog):
         logger.info('info message')
         logger.warning('warning message')
         logger.error('error message')
-        print 'Old school hand made print message'
+        print( 'Old school hand made print message')
         print(blah)
 
 if ( __name__ == '__main__' ):
