@@ -3,8 +3,16 @@ demo = False
 import sys
 sys.path.append(".\\source")
 
+import logging
+from source import custom_logger
+from source.custom_logger_widget import LogDialog
+
+# log = logging.getLogger('root')
+log = custom_logger.getLogger('root','INFO')
+
+
 try:
-    import gwy, gwyutils
+    import gwy,  gwyutils
 except:
     demo = True
 
@@ -47,6 +55,8 @@ import os
 import time
 from time import sleep
 import socket
+# log.setLevel('DEBUG')
+
 
 from source.helpers import *
 if not demo:
@@ -113,6 +123,7 @@ class MainWindow(QtGui.QMainWindow):
         self.designPltHandle = []
 
         print(self.dateTime.toPyDateTime())
+        log.info(self.dateTime.toPyDateTime())
 
         # str(QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss'))
         self.s_time = str(self.dateTime.toString('yyyy-MM-dd_HH-mm-ss'))
@@ -141,16 +152,44 @@ class MainWindow(QtGui.QMainWindow):
 
         self.setWindowState(self.windowState() & QtCore.Qt.WindowMaximized)
 
-        # self.setGeometry(200,100,900,800)
+        self.centralWidget().layout().setContentsMargins(2,2,2,2)
+        self.gridLayout_2.setContentsMargins(2,2,2,2)
+        self.gridLayout_2.setSpacing(2)
+
+
         self.plotFrame = PlotFrame()
-        self.plotSplitter.addWidget(self.plotFrame)
-        # self.splitter.setStretch(1,1)
+        self.tabSketchBox = QtGui.QVBoxLayout()
+        self.tabSketchBox.setContentsMargins(0,0,0,0)
+        self.tabSketchBox.addWidget(self.plotFrame)
+
+        self.tabWidget = QtGui.QTabWidget()
+        self.tabWidget.setDocumentMode(True)
+
+        self.tabSketching = QtGui.QWidget()
+        self.tabSketching.setContentsMargins(0,0,0,0)
+        self.tabSketching.setLayout(self.tabSketchBox)
+
+        # self.tabLogging = QtGui.QWidget()
+        self.tabLogging = LogDialog()
+
+        self.tabWidget.addTab(self.tabSketching, 'Sketching')
+        self.tabWidget.addTab(self.tabLogging, 'Logging')
+
+        self.splitter.addWidget(self.tabWidget)
+
 
         self.splitter.setSizes([400,1000])
-        # self.tree_splitter.set
+
+
+
+
+
+
+
+
+
         self.addToolbars()
-        # self.show()
-        # Set delegate
+
         self.splash.showMessage("Loading DXF-storage",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
         self.tree_file.setItemDelegateForColumn(2,DoubleSpinBoxDelegate(self))
         self.tree_file.setItemDelegateForColumn(4,DoubleSpinBoxDelegate(self))
@@ -177,6 +216,7 @@ class MainWindow(QtGui.QMainWindow):
 
         if demo:
             print("DDDDDDDDDDDDDDDDDDDDD")
+            log.info("INIT: Demo activated")
             self.splash.showMessage("Loading DemoMode",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
             self.outDir = './demo/'
             self.afmImageFolder = './demo/afmImages/'
@@ -187,14 +227,17 @@ class MainWindow(QtGui.QMainWindow):
         print( '' )
         print( '' )
 
+        log.debug("INIT: Loading Stores")
         self.splash.showMessage("Loading Stores",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
         self.init_stores()
         self.newstores = False
 
         # self.splash.finish(self)
 
+        log.debug("INIT: Sketching")
         self.splash.showMessage("Initialize Sketching",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
         self.init_sketching()
+        log.debug("INIT: Measurement")
         self.splash.showMessage("Initialize Measurement",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
 
 
@@ -208,6 +251,7 @@ class MainWindow(QtGui.QMainWindow):
         # self.log('log', 'init')
 
         # sleep(2)
+        log.debug("INIT: GUI")
         self.splash.showMessage("Showing GUI",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
         self.showMaximized()
         # self.show()
@@ -215,6 +259,7 @@ class MainWindow(QtGui.QMainWindow):
         self.readDXFFile()
         # pprint(self.settings)
 
+        log.debug("INIT: Program")
         self.splash.showMessage("Starting Program",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
         self.run()
         self.splash.finish(self)
@@ -252,6 +297,12 @@ class MainWindow(QtGui.QMainWindow):
         mainMenu = menubar.addMenu('&Main')
         mainMenu.addAction(exitAction)
 
+        # log.debug('Adebug message')
+        # log.info('Ainfo message')
+        # log.warning('Awarning message')
+        # log.error('Aerror message')
+        # print ('AOld school hand made print message')
+
 
 
         self.reoffset()
@@ -281,7 +332,9 @@ class MainWindow(QtGui.QMainWindow):
         if not os.path.exists(self.storeFolder):
             os.makedirs(self.storeFolder)
         log_cols = ['dir','sketch','time','copy','ID','vtip','r','x','y', 'pause', 'layer','entity']
-        self.log_store = DataStore(filename=self.storeFolder+c_time +'_log-sketch.h5',columns=log_cols)
+        fname = self.storeFolder+c_time +'_log-sketch.h5'
+        self.log_store = DataStore(filename=fname,columns=log_cols)
+        log.debug('New stores: %s'%fname)
 
     def log(self, column, value):
         # return
@@ -326,10 +379,12 @@ class MainWindow(QtGui.QMainWindow):
 
         self.headers = ('Name', 'Show', 'Color', 'Volt', 'Rate', 'Angle', 'Step', 'Time', 'Length', 'Closed', 'Order', 'Type')
 
+        log.debug("INIT: AFMWorker")
         self.splash.showMessage("Initialize AFMWorker",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
         self.AFMthread = AFMWorker()
+        log.debug("INIT: SocketWorker")
         self.splash.showMessage("Initialize SocketWorker",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
-        self.SocketThread = SocketWorker(host = 'nanoman', port = 12345)
+        self.SocketThread = SocketWorker(host = 'nanoman', port = 12345, demo=True)
 
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("finished()"), self.updateAFM)
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("terminated()"), self.updateAFM)
@@ -367,15 +422,18 @@ class MainWindow(QtGui.QMainWindow):
         # self.outputReady.emit(msg)
 
         start = self.mprocess.start(command, args)
+        log.debug("New Process")
 
 
 
     def process_output(self):
         output = self.mprocess.readAllStandardOutput()
+        log.warning('332')
         print(output)
 
     def process_error(self):
         output = self.mprocess.readAllStandardError()
+        log.warning('333')
         print(output)
 
 # def startit():
@@ -400,9 +458,6 @@ class MainWindow(QtGui.QMainWindow):
     #     print('Measurement window closed, restarting')
     #     self.measurementProcess()
 
-    def new_data(self, msg):
-        print(msg)
-
 
     @QtCore.pyqtSlot("QString")
     def newafmImage(self, filename=None):
@@ -413,7 +468,8 @@ class MainWindow(QtGui.QMainWindow):
             # filename = self.afmImageFolder+'/'+sorted(os.listdir(self.afmImageFolder))[-1]
 
         filename = os.path.abspath(filename)
-        print(filename)
+        log.info("newafmImage: %s"%filename)
+        # print(filename)
 
         ret = convertAFM(filename)
         if ret == False:
@@ -428,21 +484,22 @@ class MainWindow(QtGui.QMainWindow):
         y = self.afminfo['height']
 
         self.plotFrame.setAfmImage(self.afmData,x,y)
+        log.debug('New AFM image: %s'%filename)
 
     def updateAFM(self):
-        print( 'updateAFM' )
+        log.warning( 'updateAFM' )
 
     def doCapture(self):
         self.SocketThread.send_message('Capture\n')
-        print( 'Capture' )
+        log.info( 'AFM Capture' )
 
     def stageUnload(self):
         self.SocketThread.send_message('StageUnload\n')
-        print( 'unload Stage' )
+        log.info( 'AFM unload Stage' )
 
     def stageLoad(self):
         self.SocketThread.send_message('StageLoad\n')
-        print( 'Load Stage' )
+        log.info( 'AFM Load Stage' )
 
     # @QtCore.pyqtSlot("float, float, float")
     # def updateAFMpos(self,x,y,rate):
@@ -500,7 +557,7 @@ class MainWindow(QtGui.QMainWindow):
             line = line.split( )
             self.status_vtip = float(line[1])
             self.log(['sketch','vtip'],['vtip', self.status_vtip])
-            print( 'VTIP %f' %self.status_vtip )
+            log.debug('STATUS: VTIP %f' %self.status_vtip )
             # self.statusBar().showMessage(line)
         elif line.startswith('xyAbs'):
             # self.sketching = True
@@ -513,7 +570,7 @@ class MainWindow(QtGui.QMainWindow):
             self.status_position = [x, y, r]
             self.log(['sketch','x','y','r'], ['xyAbs', x, y, r])
             xo, yo = self.transformData([x,y], direction = -1)
-            # print('pojnts:', xo,yo,r)
+            log.debug('STATUS: points: %f %f %f'% (xo,yo,r))
             self.afmPoints.append([xo,yo,r])
         elif line.startswith('# sketching'):
             # print(line)
@@ -530,7 +587,7 @@ class MainWindow(QtGui.QMainWindow):
             self.status_entity = line[2]
             self.log(['sketch','ID'],['start', line[2]])
             self.afmPoints.clear()
-            print('Started '+line[2])
+            log.info('STATUS: Started '+line[2])
             # self.statusBar().showMessage(line)
         elif line.startswith('# end'):
             self.status_entity = ''
@@ -546,32 +603,40 @@ class MainWindow(QtGui.QMainWindow):
             self.afmNow.clear()
             self.afmPoints.clear()
             self.log(['sketch','ID'],['end', line[2]])
-            print('Finished '+line[2])
+            log.info('STATUS: Finished '+line[2])
             # self.statusBar().showMessage(line)
         elif line.startswith('Ready'):
             self.status_state = 'Ready'
             self.sketching = False
             self.afmReady()
-            print( "\nREADY\n" )
+            log.info( "STATUS: READY" )
             self.statusBar().showMessage(line)
 
         elif line.startswith('Parsing Script...'):
             self.status_state = 'Sketching'
         elif line.startswith('# layer'):
-            self.log(['sketch','layer'],['layer', line])
+            line = line.split( )
+            self.status_layer = line[2]
+            self.log(['sketch','ID'],['layer', line[2]])
+            log.info('STATUS: Layer '+line[2])
         elif line.startswith('# entity'):
-            self.log(['sketch','layer'],['entity', line])
+            line = line.split( )
+            self.status_entity = line[2]
+            self.log(['sketch','ID'],['entity', line[2]])
+            log.info('STATUS: entity '+line[2])
+            # self.log(['sketch','layer'],['entity', line])
             # print(line)
         elif line.startswith('# copy'):
             line = line.split( )
             self.status_copy = int(line[2])
             self.log(['sketch','copy'],['copy', self.status_copy])
-            print( 'copy %f' %self.status_copy )
+            log.info( 'STATUS: copy %f' %self.status_copy )
+
         elif line.startswith('pause'):
             line = line.split( )
             self.status_pause = float(line[1])
             self.log(['sketch','pause'],['pause', self.status_pause])
-            print( 'pause %f' %self.status_pause )
+            log.info( 'STATUS: pause %f' %self.status_pause )
         elif line.startswith('SketchScript'):
             pass
         else:
@@ -581,6 +646,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def doDemo(self):
+        log.info('Starting Demo')
         data = self.sketchFile.split('\n')
         for line in data:
             # if line.startswith('xyAbs'):
@@ -694,6 +760,7 @@ class MainWindow(QtGui.QMainWindow):
             self.log(['sketch','dir'], ['subfolder', str(self.sketchSubFolder)])
             transmit = 'SketchScript %i \n' % len(self.sketchFile)
 
+            log.info('AFM sketch now %s'%str(self.sketchSubFolder))
             if demo:
                 self.doDemo()
             else:
@@ -864,7 +931,7 @@ class MainWindow(QtGui.QMainWindow):
         self.updateActions()
 
     def clicked(self):
-        print('point')
+        log.warning('point')
 
     def doMenu(self, point):
         index=self.tree_file.indexAt(point)
@@ -878,7 +945,7 @@ class MainWindow(QtGui.QMainWindow):
 
     @QtCore.pyqtSlot("QModelIndex", "QModelIndex")
     def recalc(self, index):
-        print('X recalc')
+        log.warning('X recalc')
 
 
     def pltDesign(self):
@@ -1450,6 +1517,18 @@ class MainWindow(QtGui.QMainWindow):
         QtCore.QTimer.singleShot(10 *1000, self.savicar)
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
+
+    # app.setStyleSheet('stylesheet.qss')
+
+    # css = QtCore.QFile('./stylesheet.qss')
+    # css.open(QtCore.QIODevice.ReadOnly)
+    # if css.isOpen():
+    with open('./stylesheet.css', 'r') as f:
+         read_data = f.read()
+    # f.closed
+    app.setStyleSheet(read_data)
+    # css.close()
+
     window = MainWindow()
     # window.show()
     sys.exit(app.exec_())

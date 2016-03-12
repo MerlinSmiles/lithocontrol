@@ -1,18 +1,11 @@
-#!/usr/bin/python
-
-import logging
+import sys
+# import logging
 import custom_logger
 from PyQt4 import QtCore, QtGui
-import submodule
 # import colorer
 
-log = logging.getLogger('root')
-log.setLevel('DEBUG')
-
-
-log.addHandler(custom_logger.QtHandler())
-log.addHandler(custom_logger.MyHandler())
-
+log = custom_logger.getLogger('root','DEBUG')
+# log.setLevel('DEBUG')
 
 class tDialog(QtGui.QDialog):
     def __init__( self, parent = None ):
@@ -27,14 +20,16 @@ class tDialog(QtGui.QDialog):
         self._button.clicked.connect(self.test)
 
     def test( self ):
-        # a = submodule.SubClass() # this should produce a log message
-        # a.SomeMethod()           # so should this
         log.debug('Adebug message')
         log.info('Ainfo message')
         log.warning('Awarning message')
         log.error('Aerror message')
         print ('AOld school hand made print message')
-        # print(blah)
+
+        try:
+            blah
+        except Exception as e:
+            log.exception(e)
 
 
 class LogDialog(QtGui.QWidget):
@@ -44,15 +39,29 @@ class LogDialog(QtGui.QWidget):
         font.setStyleHint(QtGui.QFont.TypeWriter);
         self._console = QtGui.QTextBrowser(self)
         self._console.setCurrentFont(font)
+        self._combo = QtGui.QComboBox()
+        self._combo.addItems(['DEBUG','INFO','WARNING','ERROR'])
+        self._combo.currentIndexChanged.connect( self.changed )
+
+        comboLayout = QtGui.QSplitter()
+        comboLayout.addWidget(QtGui.QLabel(' Logging level:'))
+        comboLayout.addWidget(self._combo)
 
         layout = QtGui.QVBoxLayout()
         layout.setMargin(0)
         layout.setSpacing(0)
+        layout.addWidget(comboLayout)
         layout.addWidget(self._console)
         self.setLayout(layout)
 
         custom_logger.LogStream.stdout().messageWritten.connect( self.insertText2 )
         custom_logger.LogStream.stderr().messageWritten.connect( self.insertText )
+
+    def changed(self, index):
+        level = self._combo.itemText(index)
+        log.setLevel(level)
+        log.info('LOGGING: Level changed to {}'.format(level))
+        # print(index, level)
 
     def insertText(self, text):
         color = QtCore.Qt.darkMagenta
@@ -60,6 +69,9 @@ class LogDialog(QtGui.QWidget):
         fm.setForeground(color)
         self._console.setCurrentCharFormat(fm)
         self._console.insertPlainText(text)
+        self._console.moveCursor(QtGui.QTextCursor.End)
+        self._console.ensureCursorVisible()
+
 
     def insertText2(self, text):
         if text.startswith('DEBUG'):
@@ -78,10 +90,13 @@ class LogDialog(QtGui.QWidget):
         fm.setForeground(color)
         self._console.setCurrentCharFormat(fm)
         self._console.insertPlainText(text)
+        self._console.moveCursor(QtGui.QTextCursor.End)
+        self._console.ensureCursorVisible()
+
 
     def test( self ):
-        a = submodule.SubClass() # this should produce a log message
-        a.SomeMethod()           # so should this
+        # a = submodule.SubClass() # this should produce a log message
+        # a.SomeMethod()           # so should this
         log.debug('debug message')
         log.info('info message')
         log.warning('warning message')

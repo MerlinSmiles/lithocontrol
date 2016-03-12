@@ -22,10 +22,12 @@ class PlotFrame(QtGui.QWidget):
         self.area = pg_dock.DockArea()
 
         layout = QtGui.QHBoxLayout()
+        layout.setContentsMargins(0,0,0,0)
         layout.addWidget(self.area)
         self.setLayout(layout)
 
         self.sketchDock = pg_dock.Dock("Skecthing", size=(500, 500))     ## give this dock the minimum possible size
+        self.sketchDock.setContentsMargins(0,0,0,0)
 
 
         self.area.addDock(self.sketchDock, 'above')

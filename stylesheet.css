@@ -1,0 +1,63 @@
+
+QGroupBox {
+    margin-top: 5px;
+    margin-right: 0px;
+    margin-bottom: 0px;
+    margin-left: 0px;
+    spacing: 0px;
+    padding: 1px;
+    padding-top: 5px;
+}
+
+QGroupBox::title {
+    /*background-color: transparent;*/
+    /*subcontrol-position: top left;*/
+    padding: 0px;
+    margin-top: -10px;
+    margin-left: 5px;
+    /*padding-left: 15px;*/
+    /*subcontrol-origin: margin;*/
+}
+
+
+QFrame::layout { margin: 0px }
+
+QFrame {
+    margin-top: 0px;
+    margin-right: 0px;
+    margin-bottom: 0px;
+    margin-left: 0px;
+    spacing: 0px;
+    padding: 0px;
+}
+
+QMainWindow
+{
+    margin-top: 0px;
+    margin-right: 0px;
+    margin-bottom: 0px;
+    margin-left: 0px;
+    spacing: 0px;
+    padding: 0px;
+}
+
+/*
+QVBoxLayout, QVBoxLayout
+{
+    margin-top: 0px;
+    margin-right: 0px;
+    margin-bottom: 0px;
+    margin-left: 0px;
+    spacing: 0px;
+    padding: 0px;
+}
+*/
+QTreeView, QListView
+{
+    margin: 0px;
+    spacing: 0px;
+    /*border: 10px solid*/
+}
+
+QSplitter::handle {
+}

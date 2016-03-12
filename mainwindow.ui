@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1059</width>
-    <height>878</height>
+    <width>953</width>
+    <height>493</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -30,7 +30,7 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="0">
+    <item row="0" column="1">
      <widget class="QSplitter" name="splitter">
       <property name="sizePolicy">
        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -85,7 +85,7 @@
        </widget>
        <widget class="QWidget" name="gridLayoutWidget">
         <layout class="QGridLayout" name="gridLayout_2">
-         <item row="0" column="6">
+         <item row="0" column="5">
           <widget class="QGroupBox" name="groupBox_3">
            <property name="title">
             <string>Sketch</string>
@@ -217,13 +217,7 @@
           </widget>
          </item>
          <item row="0" column="3">
-          <layout class="QVBoxLayout" name="verticalLayout_4" stretch="0,0,0">
-           <property name="leftMargin">
-            <number>10</number>
-           </property>
-           <property name="rightMargin">
-            <number>10</number>
-           </property>
+          <layout class="QVBoxLayout" name="verticalLayout_4">
            <item>
             <widget class="QGroupBox" name="groupBox_4">
              <property name="sizePolicy">
@@ -373,7 +367,7 @@
            </item>
           </layout>
          </item>
-         <item row="0" column="7">
+         <item row="0" column="6">
           <spacer name="horizontalSpacer">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
@@ -388,6 +382,9 @@
          </item>
          <item row="0" column="4">
           <layout class="QVBoxLayout" name="verticalLayout">
+           <property name="spacing">
+            <number>6</number>
+           </property>
            <item>
             <widget class="QGroupBox" name="groupBox">
              <property name="title">
@@ -591,14 +588,8 @@
            </item>
           </layout>
          </item>
-         <item row="0" column="5">
-          <layout class="QVBoxLayout" name="verticalLayout_2"/>
-         </item>
         </layout>
        </widget>
-      </widget>
-      <widget class="QWidget" name="verticalLayoutWidget">
-       <layout class="QVBoxLayout" name="plotSplitter"/>
       </widget>
      </widget>
     </item>
@@ -609,7 +600,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1059</width>
+     <width>953</width>
      <height>21</height>
     </rect>
    </property>

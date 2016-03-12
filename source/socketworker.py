@@ -10,23 +10,27 @@ from PyQt4 import QtCore, QtGui, uic
 import socket
 import time
 
+import logging
+log = logging.getLogger('root')
+
 class SocketWorker(QtCore.QThread):
 
     new_data = QtCore.pyqtSignal(object)
 
-    def __init__(self, host, port, parent = None):
+    def __init__(self, host, port, demo = False, parent = None):
         QtCore.QThread.__init__(self, parent)
         self.exiting = False
-
+        self.demo = demo
         self.host = host
         self.port = port
         self.remote_ip = None
         self.sock = None
         self.init = False
         self.connected = False
-
-        self.initSocket()
-        self.connectSocket()
+        log.debug('SOCKET: Init')
+        if not demo:
+            self.initSocket()
+            self.connectSocket()
 
     def __del__(self):
         self.stop()
@@ -49,6 +53,8 @@ class SocketWorker(QtCore.QThread):
 
     def connectSocket(self):
         #Connect to remote server
+        if self.demo:
+            return
         if not self.init:
             self.initSocket()
         if self.connected:
@@ -62,6 +68,8 @@ class SocketWorker(QtCore.QThread):
             pass
 
     def disconnectSocket(self):
+        if self.demo:
+            return
         try:
             self.sock.close()
             print( 'Socket disconnected from ' + self.host + ' on ip ' + self.remote_ip )
@@ -70,6 +78,8 @@ class SocketWorker(QtCore.QThread):
             pass
 
     def send_message(self, message):
+        if self.demo:
+            return
         if not self.connected:
             self.connectSocket()
         try :
@@ -90,6 +100,8 @@ class SocketWorker(QtCore.QThread):
                 print( 'Send failed: Serious error' )
 
     def recv_message(self, timeout =0, buf = 4096):
+        if self.demo:
+            return
         if not self.connected:
             self.connectSocket()
         try:
@@ -113,6 +125,8 @@ class SocketWorker(QtCore.QThread):
         self.disconnectSocket()
 
     def run(self):
+        while self.demo:
+            time.sleep(0.1)
         self.exiting = False
         if not self.connected:
             self.connectSocket()
