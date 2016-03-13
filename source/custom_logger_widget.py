@@ -4,13 +4,13 @@ import custom_logger
 from PyQt4 import QtCore, QtGui
 # import colorer
 
-log = custom_logger.getLogger('root','DEBUG')
 # log.setLevel('DEBUG')
 
 class tDialog(QtGui.QDialog):
     def __init__( self, parent = None ):
         super(tDialog, self).__init__(parent)
 
+        self.log = custom_logger.getLogger('root','DEBUG')
         layout = QtGui.QVBoxLayout()
         self.setLayout(layout)
 
@@ -20,21 +20,21 @@ class tDialog(QtGui.QDialog):
         self._button.clicked.connect(self.test)
 
     def test( self ):
-        log.debug('Adebug message')
-        log.info('Ainfo message')
-        log.warning('Awarning message')
-        log.error('Aerror message')
+        self.log.debug('Adebug message')
+        self.log.info('Ainfo message')
+        self.log.warning('Awarning message')
+        self.log.error('Aerror message')
         print ('AOld school hand made print message')
-
         try:
             blah
         except Exception as e:
-            log.exception(e)
+            self.log.exception(e)
 
 
 class LogDialog(QtGui.QWidget):
     def __init__( self, parent = None ):
         super(LogDialog, self).__init__(parent)
+        self.log = custom_logger.getLogger('root','DEBUG')
         font = QtGui.QFont("Monospace",8)
         font.setStyleHint(QtGui.QFont.TypeWriter);
         self._console = QtGui.QTextBrowser(self)
@@ -59,8 +59,8 @@ class LogDialog(QtGui.QWidget):
 
     def changed(self, index):
         level = self._combo.itemText(index)
-        log.setLevel(level)
-        log.info('LOGGING: Level changed to {}'.format(level))
+        self.log.setLevel(level)
+        self.log.info('LOGGING: Level changed to {}'.format(level))
         # print(index, level)
 
     def insertText(self, text):
@@ -97,10 +97,10 @@ class LogDialog(QtGui.QWidget):
     def test( self ):
         # a = submodule.SubClass() # this should produce a log message
         # a.SomeMethod()           # so should this
-        log.debug('debug message')
-        log.info('info message')
-        log.warning('warning message')
-        log.error('error message')
+        self.log.debug('debug message')
+        self.log.info('info message')
+        self.log.warning('warning message')
+        self.log.error('error message')
         print ('Old school hand made print message')
         # print(blah)
 

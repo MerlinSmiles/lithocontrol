@@ -7,7 +7,7 @@ from PyQt4 import QtCore, QtGui
 
 
 
-def getLogger(name='root', loglevel='INFO'):
+def getLogger(name='root', loglevel='INFO', logfile='logfile.log'):
   logger = logging.getLogger(name)
   # if logger 'name' already exists, return it to avoid logging duplicate
   # messages by attaching multiple handlers of the same type
@@ -23,7 +23,7 @@ def getLogger(name='root', loglevel='INFO'):
     logger.addHandler(QtHandler())
     # logger.addHandler(MyHandler())
     logger.addHandler(consoleHandler(sys.stdout))
-    logger.addHandler(RotateHandler('logfile.log',maxBytes=10e6, backupCount=5))
+    logger.addHandler(RotateHandler(logfile,maxBytes=10e6, backupCount=5))
 
     if logger.name == 'root':
       logger.warning('Running: %s %s',

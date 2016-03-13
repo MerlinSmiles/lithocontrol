@@ -8,7 +8,7 @@ from source import custom_logger
 from source.custom_logger_widget import LogDialog
 
 # log = logging.getLogger('root')
-log = custom_logger.getLogger('root','INFO')
+log = custom_logger.getLogger('root','INFO','./logs/logfile.log')
 
 
 try:
