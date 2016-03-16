@@ -3,6 +3,12 @@ demo = False
 import sys
 sys.path.append(".\\source")
 
+import sip
+API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
+API_VERSION = 2
+for name in API_NAMES:
+    sip.setapi(name, API_VERSION)
+
 import logging
 from source import custom_logger
 from source.custom_logger_widget import LogDialog
@@ -15,12 +21,8 @@ try:
     import gwy,  gwyutils
 except:
     demo = True
+# demo = True
 
-import sip
-API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
-API_VERSION = 2
-for name in API_NAMES:
-    sip.setapi(name, API_VERSION)
 
 import numpy as np
 from pprint import pprint
@@ -44,8 +46,8 @@ import json
 
 with open('config.json', 'r') as f:
     config = json.load(f)
-if demo:
-    config['storage'] = config['demo_storage']
+# if demo:
+#     config['storage'] = config['demo_storage']
 # print(config['storage'])
 
 def_dxf_file = 'F:/lithography/DesignFiles/current.dxf'
@@ -352,7 +354,16 @@ class MainWindow(QtGui.QMainWindow):
         columns=[item for sublist in columns for item in sublist]
 
         self.log_store.append(values,columns)
-        # print('LOG:\t' + str(column) + '\t' + str(value))
+        # s = ''
+        # for i, data in enumerate(column):
+        #     s+=str(data)
+        #     s+=': '
+        #     s+=str(value[i])
+        #     s+=', '
+
+        # log.debug('LOG: '+s[:-2])
+
+        # print('P LOG:\t' + str(column) + '\t' + str(value))
 
     def init_sketching(self):
         self.inFile = ''
@@ -384,7 +395,7 @@ class MainWindow(QtGui.QMainWindow):
         self.AFMthread = AFMWorker()
         log.debug("INIT: SocketWorker")
         self.splash.showMessage("Initialize SocketWorker",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
-        self.SocketThread = SocketWorker(host = 'nanoman', port = 12345, demo=True)
+        self.SocketThread = SocketWorker(host = 'nanoman', port = 12345, demo=False)
 
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("finished()"), self.updateAFM)
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("terminated()"), self.updateAFM)
@@ -427,13 +438,15 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def process_output(self):
+        return
         output = self.mprocess.readAllStandardOutput()
-        log.warning('332')
+        log.warning('process_output')
         print(output)
 
     def process_error(self):
+        return
         output = self.mprocess.readAllStandardError()
-        log.warning('333')
+        log.warning('process_error')
         print(output)
 
 # def startit():
@@ -570,7 +583,7 @@ class MainWindow(QtGui.QMainWindow):
             self.status_position = [x, y, r]
             self.log(['sketch','x','y','r'], ['xyAbs', x, y, r])
             xo, yo = self.transformData([x,y], direction = -1)
-            log.debug('STATUS: points: %f %f %f'% (xo,yo,r))
+            # log.debug('STATUS: points: %f %f %f'% (xo,yo,r))
             self.afmPoints.append([xo,yo,r])
         elif line.startswith('# sketching'):
             # print(line)
@@ -611,6 +624,7 @@ class MainWindow(QtGui.QMainWindow):
             self.afmReady()
             log.info( "STATUS: READY" )
             self.statusBar().showMessage(line)
+            self.measure_save()
 
         elif line.startswith('Parsing Script...'):
             self.status_state = 'Sketching'
@@ -630,7 +644,8 @@ class MainWindow(QtGui.QMainWindow):
             line = line.split( )
             self.status_copy = int(line[2])
             self.log(['sketch','copy'],['copy', self.status_copy])
-            log.info( 'STATUS: copy %f' %self.status_copy )
+            log.info( 'STATUS: copy %d' %self.status_copy )
+            self.afmPoints.clear()
 
         elif line.startswith('pause'):
             line = line.split( )
@@ -1513,8 +1528,10 @@ class MainWindow(QtGui.QMainWindow):
         self.log_store.save_data()
 
     def savicar(self):
+        # log.debug('SAVING')
         self.measure_save()
         QtCore.QTimer.singleShot(10 *1000, self.savicar)
+
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
 

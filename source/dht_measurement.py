@@ -3,7 +3,6 @@ import numpy as np
 import multiprocessing as mp
 from multiprocessing import Queue
 from PyQt4 import QtCore
-from PyQt4.QtCore import pyqtSignal
 from PyQt4.QtCore import QTime
 
 import time
@@ -15,24 +14,40 @@ demo = False
 
 
 
-class dht_Worker(QtCore.QObject):
+class dht_Runner(QtCore.QObject):
 
-    terminate = pyqtSignal()
+    terminate = QtCore.pyqtSignal(object)
+    new_data = QtCore.pyqtSignal(object)
 
-    def __init__(self, serial, dht_buffer, timer=None, parent=None):
-
-        super(dht_Worker, self).__init__(parent)
+    def __init__(self, serial, start_signal, stopMeasEvent, timer=None, parent=None):
+        super(dht_Runner, self).__init__(parent)
         self.serial = serial
-        self.dht_buffer = dht_buffer
+        self.stopMeasEvent = stopMeasEvent
+        self.queue = Queue()
         self.timer = timer
+
+        self.timer = QTime.currentTime()
+        self.timer.start()
+        start_signal.connect(self._run)
+
+        # self.dht_buffer = dht_buffer
+        # self.timer = timer
         self.running = True
         if self.serial != None:
             print( "Monitoring serial port " + self.serial.name )
             self.running = True
 
-    def run(self):
+    def _run(self):
+        self.stopMeasEvent.clear()
+        self.get()
+
+    def get(self):
         data = ''
-        while (self.running == True):
+
+        if self.stopMeasEvent.is_set():
+            # self.p.join()
+            print('DHT ended')
+        else:
             if (self.serial == None):
                 time.sleep(3)
             else:
@@ -47,10 +62,13 @@ class dht_Worker(QtCore.QObject):
                             temperature = float(data[2])
                             if (humidity>9) and (temperature>9 ):
                                 tdelta = self.timer.elapsed()/1000.0
-                                self.dht_buffer.append(np.array([tdelta, temperature, humidity]))
+                                msg = np.array([tdelta, temperature, humidity])
+                                self.new_data.emit(msg)
+                                # self.dht_buffer.append(np.array([tdelta, temperature, humidity]))
                                 # print(np.array([tdelta, temperature, humidity]))
                 except:
                     pass
+            QtCore.QTimer.singleShot(0, self.get)
 
     def update(self,settings):
         self.settings = settings
@@ -64,6 +82,7 @@ class dht_Worker(QtCore.QObject):
         self.running = False
         try:
             self.serial.close()
+            self.stopMeasEvent.set()
         except:
             pass
 
@@ -85,7 +104,7 @@ class dht_Worker(QtCore.QObject):
 
 #     def _run(self):
 #         self.stopMeasEvent.clear()
-#         self.p = dht_Worker(self.queue, self.stopMeasEvent, timer=self.timer, port=self.port)
+#         self.p = dht_Runner(self.queue, self.stopMeasEvent, timer=self.timer, port=self.port)
 #         self.p.start()
 #         self.get()
 
@@ -102,13 +121,13 @@ class dht_Worker(QtCore.QObject):
 
 
 
-# class dht_Worker(QtCore.QObject):
+# class dht_Runner(QtCore.QObject):
 
 #     terminate = pyqtSignal()
 
 #     def __init__(self, settings, parent=None):
 
-#         super(dht_Worker, self).__init__(parent)
+#         super(dht_Runner, self).__init__(parent)
 #         self.settings = settings
 #         self.running = True
 #         if self.serial != None:
@@ -135,9 +154,9 @@ class dht_Worker(QtCore.QObject):
 
 
 
-# class dht_Worker(mp.Process):
+# class dht_Runner(mp.Process):
 #     def __init__(self, resultQueue, stopMeasEvent, port, timer=None):
-#         super(dht_Worker, self).__init__()
+#         super(dht_Runner, self).__init__()
 #         if timer is None:
 #             timer = QTime.currentTime()
 #             timer.start()

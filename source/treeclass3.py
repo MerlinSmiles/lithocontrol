@@ -426,7 +426,7 @@ class TreeItem(object):
         self.length = 0.0
         self.sketchTime = 0.0
         self.pathOrder = 1
-        self.name = 'Item'
+        self.name = 'root'
         self.type = 'Dummy'
         self.meta = {}
 

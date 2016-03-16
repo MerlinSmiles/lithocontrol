@@ -3,7 +3,6 @@ import numpy as np
 import multiprocessing as mp
 from multiprocessing import Queue
 from PyQt4 import QtCore
-from PyQt4.QtCore import pyqtSignal
 from PyQt4.QtCore import QTime
 
 import time
@@ -22,8 +21,7 @@ except:
 
 
 class Runner(QtCore.QObject):
-    terminate = pyqtSignal()
-
+    terminate = QtCore.pyqtSignal(object)
     new_data = QtCore.pyqtSignal(object)
 
     def __init__(self, start_signal, stopMeasEvent, timer=None, parent=None):
@@ -62,6 +60,7 @@ class ni_Worker(mp.Process):
     def __init__(self, resultQueue, stopMeasEvent, timer=None):
         super(ni_Worker, self).__init__()
         if timer is None:
+            print('timer none')
             timer = QTime.currentTime()
             timer.start()
         self.timer = timer

@@ -34,7 +34,7 @@ class DataStore(object):
             print(dict(self.data_store['data'].dtypes))
             print(df)
             print(self.data_store['data'])
-            self.data_store.append('data',df,append=True, ignore_index=True)
+            self.data_store.append('data',df,append=True, ignore_index=True,min_itemsize={ 'string' : 150 })
         self.data_store.close()
 
     def __repr__(self):

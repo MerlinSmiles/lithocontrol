@@ -31,6 +31,7 @@ filename = './test.dxf'
 
 import os
 import json
+from copy import deepcopy, copy
 
 with open('./config.json', 'r') as f:
     config = json.load(f)
@@ -140,6 +141,12 @@ class MainWindow(QtGui.QMainWindow):
         self.tree_file.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.connect(self.tree_file, QtCore.SIGNAL("customContextMenuRequested(const QPoint &)"), self.doMenu)
         print('make last column just as wide as needed')
+        self.offset_angle = 0
+        self.offset_center = [0,0]
+        self.sketchFile = ''
+        self.sketchList = []
+        self.sketchPrepare(self.model.rootItem)
+        self.sketchFinish()
 
 
     def clicked(self):
@@ -153,6 +160,208 @@ class MainWindow(QtGui.QMainWindow):
         colname = headers[column]
         item = self.tree_file.model().getItem(index)
         print(colname,item)
+
+    def sComment(self, stuff, prefix=''):
+        adding = ''
+        adding += '# '
+        adding += prefix
+        for i in stuff:
+            adding += str(i)+ '\t'
+        adding += '\n'
+        self.sketchFile += adding
+        # print( adding )
+
+    def sketchAdd(self, data):
+        if isinstance(data, list):
+            for i in data:
+                pass
+        elif isinstance(data, str):
+            self.sketchList.append(data+'\n')
+        elif isinstance(data, sItem):
+            self.prepareItem(data)
+            self.sketchList.append(data)
+
+    def sketchFinish(self):
+        sketchFile = '# sketching start\n'
+        for data in self.sketchList:
+            # print(type(data))
+            if isinstance(data, str):
+                sketchFile += data
+
+            elif isinstance(data, sItem):
+                sketchFile += data.sketchData
+            else:
+                raise TypeError
+
+        x0,y0 = self.offset_center
+        sketchFile += 'xyAbs\t%.4f\t%.4f\t%.3f\n' %(-x0,-y0,self.freerate)
+        sketchFile += '# sketching end\n'
+        print( sketchFile )
+
+    def getItem(self,item):
+        return self.model.getItem(model.index(item))
+
+    def sketchItem(self,item):
+        s_item = sItem(item)
+        s_item.globalOffset = self.offset_center
+        s_item.globalRotation = self.offset_rotation
+        return
+
+    def sketchPrepare(self, root):
+        # Function receives the root Item of the data-tree
+        self.offset_center = [0,0]
+        self.offset_rotation = 0
+        self.freerate = 4
+
+        layers = root.childItems
+
+        # layers = [self.getItem for i in layers]
+        for layer in layers:
+            # if layer.checkState == 0:
+            #     continue
+            self.sketchAdd(sItem(layer))
+
+            for child in layer.childItems:
+                # if child.checkState == 0:
+                #     continue
+                # print(child.childItems)
+                item = sItem(child)
+                # item.is_closed
+                # item.fillAngle
+                # item.fillStep
+                # item.pathOrder
+                # item.name
+                item.volt+=2
+                # item.rate
+                # item.offset
+                self.sketchAdd(item)
+
+
+
+
+    def s_comment(self, child, *args):
+        string = ''
+        string += '# '
+        for arg in args:
+            string += str(arg)+ '\t'
+        string = string[:-1]
+        string += '\n'
+        child.sketchData += string
+
+
+    def s_instruction(self, child, *args):
+        string = ''
+        for arg in args:
+            string += str(arg)+ '\t'
+        string = string[:-1]
+        string += '\n'
+        child.sketchData += string
+
+    def prepareItem(self, child):
+        child.sketchData = ''
+        # if child.checkState == 0:
+        #     return
+        self.s_comment(child, 'start', child.name)
+        self.s_comment(child, 'entity', *child.data() )
+
+        data = child.pltData
+        if data != []:
+            for i in data:
+                dta = np.add(i[::child.pathOrder],child.offset)
+
+                path = self.transformData( dta ,direction=1)
+                # print(path)
+                x,y = path[0]
+                self.s_instruction(child, 'vtip', 0.0)
+                self.s_instruction(child, 'xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
+                self.s_instruction(child, 'vtip\t%f' %float(child.volt))
+                r = child.rate
+                for x,y in path:
+                # Maybe go from [1:] but going to the startpoint twice should reduce vtip lag
+                    self.s_instruction(child, 'xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,r))
+
+                self.s_instruction(child, 'vtip\t%f' %float(child.volt))
+                self.s_instruction(child, 'vtip', 0.0)
+                self.s_comment(child, 'end', child.name)
+
+        # creates an empty line
+        self.s_instruction(child)
+
+
+
+
+
+    def transformData(self, data, angle = None, offset = None, direction = 1):
+        # print('in transformData')
+        c = data
+        if angle == None:
+            angle = self.offset_angle
+        if offset == None:
+            offset = self.offset_center
+        offset = -np.array(offset)
+
+        theta = direction*(angle/180.) * np.pi
+        rotMatrix = np.array([[np.cos(theta), -np.sin(theta)],
+                              [np.sin(theta),  np.cos(theta)]])
+        if direction == 1:
+            c = np.add(c, direction*offset)
+            c = np.dot(c, rotMatrix)
+        else:
+            c = np.dot(c, rotMatrix)
+            c = np.add(c, direction*offset)
+        return c
+
+
+class sItem(object):
+    def __init__(self, item):
+        self.item = item
+        self.model = item.model
+        self.color = item.color
+        self.show = item.show
+        self.parentItem = item.parentItem
+        self.itemData = item.itemData
+        self.childItems = item.childItems
+        self.entity = item.entity
+        self.pltHandle = item.pltHandle
+        self.pltData = item.pltData
+        self.checkState = item.checkState
+        self.length = item.length
+        self.sketchTime = item.sketchTime
+        self.type = item.type
+        self.meta = item.meta
+
+        self.is_closed = item.is_closed
+        self.fillAngle = item.fillAngle
+        self.fillStep = item.fillStep
+        self.pathOrder = item.pathOrder
+        self.name = item.name
+        self.parentName = item.parent().name
+        self.volt = item.volt
+        self.rate = item.rate
+        self.offset = [0,0]
+        self.sketchData = ''
+
+    def data(self):
+        datalist = [self.type,
+                    self.name,
+                    self.parentName,
+                    self.volt,
+                    self.rate,
+                    self.fillAngle,
+                    self.fillStep,
+                    self.offset,
+                    self.color,
+                    self.show,
+                    self.checkState,
+                    self.length,
+                    self.sketchTime,
+                    self.is_closed,
+                    self.pathOrder]
+
+        return datalist
+
+
+
 
 
 if __name__ == '__main__':

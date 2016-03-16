@@ -177,32 +177,19 @@ class MainWindow(QtGui.QMainWindow):
         self.sig_measure.emit(500)
         self.cnt = 0
 
-
-
-        # self.dht_stopMeasEvent = mp.Event()
-        # self.dht_runner_thread = QtCore.QThread()
-        # self.dht_runner = DhtRunner(start_signal=self.dht_runner_thread.started, stopMeasEvent=self.dht_stopMeasEvent, timer=self.timer, port=5)
-        # self.dht_runner.new_data.connect(self.handle_msg_dht)
-        # self.dht_runner.moveToThread(self.dht_runner_thread)
-        # self.dht_runner_thread.start()
-        # self.dht_cnt = 0
-
-
         self.initSerial()
-        self.init_dht_plot()
+        self.dht_runner_thread = QtCore.QThread()
+        self.dht_runner = dht_Runner(self.dht_serial, start_signal=self.dht_runner_thread.started, stopMeasEvent=self.stopMeasEvent, timer=self.timer)
+        self.dht_runner.new_data.connect(self.handle_msg_dht)
+        self.dht_runner.moveToThread(self.dht_runner_thread)
 
-        self.dht_Worker = dht_Worker(self.dht_serial, self.dht_store, self.timer)
-        # self.dht_WorkerThread = None
-        self.dht_WorkerThread = QtCore.QThread()
-        self.dht_Worker.moveToThread(self.dht_WorkerThread)
+        self.sig_dht_measure.connect(self.dht_runner_thread.start)
+        self.sig_dht_measure_stop.connect(self.dht_runner.stop)
 
-        self.sig_dht_measure.connect(self.dht_Worker.run)
-        # self.sig_dht_measure.connect(self.dhticar)
-        self.sig_dht_measure_stop.connect(self.dht_Worker.stop)
-
-        self.dht_WorkerThread.start()
+        # self.dht_runner_thread.start()
 
         self.sig_dht_measure.emit(500)
+        self.dht_cnt = 0
 
         # columns = len(self.dht_store_columns)
         # self.dht_buff = RingBuffer(10000, cols = columns)
@@ -230,13 +217,13 @@ class MainWindow(QtGui.QMainWindow):
 
         self.measurement_pause = True
 
+        self.init_measurement()
 
         # self.splitter.setStretchFactor(3,2)
 
 
 
 
-        self.init_measurement()
         # if self.newstores == True:
         # self.init_stores()
         # self.newstores = False
@@ -311,8 +298,8 @@ class MainWindow(QtGui.QMainWindow):
             ]},
             {'name': 'Measurements', 'type': 'group', 'children': [
               {'name': 'Current Data', 'type': 'group', 'children': [
-                    {'name': 'Temperature', 'type': 'float', 'value': 20.1, 'siPrefix': True, 'suffix': '\xb0C', 'readonly': True},
-                    {'name': 'Humidity', 'type': 'float', 'value': 11.1, 'siPrefix': True, 'suffix': '%', 'readonly': True},
+                    {'name': 'Temperature', 'type': 'float', 'value': 0, 'siPrefix': True, 'suffix': '\xb0C', 'readonly': True},
+                    {'name': 'Humidity', 'type': 'float', 'value': 0, 'siPrefix': True, 'suffix': '%', 'readonly': True},
                     {'name': 'Current', 'type': 'str', 'value': '', 'readonly': True},
                     {'name': 'R2pt', 'type': 'str', 'value': '', 'readonly': True},
                     {'name': 'R4pt', 'type': 'str', 'value': '', 'readonly': True},
@@ -439,7 +426,6 @@ class MainWindow(QtGui.QMainWindow):
     def init_measurement(self):
         print('init_measurement')
         self.stopMeasEvent.clear()
-        # self.dht_stopMeasEvent.clear()
 
         # self.initSerial()
 
@@ -458,9 +444,9 @@ class MainWindow(QtGui.QMainWindow):
         self.pltR_pi.clear()
         self.pltG_pi.setClipToView(True)
 
-        self.pltG_pi.setXLink(self.pltR_pi)
         self.pltG_pi.addLegend()
         # self.pltG_pi.enableAutoRange('x', True)
+        self.pltG_pi.setXLink(self.pltR_pi)
         self.pltG_pi.enableAutoRange('y', True)
 
         self.pltR_pi.setLimits(yMin=0, yMax=self.p.param("Plotting",'R-limit').value())
@@ -470,6 +456,30 @@ class MainWindow(QtGui.QMainWindow):
         self.pltR_pi_names = ['ch0','ch1','ch2','ch3','ch4','ch5','ch6','ch7','ch8','ch9',]
         self.plotR_names = ['Current1', 'R2pt', 'R4pt']
         self.plotG_names = ['Current2', 'G2pt', 'G4pt']
+
+
+        self.dht_pi = self.plotFrame.dhtPlot.getPlotItem()
+        self.dht_pi.clear()
+        self.dht_pi.setClipToView(True)
+        self.dht_pi.addLegend()
+        self.dht_pi.enableAutoRange('x', True)
+        self.dht_pi.setXLink(self.pltR_pi)
+        self.dht_pi.enableAutoRange('y', True)
+
+
+        self.pltR_pi.setLabel('left', 'Resistance', u'\u03a9')
+        self.pltG_pi.setLabel('left', 'Conductance', 'S')
+        self.dht_pi.setLabel('left', u'Hum (%)  -  Temp (\u00b0C)')
+
+        self.pltR_pi.showAxis('right')
+        self.pltG_pi.showAxis('right')
+        self.dht_pi.showAxis('right')
+
+        self.pltR_pi.showGrid(1,1,0.3)
+        self.pltG_pi.showGrid(1,1,0.3)
+        self.dht_pi.showGrid(1,1,0.3)
+
+
         # for i in range(5):
         #     self.plotlist.append({'plot': self.pltR_pi.plot(name=self.pltR_pi_names[i]), 'channel': i})
 
@@ -486,7 +496,6 @@ class MainWindow(QtGui.QMainWindow):
         print('ending')
         self.stopMeasEvent.set()
         print('set')
-        # self.dht_stopMeasEvent.set()
         self.ni_runner_thread.exit()
         print('exit')
         self.ni_runner_thread.wait()
@@ -597,9 +606,9 @@ class MainWindow(QtGui.QMainWindow):
             self.ni_runner_thread.quit()
         except:
             pass
-        self.splash.showMessage("dht_WorkerThread",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        self.splash.showMessage("dht_runner_thread",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
         try:
-            self.dht_WorkerThread.quit()
+            self.dht_runner_thread.quit()
         except:
             pass
         self.splash.showMessage("dht_serial",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
@@ -632,15 +641,15 @@ class MainWindow(QtGui.QMainWindow):
 
     # def run_dht(self):
 
-    #     self.dht_Worker = dht_Worker(self.settings['measure'])
-    #     self.dht_WorkerThread = QtCore.QThread()
-    #     # self.dht_Worker.terminate.connect(sig_dht_measure_stop)
-    #     self.dht_Worker.moveToThread(self.dht_WorkerThread)
-    #     self.sig_dht_measure.connect(self.dht_Worker.run)
+    #     self.dht_runner = dht_Runner(self.settings['measure'])
+    #     self.dht_runner_thread = QtCore.QThread()
+    #     # self.dht_runner.terminate.connect(sig_dht_measure_stop)
+    #     self.dht_runner.moveToThread(self.dht_runner_thread)
+    #     self.sig_dht_measure.connect(self.dht_runner.run)
     #     self.sig_dht_measure.connect(self.dhticar)
-    #     self.sig_dht_measure_stop.connect(self.dht_Worker.stop)
+    #     self.sig_dht_measure_stop.connect(self.dht_runner.stop)
 
-    #     self.dht_WorkerThread.start()
+    #     self.dht_runner_thread.start()
     #     self.dhticar()
 
     def run_ni(self):
@@ -699,70 +708,33 @@ class MainWindow(QtGui.QMainWindow):
         self.p.param("Measurements","Storage",'Last saved').setValue(self.timer.elapsed()/1000 )
         # return
 
+
     def init_dht_plot(self):
-        self.dht_pi = self.plotFrame.dhtPlot.getPlotItem()
-        self.dht_pi.clear()
-        self.dht_pi.addLegend()
-        self.dht_pi.enableAutoRange('x', True)
-        self.dht_pi.enableAutoRange('y', True)
-
-        self.dht_pi.setLabel('left', u'Hum (%)  -  Temp (\u00b0C)')
-
-        self.dht_pi.showGrid(1,1,0.3)
-
-        self.hplot = pg.PlotDataItem()
-        self.tplot = pg.PlotDataItem()
-        self.hplot.setPen(color=kelly_colors['vivid_green'])
-        self.tplot.setPen(color=kelly_colors['vivid_orange'])
-        self.dht_pi.addItem(self.hplot)
-        self.dht_pi.addItem(self.tplot)
-
-    def dhticar(self):
-        if self.p.param('Plotting', 'Plot DHT').value():
-            raw_buffer = self.dht_store.get()
-
-            time = raw_buffer[:,0]
-            temp = raw_buffer[:,1]
-            humi = raw_buffer[:,2]
-
-            if len(temp) > 10:
-                self.p.param("Measurements","Current Data",'Temperature').setValue(temp[-10:].mean())
-                self.p.param("Measurements","Current Data",'Humidity').setValue(humi[-10:].mean())
-
-            self.tplot.setData(x=time, y=temp)
-            self.hplot.setData(x=time, y=humi)
-
-
-            if len(temp) > 10:
-                self.dht_pi.legend.items = []
-                self.dht_pi.legend.addItem(self.tplot, 'Temperature' + ' = ' +  '%.1f ' % temp[-10:].mean() +u"\u00b0"+'C')
-                self.dht_pi.legend.addItem(self.hplot, 'Humidity' + ' = ' + '%.1f %%' % humi[-10:].mean())
-            else:
-                self.dht_pi.legend.items = []
-                self.dht_pi.legend.addItem(self.tplot, 'Temperature')
-                self.dht_pi.legend.addItem(self.hplot, 'Humidity')
-
-        # if not self.measurement_pause:
-        QtCore.QTimer.singleShot(self.p.param('Plotting', 'DHT Timing').value()*1000, self.dhticar)
+        pass
 
     def initplot(self):
         # print('initplot')
-        start_buffer = np.zeros((1,4))
-        time =    start_buffer[:,0]
-        current = start_buffer[:,1]
-        r2pt =    start_buffer[:,2]
-        r4pt =    start_buffer[:,3]
-
+        # start_buffer = np.zeros((1,4))
+        # time =    start_buffer[:,0]
+        # current = start_buffer[:,1]
+        # r2pt =    start_buffer[:,2]
+        # r4pt =    start_buffer[:,3]
         self.pltG_pi.clear()
         self.pltR_pi.clear()
-# (axis, text=None, units=None, unitPrefix=None, **args)
-        self.pltR_pi.setLabel('left', 'Resistance', u'\u03a9')
-        self.pltG_pi.setLabel('left', 'Conductance', 'S')
+        self.dht_pi.clear()
 
-        self.pltR_pi.showGrid(1,1,0.3)
-        self.pltG_pi.showGrid(1,1,0.3)
+        # self.plotlist_dht[1] = pg.PlotDataItem()
+        # self.plotlist_dht[0] = pg.PlotDataItem()
+
+        self.plotlist_dht = []
+        self.plotlist_dht.append(self.dht_pi.plot(pen = kelly_colors['vivid_orange']))
+        self.plotlist_dht.append(self.dht_pi.plot(pen = kelly_colors['vivid_green']))
+        # self.plotlist_dht[1].setPen(color=kelly_colors['vivid_green'])
+        # self.plotlist_dht[0].setPen(color=kelly_colors['vivid_orange'])
+        # self.dht_pi.addItem(self.plotlist_dht[1])
+        # self.dht_pi.addItem(self.plotlist_dht[0])
+
         self.plotlist = []
-
 
         self.plotlist.append({})
         self.plotlist.append({})
@@ -787,6 +759,35 @@ class MainWindow(QtGui.QMainWindow):
 
         self.ni_plot_counter = 0
 
+
+    def dhticar(self):
+        if not self.measurement_pause:
+            if self.p.param('Plotting', 'Plot DHT').value():
+                raw_buffer = self.dht_store.get()
+
+                time = raw_buffer[:,0]
+                temp = raw_buffer[:,1]
+                humi = raw_buffer[:,2]
+
+                if len(temp) > 10:
+                    self.p.param("Measurements","Current Data",'Temperature').setValue(temp[-10:].mean())
+                    self.p.param("Measurements","Current Data",'Humidity').setValue(humi[-10:].mean())
+
+                self.plotlist_dht[0].setData(x=time, y=temp)
+                self.plotlist_dht[1].setData(x=time, y=humi)
+
+
+                if len(temp) > 10:
+                    self.dht_pi.legend.items = []
+                    self.dht_pi.legend.addItem(self.plotlist_dht[0], 'Temperature' + ' = ' +  '%.1f ' % temp[-10:].mean() +u"\u00b0"+'C')
+                    self.dht_pi.legend.addItem(self.plotlist_dht[1], 'Humidity' + ' = ' + '%.1f %%' % humi[-10:].mean())
+                else:
+                    self.dht_pi.legend.items = []
+                    self.dht_pi.legend.addItem(self.plotlist_dht[0], 'Temperature')
+                    self.dht_pi.legend.addItem(self.plotlist_dht[1], 'Humidity')
+
+        # if not self.measurement_pause:
+        QtCore.QTimer.singleShot(self.p.param('Plotting', 'DHT Timing').value()*1000, self.dhticar)
 
     def graficar(self):
         # print('graficar')
