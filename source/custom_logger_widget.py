@@ -35,22 +35,37 @@ class LogDialog(QtGui.QWidget):
     def __init__( self, parent = None ):
         super(LogDialog, self).__init__(parent)
         self.log = custom_logger.getLogger('root','DEBUG')
-        font = QtGui.QFont("Monospace",8)
-        font.setStyleHint(QtGui.QFont.TypeWriter);
+        self.font = QtGui.QFont("Consolas",8)
+        self.font.setStyleHint(QtGui.QFont.TypeWriter);
+        self.font.setFixedPitch(True)
+
         self._console = QtGui.QTextBrowser(self)
-        self._console.setCurrentFont(font)
+        self._console.setCurrentFont(self.font)
+        self._console.setFont(self.font)
         self._combo = QtGui.QComboBox()
         self._combo.addItems(['DEBUG','INFO','WARNING','ERROR'])
         self._combo.currentIndexChanged.connect( self.changed )
 
-        comboLayout = QtGui.QSplitter()
-        comboLayout.addWidget(QtGui.QLabel(' Logging level:'))
+        fm = QtGui.QFontMetrics(self.font)
+        pixels = fm.width('M' * 4)
+        self._console.setTabStopWidth(pixels)
+
+        clearButton = QtGui.QPushButton('Clear')
+        clearButton.clicked.connect(self.clearText)
+        comboLayout = QtGui.QHBoxLayout()
+        comboLayout.addWidget(clearButton)
+        comboLayout.addStretch()
+        comboLayout.addWidget(QtGui.QLabel('Logging level:'))
         comboLayout.addWidget(self._combo)
+        comboWidget = QtGui.QWidget()
+        comboLayout.setMargin(0)
+        comboLayout.setSpacing(5)
+        comboWidget.setLayout(comboLayout)
 
         layout = QtGui.QVBoxLayout()
         layout.setMargin(0)
         layout.setSpacing(0)
-        layout.addWidget(comboLayout)
+        layout.addWidget(comboWidget)
         layout.addWidget(self._console)
         self.setLayout(layout)
 
@@ -63,9 +78,14 @@ class LogDialog(QtGui.QWidget):
         self.log.info('LOGGING: Level changed to {}'.format(level))
         # print(index, level)
 
+    def clearText(self):
+        self._console.clear()
+
     def insertText(self, text):
+        self._console.moveCursor(QtGui.QTextCursor.End)
         color = QtCore.Qt.darkMagenta
         fm = self._console.currentCharFormat()
+        fm.setFont(self.font)
         fm.setForeground(color)
         self._console.setCurrentCharFormat(fm)
         self._console.insertPlainText(text)
@@ -74,6 +94,7 @@ class LogDialog(QtGui.QWidget):
 
 
     def insertText2(self, text):
+        text = str(text)
         if text.startswith('DEBUG'):
             color = QtCore.Qt.darkRed
         elif text.startswith('INFO'):
@@ -86,7 +107,9 @@ class LogDialog(QtGui.QWidget):
             color = QtCore.Qt.red
         else:
             color = QtCore.Qt.darkGray
+        self._console.moveCursor(QtGui.QTextCursor.End)
         fm = self._console.currentCharFormat()
+        fm.setFont(self.font)
         fm.setForeground(color)
         self._console.setCurrentCharFormat(fm)
         self._console.insertPlainText(text)

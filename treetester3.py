@@ -161,15 +161,6 @@ class MainWindow(QtGui.QMainWindow):
         item = self.tree_file.model().getItem(index)
         print(colname,item)
 
-    def sComment(self, stuff, prefix=''):
-        adding = ''
-        adding += '# '
-        adding += prefix
-        for i in stuff:
-            adding += str(i)+ '\t'
-        adding += '\n'
-        self.sketchFile += adding
-        # print( adding )
 
     def sketchAdd(self, data):
         if isinstance(data, list):
@@ -200,12 +191,6 @@ class MainWindow(QtGui.QMainWindow):
 
     def getItem(self,item):
         return self.model.getItem(model.index(item))
-
-    def sketchItem(self,item):
-        s_item = sItem(item)
-        s_item.globalOffset = self.offset_center
-        s_item.globalRotation = self.offset_rotation
-        return
 
     def sketchPrepare(self, root):
         # Function receives the root Item of the data-tree
@@ -373,3 +358,91 @@ if __name__ == '__main__':
 
     # window.show()
     sys.exit(app.exec_())
+
+
+nfile = False
+
+        if self.multi_check.checkState() == 2:
+            multiples = self.multi_n.value()
+            sleep = self.multi_time.value()
+            dx = self.multi_dx.value()
+            dy = self.multi_dy.value()
+        else:
+            multiples = 1
+            sleep = 0
+            dx = 0
+            dy = 0
+
+
+        self.sComment(['sketching','start'])
+        for cpy in range(multiples):
+
+            offset = [cpy*dx,cpy*dy]
+            self.sComment(['copy',cpy])
+
+            for i in range(index.rowCount()):
+                # print( '- ', i )
+                item = index.getItem(index.index(i))
+                if item.checkState == 0:
+                    continue
+                chitems = item.childItems
+                # if item.data(6) == 'Layer':
+                self.sAdd('')
+                # print('*********')
+                # print(item.data())
+                # logger = item.data()
+                # logger[0] = 'Layer '+str(logger[0])
+                # print(logger)
+                self.sComment(item.data(), 'layer ')
+
+                if len(chitems) != 0:
+                    nfile = True
+                    for child in item.childItems:
+                        if child.checkState == 0:
+                            continue
+                        self.sAdd('')
+                        # child.data()
+                        # print('xx',child.data('Volt'),child.data(1),child.data(2),child.data(3))
+                        # print('yy',child.volt)
+                        # l = [['start'], child.data()]
+                        # startline = [item for sublist in l for item in sublist]
+                        # self.sComment(startline)
+                        self.sComment(['start', child.data('Name')])
+                        self.sComment(child.data(), 'entity ')
+                        # self.sComment()
+                        if child.checkState == 2:
+
+                            data = child.pltData
+                            if data != []:
+                                for i in data:
+                                    # print (np.array(i).shape)
+                                    # dta = self.transformData(i[::item.pathOrder])
+                                    dta = np.add(i[::child.pathOrder],offset)
+                                    # pdi = self.pi.plot(dta, pen = showPen)
+
+                            # for chpath in child.pltData[::child.pathOrder]:
+                                # dta = chpath[::child.pathOrder]
+
+                                    path = self.transformData( dta ,direction=1)
+                                    # print(path)
+                                    x,y = path[0]
+                                    self.sAdd('vtip\t%f' %(0.0))
+                                    self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
+                                    self.sAdd('vtip\t%f' %float(child.data('Volt')))
+                                    r = child.data('Rate')
+                                    for x,y in path:
+                                    # Maybe go from [1:] but going to the startpoint twice should reduce vtip lag
+                                        self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,r))
+
+                                    self.sAdd('vtip\t%f' %(0.0))
+                                    self.sComment(['end',child.data('Name')])
+
+            x0,y0 = self.offset_center
+            self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(-x0,-y0,self.freerate))
+            # self.sAdd('vtip\t%f' %(0.0))
+            # time.sleep(sleep)
+            self.sAdd('pause\t%.1f' %(sleep))
+        self.sComment(['sketching','end'])
+
+
+        if nfile:

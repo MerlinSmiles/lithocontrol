@@ -6,6 +6,8 @@ import time
 
 import cv2
 
+import logging
+log = logging.getLogger('root')
 # Set options in settings...
 
 def convertAFM(filenamex, saveImg = True):
@@ -42,7 +44,7 @@ def convertAFM(filenamex, saveImg = True):
             if saveImg:
                 filename = os.path.abspath('D:/lithography/')
                 imfilename = str(filename)+"/current.png"
-                print (imfilename)
+                log.debug('AFM converted: %s'%imfilename)
                 res = saveAFMimg(data, imfilename )
                 writeImageMacro( imfilename , [-xreal, -yreal, xreal, yreal])
     info = {'width':xreal*2, 'height':yreal*2, 'imname': imfilename}

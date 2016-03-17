@@ -40,14 +40,14 @@ class SocketWorker(QtCore.QThread):
             #create an AF_INET, STREAM socket (TCP)
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         except socket.error as msg:
-            print( 'Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + msg[1] )
+            log.warning('SOCKET: Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + msg[1] )
             self.init =  False
 
         try:
             self.remote_ip = socket.gethostbyname( self.host )
         except socket.gaierror:
             #could not resolve
-            print( 'Hostname could not be resolved. Exiting' )
+            log.warning( 'SOCKET: Hostname could not be resolved. Exiting' )
             self.init =  False
         self.init =  True
 
@@ -61,10 +61,11 @@ class SocketWorker(QtCore.QThread):
             self.disconnectSocket()
         try:
             self.sock.connect((self.remote_ip , self.port))
-            print( 'Socket Connected to ' + self.host + ' on ip ' + self.remote_ip )
+            log.info( 'SOCKET: Connected to ' + self.host + ' on ip ' + self.remote_ip )
             self.connected = True
         except:
             self.connected = False
+            # log.debug( 'Socket NOT Connected to ' + self.host + ' on ip ' + self.remote_ip )
             pass
 
     def disconnectSocket(self):
@@ -72,24 +73,29 @@ class SocketWorker(QtCore.QThread):
             return
         try:
             self.sock.close()
-            print( 'Socket disconnected from ' + self.host + ' on ip ' + self.remote_ip )
+            log.info( 'SOCKET: disconnected from ' + self.host + ' on ip ' + self.remote_ip )
             self.connected = False
+            self.init =  False
         except:
+            log.warning( 'SOCKET: disconnect FAILED from ' + self.host + ' on ip ' + self.remote_ip )
             pass
 
     def send_message(self, message):
         if self.demo:
             return
         if not self.connected:
+            log.info('SOCKET: not connected')
             self.connectSocket()
         try :
             #Set the whole string
+            # log.info('SOCKET: send: ' +message)
             self.sock.sendall(message.encode())
             # print( 'sending message' )
         except socket.error:
             #Send failed
-            print( 'Send failed trying again with reconnect' )
-            self.initSocket()
+            log.info( 'SOCKET: Send failed trying again with reconnect' )
+            # self.disconnectSocket()
+            # self.initSocket()
             self.connectSocket()
             try :
                 #Set the whole string
@@ -97,22 +103,22 @@ class SocketWorker(QtCore.QThread):
                 self.sock.sendall(message.encode())
             except socket.error:
                 #Send failed
-                print( 'Send failed: Serious error' )
+                log.warning( 'SOCKET: Send failed: Serious error' )
+                # self.disconnectSocket()
 
     def recv_message(self, timeout =0, buf = 4096):
         if self.demo:
             return
         if not self.connected:
+            time.sleep(0.2)
             self.connectSocket()
-        try:
-            self.sock.settimeout(timeout)
-            msg = self.sock.recv(buf)
-            return msg
-        except socket.error as e:
-            return False
         else:
-            print( 'got a message, do something :)' )
-            pass
+            try:
+                self.sock.settimeout(timeout)
+                msg = self.sock.recv(buf)
+                return msg
+            except socket.error as e:
+                return False
 
     def monitor(self):
         self.exiting = False

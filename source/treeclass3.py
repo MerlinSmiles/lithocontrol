@@ -543,6 +543,15 @@ class TreeItem(object):
                 else:
                     return 2
 
+        if self.col(column) in ['step']:
+            if self.childCount>0:
+                if self.itemData[column] < 0.1:
+                    return 0.1
+            # if self.parent() != None:
+            #     if self.pathOrder == 1:
+            #         return 0
+            #     else:
+
         return self.itemData[column]
 
     def insertChildren(self, position, count, columns):
@@ -571,6 +580,9 @@ class TreeItem(object):
 
     def parent(self):
         return self.parentItem
+
+    def getRows(self):
+        return self.childItems
 
     def removeChildren(self, position, count):
         # print('removeChildren')
@@ -681,6 +693,14 @@ class TreeItem(object):
     def getPltData(self):
         return self.pltData
 
+    def setValues(self,column,value):
+        self.setData(column,value)
+        # if colname in  ['Closed']:
+        for ch in self.childItems:
+            # continue
+            ch.setData(column, value)
+
+
     def setData(self, column, value, index=None):
         if type(column) == int:
             if column < 0 or column >= len(self.itemData):
@@ -699,10 +719,15 @@ class TreeItem(object):
         else:
             if colname == 'Angle':
                 value= str(value)
-                # print('val',value)
+                if value == '':
+                    value = '0'
                 if self.fillAngle != value:
                     self.fillAngle = value
                     recalc = True
+            elif colname == 'Name':
+                value = str(value)
+                if self.name != value:
+                    self.name = value
             elif colname == 'Volt':
                 value= float(value)
                 if self.volt != value:
@@ -714,9 +739,12 @@ class TreeItem(object):
                     self.calcTime()
             elif colname == 'Step':
                 value= float(value)
-                if self.fillStep != value:
-                    self.fillStep = value
-                    recalc = True
+                if value > 0.0:
+                    if self.fillStep != value:
+                        self.fillStep = value
+                        recalc = True
+                else:
+                    value = self.fillStep
             elif colname == 'Order':
                 value= int(value)
                 # print('set', value)
@@ -845,7 +873,7 @@ class TreeModel(QtCore.QAbstractItemModel):
         elif colname == 'Volt':
             return [(-210,210), 1, 0.1]
         elif colname == 'Step':
-            return [(0.001,1000), 3, 0.01]
+            return [(0.0,1000), 3, 0.01]
         elif colname == 'Rate':
             return [(0.01,1000), 2, 0.1]
         else:
@@ -925,7 +953,8 @@ class TreeModel(QtCore.QAbstractItemModel):
         # print(column, self.col(column), self.itemData[column])
         if colname in ['Angle','Step']:
             if item.is_closed == 0:
-                return ' '
+                if role == QtCore.Qt.DisplayRole:
+                    return ' '
 
 
         if colname in ['Time', 'Length']:
@@ -971,7 +1000,7 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsUserCheckable
 
-        if colname not in ['Name', 'Time', 'Type', 'Length']:
+        if colname not in ['Time', 'Type', 'Length']:
             flags = flags | QtCore.Qt.ItemIsEditable
 
         # dragdrop kills other things :/
@@ -1081,7 +1110,53 @@ class TreeModel(QtCore.QAbstractItemModel):
             child = child.parent()
         return False
 
+    def setValues(self, item, colname, value):
+        # item = self.getItem(index)
+        if colname in ['Volt', 'Angle', 'Rate', 'Step', 'Color', 'Closed', 'Order', 'Show']:
+            colnum = self.col(colname)
+
+            # index =  self.createIndex(index, colnum, item.child(i))
+            # item = self.getItem(index)
+            # self.setData(index,value)
+
+            cc = item.childCount()
+            if cc > 0:
+                for i in range(cc):
+
+                    chindex =  self.createIndex(i, colnum, item.child(i))
+                    # item = self.getItem(index)
+                    self.setData(chindex,value)
+
+            # if item.childCount() > 0:
+            #     # chindex = item.index(colnum)
+            #     chindex =  self.createIndex(item, colnum, item.child(0))
+            #     self.setData(chindex,value)
+
+                # for i in range(cc):
+                    # item = self.getItem(index)
+                    # self.setData(chindex,value)
+
+    # def setValues(self, index, colname, value):
+    #     item = self.getItem(index)
+    #     if colname in ['Volt', 'Angle', 'Rate', 'Step', 'Color', 'Closed', 'Order', 'Show']:
+    #         colnum = self.col(colname)
+    #         cc = item.childCount()
+    #         if cc > 0:
+    #             for i in range(cc):
+    #                 chindex =  self.createIndex(i, colnum, item.child(i))
+    #                 # item = self.getItem(index)
+    #                 self.setData(chindex,value)
+
+
     def setData(self, index, value, role=QtCore.Qt.EditRole):
+        # if column != None:
+        #     if type(column) == int:
+        #         colname = self.col(column)
+        #     else:
+        #         colname = column
+        #         column = self.col(column)
+        #     index.column() = column
+
         if (role == QtCore.Qt.CheckStateRole and index.column() == 0):
             self.layoutAboutToBeChanged.emit()
             item = self.getItem(index)
@@ -1159,6 +1234,12 @@ class TreeModel(QtCore.QAbstractItemModel):
         for i in range(self.rowCount()):
             rows.append(self.getItem(self.index(i)))
         return rows
+
+    def getIndexes(self):
+        indexes = []
+        for i in range(self.rowCount()):
+            indexes.append(self.index(i))
+        return indexes
 
     def clearData(self):
         self.rootItem = TreeItem(self.header, model=self)

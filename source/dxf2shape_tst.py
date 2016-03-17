@@ -64,7 +64,7 @@ def dxf2shape(item, threshold = 1e-9, fillStep = None, fillAngle = None, pathDir
         else:
             pts = np.append(pts,[pts[0]],axis = 0)
         if fill_step<=0 :
-            self.error('Tools diameter must be greater than 0!', 'error')
+            raise TypeError
 
 
         pts = Rotate2D(pts,fill_angle)

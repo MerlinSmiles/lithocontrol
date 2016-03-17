@@ -8,6 +8,9 @@ from watchdog.events import PatternMatchingEventHandler
 
 import time
 
+import logging
+log = logging.getLogger('root')
+
 class MyHandler(PatternMatchingEventHandler):
     def __init__(self, parent = None):
         super( MyHandler, self ).__init__()
@@ -58,7 +61,8 @@ class AFMWorker(QtCore.QThread):
     def run(self):
         observer = Observer()
         observer.schedule(MyHandler(self), path=self.foldername)
-        print( 'Monitoring ' + self.foldername )
+        log.info('MONITOR: %s'%self.foldername )
+
         observer.start()
         while True and not self.exiting:
             time.sleep(1)

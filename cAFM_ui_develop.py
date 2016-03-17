@@ -14,8 +14,11 @@ from source import custom_logger
 from source.custom_logger_widget import LogDialog
 
 # log = logging.getLogger('root')
-log = custom_logger.getLogger('root','INFO','./logs/logfile.log')
+log = custom_logger.getLogger('root','DEBUG','./logs/logfile.log')
 
+from source.sketch_data_widget import SketchDataDialog
+from source.script_editor import editorWidget
+# import sketch_script
 
 try:
     import gwy,  gwyutils
@@ -106,6 +109,53 @@ movePen = pg.mkPen(color='1E4193',width=2, style=QtCore.Qt.DotLine)  #, style=Qt
 showPen = pg.mkPen(color='00FF00')  #, style=QtCore.Qt.DotLine , width=
 selectPen = pg.mkPen(color='00FF00',width=3)  #, style=QtCore.Qt.DotLine , width=
 
+class sItem(object):
+    def __init__(self, item):
+        self.item = item
+        self.model = item.model
+        self.color = item.color
+        self.show = item.show
+        self.parentItem = item.parentItem
+        self.itemData = item.itemData
+        self.childItems = item.childItems
+        self.entity = item.entity
+        self.pltHandle = item.pltHandle
+        self.pltData = item.pltData
+        self.checkState = item.checkState
+        self.length = item.length
+        self.sketchTime = item.sketchTime
+        self.type = item.type
+        self.meta = item.meta
+
+        self.is_closed = item.is_closed
+        self.fillAngle = item.fillAngle
+        self.fillStep = item.fillStep
+        self.pathOrder = item.pathOrder
+        self.name = item.name
+        self.parentName = item.parent().name
+        self.volt = item.volt
+        self.rate = item.rate
+        self.offset = [0,0]
+        self.sketchData = ''
+
+    def data(self):
+        datalist = [self.type,
+                    self.name,
+                    self.parentName,
+                    self.volt,
+                    self.rate,
+                    self.fillAngle,
+                    self.fillStep,
+                    self.offset,
+                    self.color,
+                    self.show,
+                    self.checkState,
+                    self.length,
+                    self.sketchTime,
+                    self.is_closed,
+                    self.pathOrder]
+
+        return datalist
 
 
 class MainWindow(QtGui.QMainWindow):
@@ -113,8 +163,8 @@ class MainWindow(QtGui.QMainWindow):
     outputReady = QtCore.pyqtSignal(object)
 
     def __init__(self, parent=None):
-
         super(MainWindow, self).__init__(parent)
+        global log
         self.dateTime = QDateTime.currentDateTime()
         self.timer = self.dateTime.time()
         self.dater = self.dateTime.date()
@@ -123,13 +173,26 @@ class MainWindow(QtGui.QMainWindow):
         self.offset_center = [0,0]
         self.dxf_design = None
         self.designPltHandle = []
+        self.sketchList = []
 
-        print(self.dateTime.toPyDateTime())
-        log.info(self.dateTime.toPyDateTime())
 
         # str(QDate.currentDate().toString('yyyy-MM-dd_') + QTime.currentTime().toString('HH-mm-ss'))
         self.s_time = str(self.dateTime.toString('yyyy-MM-dd_HH-mm-ss'))
-        # print(self.s_time)
+
+        self.afmImageFolder = config['storage']['afmImageFolder']
+        self.storeFolder = config['storage']['storeFolder'] + self.s_time + '/'
+        if not os.path.exists(self.storeFolder):
+            os.makedirs(self.storeFolder)
+
+        # for hdlr in log.handlers:
+        #     hdlr.close()
+        #     log.removeHandler(hdlr)
+        log = custom_logger.getLogger('root','DEBUG')
+        self.logfile = self.storeFolder+'logfile.log'
+        self.logHandler = custom_logger.RotateHandler(os.path.abspath(self.logfile),maxBytes=10e6, backupCount=5)
+        log.addHandler(self.logHandler)
+        log.info('TIME: ' + self.s_time)
+
 
         splash_pix = QtGui.QPixmap(r'./source/splash2.png')
         self.splash = QtGui.QSplashScreen(splash_pix)
@@ -171,22 +234,21 @@ class MainWindow(QtGui.QMainWindow):
         self.tabSketching.setContentsMargins(0,0,0,0)
         self.tabSketching.setLayout(self.tabSketchBox)
 
-        # self.tabLogging = QtGui.QWidget()
         self.tabLogging = LogDialog()
+        self.tabSketchData = SketchDataDialog()
+        self.tabSketchScript = editorWidget('./user_scripts/parse_script.py')
+        self.tabParseScript = editorWidget('./user_scripts/parse_dxf.py')
 
         self.tabWidget.addTab(self.tabSketching, 'Sketching')
         self.tabWidget.addTab(self.tabLogging, 'Logging')
+        self.tabWidget.addTab(self.tabSketchData, 'Sketch Data')
+        self.tabWidget.addTab(self.tabParseScript, 'DXF Script')
+        self.tabWidget.addTab(self.tabSketchScript, 'Sketch Script')
 
         self.splitter.addWidget(self.tabWidget)
 
 
-        self.splitter.setSizes([400,1000])
-
-
-
-
-
-
+        self.splitter.setSizes([500,1000])
 
 
 
@@ -212,8 +274,7 @@ class MainWindow(QtGui.QMainWindow):
         self.nextPosition = np.array([np.nan,np.nan,np.nan])
         self.sketching = False
 
-        self.afmImageFolder = config['storage']['afmImageFolder']
-        self.storeFolder = config['storage']['storeFolder'] + self.s_time + '/'
+
         self.sketchSubFolder = './'
 
         if demo:
@@ -329,6 +390,7 @@ class MainWindow(QtGui.QMainWindow):
     #     print ('modifiers:', hex(int(event.modifiers())))
 
     def init_stores(self):
+
         c_time = str(int(self.timer.elapsed()/1000.0))
 
         if not os.path.exists(self.storeFolder):
@@ -336,7 +398,13 @@ class MainWindow(QtGui.QMainWindow):
         log_cols = ['dir','sketch','time','copy','ID','vtip','r','x','y', 'pause', 'layer','entity']
         fname = self.storeFolder+c_time +'_log-sketch.h5'
         self.log_store = DataStore(filename=fname,columns=log_cols)
+
+        # self.log_store.data[['dir','sketch','ID','layer','entity']] = self.log_store.data[['dir','sketch','ID','layer','entity']].astype(object)
+        # dtype = { column_that_is_bad : 'object' }
+
         log.debug('New stores: %s'%fname)
+
+
 
     def log(self, column, value):
         # return
@@ -353,7 +421,7 @@ class MainWindow(QtGui.QMainWindow):
         columns=[['time'],column]
         columns=[item for sublist in columns for item in sublist]
 
-        self.log_store.append(values,columns)
+        self.log_store.append([str(c) for c in values],columns)
         # s = ''
         # for i, data in enumerate(column):
         #     s+=str(data)
@@ -432,7 +500,7 @@ class MainWindow(QtGui.QMainWindow):
         # msg = str(self.mprocess.readAllStandardOutput())
         # self.outputReady.emit(msg)
 
-        start = self.mprocess.start(command, args)
+        start = self.mprocess.startDetached(command, args)
         log.debug("New Process")
 
 
@@ -481,7 +549,7 @@ class MainWindow(QtGui.QMainWindow):
             # filename = self.afmImageFolder+'/'+sorted(os.listdir(self.afmImageFolder))[-1]
 
         filename = os.path.abspath(filename)
-        log.info("newafmImage: %s"%filename)
+        log.info("New AFM image: %s"%filename)
         # print(filename)
 
         ret = convertAFM(filename)
@@ -497,7 +565,6 @@ class MainWindow(QtGui.QMainWindow):
         y = self.afminfo['height']
 
         self.plotFrame.setAfmImage(self.afmData,x,y)
-        log.debug('New AFM image: %s'%filename)
 
     def updateAFM(self):
         log.warning( 'updateAFM' )
@@ -566,11 +633,14 @@ class MainWindow(QtGui.QMainWindow):
         line = str(line)
         # print(line)
         # return
-        if line.startswith('vtip'):
+        if line.startswith('# CheckAbort'):
+            self.SocketThread.send_message('# continue\n')
+            log.debug('STATUS: CheckAbort')
+        elif line.startswith('vtip'):
             line = line.split( )
             self.status_vtip = float(line[1])
             self.log(['sketch','vtip'],['vtip', self.status_vtip])
-            log.debug('STATUS: VTIP %f' %self.status_vtip )
+            log.debug('STATUS: vtip %f' %self.status_vtip )
             # self.statusBar().showMessage(line)
         elif line.startswith('xyAbs'):
             # self.sketching = True
@@ -593,14 +663,17 @@ class MainWindow(QtGui.QMainWindow):
             if stat == 'start':
                 self.sketching = True
                 self.sketchicar()
+                log.debug('STATUS: sketching start')
             elif stat == 'end':
                 self.sketching = False
+                log.debug('STATUS: sketching end')
+                self.multi_check.setCheckState(0)
         elif line.startswith('# start'):
             line = line.split( )
             self.status_entity = line[2]
-            self.log(['sketch','ID'],['start', line[2]])
+            self.log(['sketch','ID'],['start', str(line[2])])
             self.afmPoints.clear()
-            log.info('STATUS: Started '+line[2])
+            log.info('STATUS: started '+line[2])
             # self.statusBar().showMessage(line)
         elif line.startswith('# end'):
             self.status_entity = ''
@@ -615,8 +688,8 @@ class MainWindow(QtGui.QMainWindow):
 
             self.afmNow.clear()
             self.afmPoints.clear()
-            self.log(['sketch','ID'],['end', line[2]])
-            log.info('STATUS: Finished '+line[2])
+            self.log(['sketch','ID'],['end', str(line[2])])
+            log.info('STATUS: finished '+line[2])
             # self.statusBar().showMessage(line)
         elif line.startswith('Ready'):
             self.status_state = 'Ready'
@@ -625,19 +698,23 @@ class MainWindow(QtGui.QMainWindow):
             log.info( "STATUS: READY" )
             self.statusBar().showMessage(line)
             self.measure_save()
-
+        elif line.startswith('ABORT'):
+            self.status_state = 'Ready'
+            self.sketching = False
+            self.afmReady()
+            log.info( "STATUS: ABORT" )
+            log.info( "STATUS: READY" )
+            self.statusBar().showMessage(line)
+            self.measure_save()
         elif line.startswith('Parsing Script...'):
             self.status_state = 'Sketching'
-        elif line.startswith('# layer'):
-            line = line.split( )
-            self.status_layer = line[2]
-            self.log(['sketch','ID'],['layer', line[2]])
-            log.info('STATUS: Layer '+line[2])
         elif line.startswith('# entity'):
-            line = line.split( )
-            self.status_entity = line[2]
-            self.log(['sketch','ID'],['entity', line[2]])
-            log.info('STATUS: entity '+line[2])
+            line = line.split()
+            # [2] is the type, polyline etc...
+            self.status_entity = line[3]
+
+            self.log(['sketch','ID'],['entity', str(line[3])])
+            log.info('STATUS: entity '+line[3])
             # self.log(['sketch','layer'],['entity', line])
             # print(line)
         elif line.startswith('# copy'):
@@ -648,6 +725,7 @@ class MainWindow(QtGui.QMainWindow):
             self.afmPoints.clear()
 
         elif line.startswith('pause'):
+            self.statusBar().showMessage(line)
             line = line.split( )
             self.status_pause = float(line[1])
             self.log(['sketch','pause'],['pause', self.status_pause])
@@ -676,110 +754,142 @@ class MainWindow(QtGui.QMainWindow):
             # line = line.split( )
             # r = float(line[3])
 
+    def s_comment(self, child, *args):
+        string = ''
+        string += '# '
+        for arg in args:
+            string += str(arg)+ '\t'
+        string = string[:-1]
+        string += '\n'
+        child.sketchData += string
+
+
+    def s_instruction(self, child, *args):
+        string = ''
+        for arg in args:
+            string += str(arg)+ '\t'
+        string = string[:-1]
+        string += '\n'
+        child.sketchData += string
+
+    def prepareItem(self, child):
+        child.sketchData = ''
+        if child.checkState == 0:
+            return
+        self.s_comment(child, 'start', child.name)
+        self.s_comment(child, 'entity', *child.data() )
+
+        data = child.pltData
+        if data != []:
+            for i in data:
+                dta = np.add(i[::child.pathOrder],child.offset)
+
+                path = self.transformData( dta ,direction=1)
+                # print(path)
+                x,y = path[0]
+                self.s_instruction(child, 'vtip', 0.0)
+                self.s_instruction(child, 'xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
+                self.s_instruction(child, 'vtip', 0.0)
+                self.s_instruction(child, 'vtip\t%f' %float(child.volt))
+                r = child.rate
+                for x,y in path:
+                # Maybe go from [1:] but going to the startpoint twice should reduce vtip lag
+                    self.s_instruction(child, 'xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,r))
+
+                self.s_instruction(child, 'vtip\t%f' %float(child.volt))
+                self.s_instruction(child, 'vtip', 0.0)
+                self.s_comment(child, 'end', child.name)
+
+        # creates an empty line
+        self.s_instruction(child)
+
+
+    def sketchAdd(self, data):
+        if isinstance(data, list):
+            for i in data:
+                pass
+        elif isinstance(data, str):
+            self.sketchList.append(data+'\n')
+        elif isinstance(data, sItem):
+            self.prepareItem(data)
+            self.sketchList.append(data)
+
+    def sketchFinish(self):
+        self.sketchFile = '# sketching start\n'
+        for data in self.sketchList:
+            # print(type(data))
+            if isinstance(data, str):
+                self.sketchFile += data
+
+            elif isinstance(data, sItem):
+                self.sketchFile += data.sketchData
+            else:
+                raise TypeError
+
+        x0,y0 = self.offset_center
+        self.sketchFile += 'xyAbs\t%.4f\t%.4f\t%.3f\n' %(-x0,-y0,self.freerate)
+        self.sketchFile += '# sketching end\n'
+        # return sketchFile
+
+    def getItem(self,item):
+        return self.model.getItem(model.index(item))
+
+    def sketchPrepare(self, root):
+        # HEERE!
+        # Function receives the root Item of the data-tree
+
+        exec(self.tabSketchScript.getFile())
+        # layers = root.childItems
+
+        # # layers = [self.getItem for i in layers]
+        # for layer in layers:
+        #     if layer.checkState == 0:
+        #         continue
+        #     self.sketchAdd(sItem(layer))
+
+        #     for child in layer.childItems:
+        #         # if child.checkState == 0:
+        #         #     continue
+        #         # print(child.childItems)
+        #         item = sItem(child)
+        #         # item.is_closed
+        #         # item.fillAngle
+        #         # item.fillStep
+        #         # item.pathOrder
+        #         # item.name
+        #         # item.volt
+        #         # print(item.volt)
+        #         # item.rate
+        #         # item.offset
+        #         self.sketchAdd(item)
+
+
+
+
     def sketchNow(self, index=None):
         # self.afmPosition.clear()
         self.afmNow.clear()
         # self.afmAll.clear()
-        self.sketchFile = ''
+        # self.sketchFile = ''
+        self.sketchList = []
         if index == None:
             index = self.model
-        nfile = False
 
-        if self.multi_check.checkState() == 2:
-            multiples = self.multi_n.value()
-            sleep = self.multi_time.value()
-            dx = self.multi_dx.value()
-            dy = self.multi_dy.value()
+        self.sketchPrepare(index.rootItem)
+        self.sketchFinish()
+
+        self.saveSketch()
+
+        self.log(['sketch','dir'], ['subfolder', str(self.sketchSubFolder)])
+        transmit = 'SketchScript %i \n' % len(self.sketchFile)
+
+        log.info('STATUS: subfolder %s'%str(self.sketchSubFolder))
+        if demo:
+            self.doDemo()
         else:
-            multiples = 1
-            sleep = 0
-            dx = 0
-            dy = 0
+            self.SocketThread.send_message(transmit + self.sketchFile)
 
-
-        self.sComment(['sketching','start'])
-        for cpy in range(multiples):
-
-            offset = [cpy*dx,cpy*dy]
-            self.sComment(['copy',cpy])
-
-            for i in range(index.rowCount()):
-                # print( '- ', i )
-                item = index.getItem(index.index(i))
-                if item.checkState == 0:
-                    continue
-                chitems = item.childItems
-                # if item.data(6) == 'Layer':
-                self.sAdd('')
-                # print('*********')
-                # print(item.data())
-                # logger = item.data()
-                # logger[0] = 'Layer '+str(logger[0])
-                # print(logger)
-                self.sComment(item.data(), 'layer ')
-
-                if len(chitems) != 0:
-                    nfile = True
-                    for child in item.childItems:
-                        if child.checkState == 0:
-                            continue
-                        self.sAdd('')
-                        # child.data()
-                        # print('xx',child.data('Volt'),child.data(1),child.data(2),child.data(3))
-                        # print('yy',child.volt)
-                        # l = [['start'], child.data()]
-                        # startline = [item for sublist in l for item in sublist]
-                        # self.sComment(startline)
-                        self.sComment(['start', child.data('Name')])
-                        self.sComment(child.data(), 'entity ')
-                        # self.sComment()
-                        if child.checkState == 2:
-
-                            data = child.pltData
-                            if data != []:
-                                for i in data:
-                                    # print (np.array(i).shape)
-                                    # dta = self.transformData(i[::item.pathOrder])
-                                    dta = np.add(i[::child.pathOrder],offset)
-                                    # pdi = self.pi.plot(dta, pen = showPen)
-
-                            # for chpath in child.pltData[::child.pathOrder]:
-                                # dta = chpath[::child.pathOrder]
-
-                                    path = self.transformData( dta ,direction=1)
-                                    # print(path)
-                                    x,y = path[0]
-                                    self.sAdd('vtip\t%f' %(0.0))
-                                    self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,self.freerate))
-                                    self.sAdd('vtip\t%f' %float(child.data('Volt')))
-                                    r = child.data('Rate')
-                                    for x,y in path:
-                                    # Maybe go from [1:] but going to the startpoint twice should reduce vtip lag
-                                        self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(x,y,r))
-
-                                    self.sAdd('vtip\t%f' %(0.0))
-                                    self.sComment(['end',child.data('Name')])
-
-            x0,y0 = self.offset_center
-            self.sAdd('xyAbs\t%.4f\t%.4f\t%.3f' %(-x0,-y0,self.freerate))
-            # self.sAdd('vtip\t%f' %(0.0))
-            # time.sleep(sleep)
-            self.sAdd('pause\t%.1f' %(sleep))
-        self.sComment(['sketching','end'])
-
-
-        if nfile:
-            # make sure the afm moves away from the device
-            self.saveSketch()
-
-            self.log(['sketch','dir'], ['subfolder', str(self.sketchSubFolder)])
-            transmit = 'SketchScript %i \n' % len(self.sketchFile)
-
-            log.info('AFM sketch now %s'%str(self.sketchSubFolder))
-            if demo:
-                self.doDemo()
-            else:
-                self.SocketThread.send_message(transmit + self.sketchFile)
+        self.tabSketchData.insertText(self.sketchFile)
 
     def sComment(self, stuff, prefix=''):
         adding = ''
@@ -799,9 +909,13 @@ class MainWindow(QtGui.QMainWindow):
 
         self.sketchOutDir = str(self.storeFolder + self.sketchSubFolder+'/')
         fname = self.sketchOutDir + 'out.txt'
-        f = open(fname, 'w')
-        f.write(self.sketchFile)
-        f.close()
+        with open(fname, 'w') as f:
+            f.write(self.sketchFile)
+
+        fname = self.sketchOutDir + 'SketchScript.py'
+        with open(fname, 'w') as f:
+            f.write(self.tabSketchScript.getFile())
+
         try:
             self.plotFrame.savePlot(self.sketchOutDir+'currentSketchView.png')
         except:
@@ -827,10 +941,13 @@ class MainWindow(QtGui.QMainWindow):
         # print( data )
 
     def abortNow(self):
-        self.SocketThread.send_message('Abort\n')
+        self.SocketThread.send_message('abort\n')
+        log.info('STATUS: Sent abort')
 
     def shutLithoNow(self):
         self.SocketThread.send_message('shutdown\n')
+        log.info('STATUS: Sent shutdown')
+        self.SocketThread.disconnectSocket()
 
 
     def pickFile(self):
@@ -874,13 +991,27 @@ class MainWindow(QtGui.QMainWindow):
         except:
             pass
 
+    def expand(self,layer):
+        items = layer.getRows()
+        for num, item in enumerate(items):
+            self.tree_file.expand(item.index())
+
+    def collapse(self,layer):
+        items = layer.getRows()
+        for num, item in enumerate(items):
+            self.tree_file.collapse(item.index())
+
+    def parseModelSettings(self):
+        exec(self.tabParseScript.getFile())
+
+
+
     def readDXFFile(self):
         self.clearDXFFile()
 
         # self.fileIn.setText()
         self.dxf = ezdxf.readfile(self.dxffileName)
         self.model = TreeModel(self.headers, self.dxf, parent=self)
-
 
         # self.tree_file.setSizes([20, 300])
         self.tree_file.setModel(self.model)
@@ -890,6 +1021,8 @@ class MainWindow(QtGui.QMainWindow):
         self.tree_file.setDragDropMode( QtGui.QAbstractItemView.InternalMove )
         self.tree_file.setSelectionMode( QtGui.QAbstractItemView.ExtendedSelection )
 
+        self.tree_file.setEditTriggers(QtGui.QAbstractItemView.AllEditTriggers)
+        # self.tree_file.setEditTriggers(QtGui.QTreeView.DoubleClicked | QtGui.QAbstractItemView.SelectedClicked)
         for col in ['Closed', 'Show', 'Order']:
             colnum = self.headers.index(col)
             self.tree_file.setItemDelegateForColumn(colnum,CheckBoxDelegate(self, column = col))
@@ -901,9 +1034,9 @@ class MainWindow(QtGui.QMainWindow):
         self.tree_file.setItemDelegateForColumn(self.model.col('Color'),ColorDelegate(self))
 
 
-        self.tree_file.expandAll()
-        self.tree_file.setEditTriggers(QtGui.QAbstractItemView.AllEditTriggers)
 
+        self.tree_file.expandAll()
+        self.parseModelSettings()
 
         # for col in [self.headers.index(col) for col in ['Closed', 'Show']]:
         #     root = self.tree_file.rootIndex()
@@ -1053,23 +1186,9 @@ class MainWindow(QtGui.QMainWindow):
 
         self.multi_dx.setValue(dx)
         self.multi_dy.setValue(dy)
-        self.remulti()
+        self.remulti_calc()
 
-
-    def remulti(self):
-
-        dx = self.multi_dx.value()
-        dy = self.multi_dy.value()
-
-        if dx != 0:
-            theta = np.arctan(dy/dx)
-            theta *= 180/np.pi
-        else:
-            theta = np.sign(dy) * 90
-
-        self.multi_angle.setValue(theta)
-        self.multi_distance.setValue(np.sqrt(dx**2 + dy**2))
-        # print('in remulti')
+    def remulti_calc(self):
 
         root = self.tree_file.rootIndex()
         for i in range(0,self.model.rowCount(root)):
@@ -1082,6 +1201,20 @@ class MainWindow(QtGui.QMainWindow):
                 checked = item.checkState
                 if checked != 0:
                     self.replot(index2)
+
+    def remulti(self):
+
+        dx = self.multi_dx.value()
+        dy = self.multi_dy.value()
+
+        theta = np.arctan2(dy,dx)
+        theta *= 180/np.pi
+
+        self.multi_angle.setValue(theta)
+        self.multi_distance.setValue(np.sqrt(dx**2 + dy**2))
+        # print('in remulti')
+        self.remulti_calc()
+
 
     @QtCore.pyqtSlot("QModelIndex", "QModelIndex")
     def replot(self, index = None):
@@ -1549,3 +1682,8 @@ if __name__ == '__main__':
     window = MainWindow()
     # window.show()
     sys.exit(app.exec_())
+
+    handlers = log.handlers[:]
+    for handler in handlers:
+        handler.close()
+        log.removeHandler(handler)

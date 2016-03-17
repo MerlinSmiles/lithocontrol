@@ -56,18 +56,42 @@
 	"buffers":
 	[
 		{
-			"file": "cAFM_ui_develop.py",
+			"file": "treetester3.py",
 			"settings":
 			{
-				"buffer_size": 57731,
+				"buffer_size": 15301,
 				"line_ending": "Windows"
 			}
 		},
 		{
-			"file": "/F/lithography/sketches/2016-03-14_13-15-21/sketch_5743/out.txt",
+			"file": "source/script_editor.py",
 			"settings":
 			{
-				"buffer_size": 6501,
+				"buffer_size": 6543,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "user_scripts/parse_dxf.py",
+			"settings":
+			{
+				"buffer_size": 687,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "source/custom_logger.py",
+			"settings":
+			{
+				"buffer_size": 4630,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "source/custom_logger_widget.py",
+			"settings":
+			{
+				"buffer_size": 4405,
 				"line_ending": "Windows"
 			}
 		},
@@ -75,12 +99,60 @@
 			"file": "source/socketworker.py",
 			"settings":
 			{
-				"buffer_size": 4189,
+				"buffer_size": 4636,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "source/ni_measurement_demo.py",
+			"settings":
+			{
+				"buffer_size": 2853,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "cAFM_ui_develop.py",
+			"settings":
+			{
+				"buffer_size": 61946,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "project.sublime-project",
+			"settings":
+			{
+				"buffer_size": 978,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "source/convertAFM.py",
+			"settings":
+			{
+				"buffer_size": 3076,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "source/treeclass3.py",
+			"settings":
+			{
+				"buffer_size": 52549,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "source/dxf2shape_tst.py",
+			"settings":
+			{
+				"buffer_size": 6744,
 				"line_ending": "Windows"
 			}
 		}
 	],
-	"build_system": "Packages/Default/Syntax Tests.sublime-build",
+	"build_system": "Raw python start",
 	"build_system_choices":
 	[
 		[
@@ -142,13 +214,29 @@
 				"Packages/Python/Python.sublime-build",
 				""
 			]
+		],
+		[
+			[
+				[
+					"Raw python start",
+					""
+				],
+				[
+					"Raw python start",
+					"Run"
+				]
+			],
+			[
+				"Raw python start",
+				""
+			]
 		]
 	],
 	"build_varint": "",
 	"command_palette":
 	{
-		"height": 235.0,
-		"last_filter": "rem pa",
+		"height": 285.0,
+		"last_filter": "",
 		"selected_items":
 		[
 			[
@@ -298,21 +386,51 @@
 	},
 	"expanded_folders":
 	[
-		"/F/Projects/lithocontrol",
-		"/F/Projects/lithocontrol/logs",
-		"/F/Projects/lithocontrol/source"
+		"/F/Projects/lithocontrol"
 	],
 	"file_history":
 	[
+		"/C/Users/Merlin/AppData/Roaming/Sublime Text 3/Packages/Anaconda/anaconda_lib/autopep/autopep8_lib/lib2to3/fixes/fix_exec.py",
+		"/F/lithography/sketches/2016-03-17_02-31-41/sketch_4/SketchScript.py",
+		"/F/Projects/lithocontrol/user_scripts/parse_dxf.py",
+		"/F/Projects/lithocontrol/user_scripts/parse_script.py",
+		"/C/Users/Merlin/AppData/Roaming/Sublime Text 3/Packages/User/Preferences.sublime-settings",
+		"/F/Projects/lithocontrol/sketch_scripts/default.py",
+		"/C/Users/Merlin/Desktop/script_editor.py",
+		"/F/Projects/lithocontrol/source/sketch_data_widget.py",
+		"/F/Projects/lithocontrol/source/custom_logger_widget.py",
+		"/C/Users/Merlin/AppData/Roaming/Sublime Text 3/Packages/Default/Preferences.sublime-settings",
+		"/C/Users/Merlin/AppData/Roaming/Sublime Text 3/Packages/User/Monokai Merlin (SublimePythonIDE).tmTheme",
+		"/C/Users/Merlin/AppData/Roaming/Sublime Text 3/Packages/User/Monokai Merlin.tmTheme",
+		"/F/lithography/sketches/2016-03-16_18-30-01/sketch_226/out.txt",
+		"/F/Projects/lithocontrol/ni_ui.py",
+		"/F/Projects/lithocontrol/source/DataStore.py",
+		"/F/Projects/lithocontrol/ni_ui_bak.py",
+		"/F/Projects/lithocontrol/source/ni_measurement2.py",
+		"/F/Projects/lithocontrol/source/afmHandler.py",
+		"/F/Projects/lithocontrol/source/socketworker.py",
+		"/F/Projects/lithocontrol/sketch-scripts/default.py",
+		"/F/Projects/lithocontrol/source/__init__.py",
+		"/F/Projects/lithocontrol/source/script_editor.py",
+		"/F/lithography/sketches/2016-03-16_12-12-50/sketch_66/out.txt",
+		"/F/lithography/sketches/2016-03-16_18-30-01/sketch_46/out.txt",
+		"/F/Projects/lithocontrol/source/treeclass3.py",
+		"/F/Projects/lithocontrol/source/dht_measurement.py",
+		"/F/Projects/lithocontrol/source/buffer.py",
+		"/C/Anaconda/Lib/site-packages/PyQt4/qsci/api/python/PyQt4.api",
+		"/C/Users/Merlin/AppData/Roaming/Sublime Text 3/Packages/Anaconda/anaconda_lib/jedi/api/__init__.py",
+		"/C/Anaconda/Lib/site-packages/PyQt4/qsci/api/python/Python-2.4.api",
+		"/C/Anaconda/Lib/site-packages/PyQt4/Qsci.pyd",
+		"/C/Anaconda/Lib/site-packages/PyQt4/__init__.py",
+		"/C/Anaconda/Lib/site-packages/PyQt4/qsci/api/python/Python-3.3.api",
+		"/F/lithography/sketches/2016-03-14_13-15-21/sketch_5743/out.txt",
 		"/F/Projects/lithocontrol/ansi_color_build.py",
 		"/F/Projects/lithocontrol/source/dxf2shape_tst.py",
-		"/F/Projects/lithocontrol/source/treeclass3.py",
 		"/C/Users/Merlin/Desktop/output.py",
 		"/C/Users/Merlin/AppData/Roaming/Sublime Text 3/Packages/User/ANSIescape/ansi_color_build.py",
 		"/F/Projects/lithocontrol/project.sublime-project",
 		"/C/Users/Merlin/AppData/Roaming/Sublime Text 3/Packages/User/SublimePython.sublime-settings",
 		"/F/Projects/lithocontrol/testlogger.py",
-		"/F/Projects/lithocontrol/ni_ui_bak.py",
 		"/F/lithography/sketches/2016-03-07_13-24-49/sketch_1898/out.txt",
 		"/F/Projects/lithocontrol/cAFM_ui_develop.py",
 		"/F/Projects/lithocontrol/debugging.py",
@@ -331,22 +449,16 @@
 		"/F/lithography/sketches/2016-03-07_12-54-14/sketch_13/out.txt",
 		"/F/Projects/lithocontrol/source/settingstree.py",
 		"/F/Projects/lithocontrol/source/ringbuffer2.py",
-		"/F/Projects/lithocontrol/source/ni_measurement2.py",
 		"/C/Anaconda/lib/site-packages/pandas/io/pytables.py",
 		"/F/lithography/sketches/2016-03-07_10-26-35/sketch_6339/out.txt",
 		"/F/lithography/sketches/2016-03-07_10-26-35/sketch_6877/out.txt",
 		"/F/lithography/sketches/2016-03-07_10-26-35/sketch_6404/out.txt",
 		"/F/lithography/sketches/2016-03-07_10-26-35/sketch_6393/out.txt",
-		"/F/Projects/lithocontrol/source/DataStore.py",
-		"/F/Projects/lithocontrol/source/dht_measurement.py",
 		"/F/Projects/lithocontrol/source/PlotFrame.py",
 		"/F/Projects/lithocontrol/cAFM_ui.py",
-		"/F/Projects/lithocontrol/source/socketworker.py",
 		"/C/Anaconda/lib/site-packages/pyqtgraph/parametertree/Parameter.py",
-		"/F/Projects/lithocontrol/source/buffer.py",
 		"/F/Projects/lithocontrol/test.py",
 		"/F/Projects/lithocontrol/source/ringbuffer.py",
-		"/F/Projects/lithocontrol/ni_ui.py",
 		"/C/Anaconda/lib/site-packages/serial/serialwin32.py",
 		"/C/Anaconda/lib/site-packages/pandas/core/internals.py",
 		"/F/Projects/lithocontrol/cAFM_ui_bak.py",
@@ -369,7 +481,6 @@
 		"/F/Projects/lithocontrol/parametertree2.py",
 		"/C/Anaconda/Lib/site-packages/pyqtgraph/parametertree/parameterTypes.py",
 		"/C/Users/Merlin/Dropbox/SOX/bla.py",
-		"/C/Users/Merlin/AppData/Roaming/Sublime Text 3/Packages/User/Preferences.sublime-settings",
 		"/C/Users/Merlin/AppData/Roaming/Sublime Text 3/Packages/User/Default (Windows).sublime-keymap",
 		"/F/lithography/current.d3m",
 		"/F/lithography/sketches/2016-02-08_16-37-27/2016-02-08_16-37-56/out.txt",
@@ -406,32 +517,7 @@
 		"/F/Projects/lithocontrol/cAFM_ui_tst.py",
 		"/F/lithography/sketches/2016-02-02_12-12-19/2016-02-02_12-12-24/out.txt",
 		"/F/lithography/sketches/2016-02-02_12-00-29/2016-02-02_12-00-33/out.txt",
-		"/F/lithography/sketches/2016-02-02_12-10-51/2016-02-02_12-10-56/out.txt",
-		"/F/lithography/sketches/2016-01-28_19-04-09/2016-01-28_19-13-19/out.txt",
-		"/F/lithography/sketches/2016-02-02_11-53-13/2016-02-02_11-53-41/out.txt",
-		"/F/lithography/sketches/2016-01-29_18-45-15/2016-01-29_18-45-34/out.txt",
-		"/C/Users/Merlin/Desktop/settings.txt",
-		"/C/Users/Merlin/AppData/Local/Temp/7zO46506708/password.txt",
-		"/C/Users/Merlin/AppData/Local/Temp/7zO8E14A553/readme.txt",
-		"/C/Anaconda/lib/site-packages/watchdog/utils/__init__.py",
-		"/C/Anaconda/lib/site-packages/watchdog/observers/api.py",
-		"/C/Anaconda/lib/site-packages/pyqtgraph/graphicsItems/PlotItem/PlotItem.py",
-		"/C/Anaconda/lib/site-packages/pyqtgraph/graphicsItems/PlotDataItem.py",
-		"/C/Users/Merlin/Documents/IPython Notebooks/config.json",
-		"/F/Projects/lithocontrol/source/afmHandler.py",
-		"/F/Projects/lithocontrol/treetester.py",
-		"/F/Projects/lithocontrol/houghlines5.jpg",
-		"/F/Projects/lithocontrol/.git/config",
-		"/F/GDrive/Projects/qtlab/instrument_plugins/Keithley_2400.py",
-		"/F/lithography/sketches/2016-01-27_17-20-51/2016-01-27_17-43-17/out.txt",
-		"/C/Users/Merlin/AppData/Roaming/Sublime Text 3/Packages/SublimePythonIDE/SublimePython.sublime-settings",
-		"/Y/Readme.txt",
-		"/Y/.DS_Store",
-		"/Y/.htpasswd",
-		"/C/Anaconda/lib/site-packages/watchdog/observers/read_directory_changes.py",
-		"/C/Anaconda/lib/site-packages/watchdog/observers/winapi.py",
-		"/D/Projects/lithocontrol/source/splash.py",
-		"/D/Projects/lithocontrol/cAFM_ui_py3.py"
+		"/F/lithography/sketches/2016-02-02_12-10-51/2016-02-02_12-10-56/out.txt"
 	],
 	"find":
 	{
@@ -450,134 +536,134 @@
 		"case_sensitive": false,
 		"find_history":
 		[
-			"SocketWorker",
-			"demo",
-			"logger",
-			"class",
-			"message",
-			"logging",
-			"logger",
-			"LoggingTestDialog",
-			"QtHandler",
-			"XStream",
-			"logger",
-			"DEBUG_LEVELV_NUM",
-			"MyDialog",
-			"15.0251",
-			"updateStatus",
-			"angle:",
-			"'fillangle",
-			"fillangle",
-			"'recalc",
-			"recalc",
-			"error calculating length",
-			"plot_timing",
-			"measurementProcess",
-			"mprocess",
 			"print",
-			"sketching",
-			"'sketch",
-			"sketching",
-			"# start",
-			"out",
-			"sketchicar()",
-			"print(",
-			"RH",
-			"kOhm",
-			"'+u'",
-			"\\u0b5S",
-			"uS'",
-			"quit_runner",
-			"stopMeasEvent",
-			"close",
-			"sig_measure_stop",
-			"thread",
-			"dht_WorkerThread",
-			"ni_workerThread",
-			"ni_Worker",
-			"close",
-			"showGrid",
-			"*1e-6",
-			"humidity",
-			"initplot",
-			"' + '",
-			"setValue(",
-			"pltR_pi.",
-			"measure_stop",
-			"start_meas",
-			"newstores",
-			"measurement_pause",
-			"measure_stop",
-			"stop",
-			"hist",
-			"in pltde",
-			"inplt",
-			"Temperature",
-			"humi",
-			"afmall",
-			"afmPosition",
-			"afmP",
-			"afmPosition",
-			"afmposition",
-			"afmpos",
-			"pg.",
-			"sketchedpen",
-			"afmpos",
-			"afmPosition",
-			"sketchedPen",
-			"afmAll",
-			"showpen",
-			"pen",
-			"afmNow",
-			"afmPos",
-			"afmPosition",
-			"afmnow",
-			"afmNow",
-			"afmPoints",
-			"afmNow",
-			"afmpos",
-			"sketchpe",
-			"dxf_design",
+			"log.",
+			"# continue",
+			"#continue",
+			"log.",
+			"shutlithono",
+			"closeconne",
+			"abort",
+			"`abort",
+			"abort",
+			"self.log",
+			"store",
+			"connectSocket",
+			"not connec",
+			"socket",
+			"vtip",
+			"LogDialog",
+			"script",
+			"multi",
+			"exec",
+			"def index",
+			"index",
+			"usetabs",
+			"sketch_scripts",
+			"tabParseScript",
+			"index=index",
+			"setData",
+			"index",
+			"createIndex",
+			"def createIndex",
+			"createIndex",
+			"layer",
+			"layer.setData",
+			",index=index",
+			"def index(",
+			"index(",
+			"createIndex",
+			"getItem",
+			"setData",
+			"layers",
+			"rows",
+			"index",
+			")",
+			"setdata",
+			"layr",
+			"children",
+			"mdata",
+			"self.layers",
+			"setupModelData",
+			"readDXFFile",
+			"dxf",
+			"multi_check",
+			"status",
+			"store",
+			"dir",
+			"storeFolder",
+			"init_stores",
+			"''",
+			"' '",
+			"angle'",
+			"'step",
+			"step",
+			"spinvar",
+			"'step",
+			"spinvar",
+			"calclength",
+			"recalc",
+			"'step",
+			"getSpinVars",
+			"spin_vars",
+			"'step",
+			"error",
+			"dxf2s",
+			"calcTime",
+			"recalc",
+			"'step",
+			"self.name",
+			"setdata",
+			"set_data",
+			"delegate",
+			"trigger",
+			"tree_file",
+			"click",
+			"delegate",
+			"editable",
+			"editorwid",
+			"statusbar",
+			"sketchFolder",
+			"pickSketchImageDirectory",
+			"controlToolbar",
+			"addtoolbar",
+			"plttoolbar",
+			"default",
+			"afm",
+			"dxfClearAction",
+			"toolbar",
+			"exit",
+			"exec",
 			"mprocess",
-			"multi_dy",
-			"multi_angle",
-			"remulti_angle",
-			"ready",
-			"sketchPoints",
-			"+",
-			"sketchPoints",
-			"afmAll",
-			"timing",
-			"dxffileName",
-			"pickFile",
-			"self.plotFrame.setAfmImage(",
-			"reoffset",
-			"offset",
-			"frame",
-			"close",
-			"interval",
-			"sleep",
-			"quit_runner",
-			"ending'",
-			"state",
-			"print(self.mprocess.state())",
-			"quit_runner",
-			"print('###########",
-			"###",
-			"#####",
-			"measure_save",
-			"kill",
-			"window",
-			"closeEvent",
-			"mprocess",
-			"close",
-			"mprocess",
-			"AFMThread",
-			"mprocess",
-			"process",
-			"columns",
-			"nae",
-			"# start"
+			"sketchAdd",
+			"prepare",
+			"font",
+			"prepare",
+			"SketchDataDialog",
+			"editorWidget",
+			"tabSketchData",
+			"tab",
+			"prepare",
+			"datastore",
+			"volt",
+			"SketchDataDialog",
+			"tabOutFile",
+			"LogDialog",
+			"logger_widget",
+			"editor",
+			"checkstate",
+			"sketchList",
+			"prepareItem",
+			"copy",
+			"=",
+			"vtip",
+			"prepareItem",
+			"sketchAdd",
+			"sketchFinish",
+			"sketchFile",
+			"sketchFinish",
+			"sComment",
+			"sketchItem"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -603,24 +689,57 @@
 	"groups":
 	[
 		{
-			"selected": 1,
+			"selected": 4,
 			"sheets":
 			[
 				{
 					"buffer": 0,
-					"file": "cAFM_ui_develop.py",
+					"file": "treetester3.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 57731,
+						"buffer_size": 15301,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								12919,
-								12919
+								15238,
+								15192
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"encoding_thread_running": true,
+							"spell_check": false,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 5799.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 11,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "source/script_editor.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 6543,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								5681,
+								5686
 							]
 						],
 						"settings":
@@ -632,57 +751,258 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 5330.0,
+						"translation.y": 1667.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 1,
+					"stack_index": 4,
 					"type": "text"
 				},
 				{
-					"buffer": 1,
-					"file": "/F/lithography/sketches/2016-03-14_13-15-21/sketch_5743/out.txt",
+					"buffer": 2,
+					"file": "user_scripts/parse_dxf.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 6501,
+						"buffer_size": 687,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								0,
-								0
+								574,
+								574
 							]
 						],
 						"settings":
 						{
 							"encoding_helper_encoding": "UTF-8",
 							"encoding_thread_running": true,
-							"syntax": "Packages/Text/Plain text.tmLanguage"
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 1800.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "source/custom_logger.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 4630,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2072,
+								2085
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"encoding_thread_running": true,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 495.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "source/custom_logger_widget.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 4405,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1156,
+								1156
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"encoding_thread_running": true,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 495.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "source/socketworker.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 4636,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3361,
+								3361
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"encoding_thread_running": true,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 45.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 6,
+					"type": "text"
+				},
+				{
+					"buffer": 6,
+					"file": "source/ni_measurement_demo.py",
+					"semi_transient": true,
+					"settings":
+					{
+						"buffer_size": 2853,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								716,
+								716
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"encoding_thread_running": true,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 7,
+					"type": "text"
+				}
+			]
+		},
+		{
+			"selected": 0,
+			"sheets":
+			[
+				{
+					"buffer": 7,
+					"file": "cAFM_ui_develop.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 61946,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								16824,
+								16824
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"encoding_thread_running": true,
+							"spell_check": false,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 7055.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 0,
 					"type": "text"
 				},
 				{
-					"buffer": 2,
-					"file": "source/socketworker.py",
-					"semi_transient": true,
+					"buffer": 8,
+					"file": "project.sublime-project",
+					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 4189,
+						"buffer_size": 978,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								316,
-								328
+								318,
+								597
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"encoding_thread_running": true,
+							"syntax": "Packages/JavaScript/JSON.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 9,
+					"file": "source/convertAFM.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3076,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								190,
+								193
 							]
 						],
 						"settings":
@@ -693,11 +1013,75 @@
 							"tab_size": 4,
 							"translate_tabs_to_spaces": true
 						},
-						"translation.x": -0.0,
+						"translation.x": 0.0,
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 2,
+					"stack_index": 8,
+					"type": "text"
+				},
+				{
+					"buffer": 10,
+					"file": "source/treeclass3.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 52549,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								33134,
+								33134
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"encoding_thread_running": true,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 12185.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 9,
+					"type": "text"
+				},
+				{
+					"buffer": 11,
+					"file": "source/dxf2shape_tst.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 6744,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								736,
+								736
+							]
+						],
+						"settings":
+						{
+							"encoding_helper_encoding": "UTF-8",
+							"encoding_thread_running": true,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 90.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 10,
 					"type": "text"
 				}
 			]
@@ -720,11 +1104,18 @@
 				0,
 				1,
 				1
+			],
+			[
+				1,
+				0,
+				2,
+				1
 			]
 		],
 		"cols":
 		[
 			0.0,
+			0.5,
 			1.0
 		],
 		"rows":
@@ -742,7 +1133,7 @@
 	{
 		"height": 0.0
 	},
-	"pinned_build_system": "Packages/Python/Python.sublime-build",
+	"pinned_build_system": "Raw python start",
 	"project": "project.sublime-project",
 	"replace":
 	{
@@ -776,7 +1167,7 @@
 		],
 		"width": 0.0
 	},
-	"selected_group": 0,
+	"selected_group": 1,
 	"settings":
 	{
 	},
@@ -784,7 +1175,7 @@
 	"show_open_files": true,
 	"show_tabs": true,
 	"side_bar_visible": true,
-	"side_bar_width": 280.0,
+	"side_bar_width": 186.0,
 	"status_bar_visible": true,
 	"template_settings":
 	{
