@@ -1,150 +1,51 @@
-import sys
+# -*- coding: utf-8 -*-
+"""
+Demonstrates use of FillBetweenItem to fill the space between two plot curves.
+"""
+
+import pyqtgraph as pg
+from pyqtgraph.Qt import QtGui, QtCore
 import numpy as np
-import time
-from PyQt4 import QtCore, QtGui, uic
-from PyQt4.QtCore import QTime, QTimer, QDate
-from PyQt4.QtCore import pyqtSignal
-import multiprocessing as mp
-from multiprocessing import Queue, Process, freeze_support
+from FillItem import FillItem
+
+win = pg.plot()
+win.setWindowTitle('pyqtgraph example: FillBetweenItem')
+win.setXRange(-10, 10)
+win.setYRange(-10, 10)
+
+N = 200
+x = np.linspace(-10, 10, N)
+gauss = np.exp(-x**2 / 20.)
+mn = mx = np.zeros(len(x))
+data = np.array([[  3.41315761,  21.5       ], [  2.45079697,  15.38903495], [  2.44571055,  15.34227491], [  2.44433205,  15.31089283], [  2.44459786,  15.27948162], [  2.44650724,  15.24812737], [  2.45005496,  15.21691601], [  2.45523129,  15.1859331 ], [  2.46202204,  15.15526356], [  2.47040861,  15.12499146], [  2.48036801,  15.09519976], [  2.49187293,  15.06597012], [  2.50489185,  15.03738266], [  2.51938908,  15.00951574], [  2.53532488,  14.98244573], [  2.55265558,  14.95624684], [  2.57133367,  14.93099087], [  2.59130795,  14.90674705], [  2.61252369,  14.88358183], [  2.63492273,  14.8615587 ], [  2.65844366,  14.84073803], [  2.68302204,  14.82117689], [  2.70859048,  14.80292888], [  2.73507891,  14.78604403], [  2.76241472,  14.77056862], [  2.79052299,  14.75654506], [  2.81932668,  14.7440118 ], [  2.84874683,  14.73300318], [  2.87870281,  14.72354938], [  2.9091125 ,  14.7156763 ], [  2.93989257,  14.70940554], [  2.97095864,  14.70475428], [  3.00222556,  14.70173527], [  3.03360764,  14.70035677], [  3.06501885,  14.70062258], [  3.09637311,  14.70253196], [  3.12758446,  14.70607967], [  3.15856737,  14.711256  ], [  3.18923691,  14.71804676], [  3.21950902,  14.72643333], [  3.24930072,  14.73639272], [  3.27853036,  14.74789765], [  3.30711781,  14.76091657], [  3.33498474,  14.77541379], [  3.36205474,  14.7913496 ], [  3.38825363,  14.80868029], [  3.4135096 ,  14.82735838], [  3.43775342,  14.84733267], [  3.46091864,  14.86854841], [  3.48294177,  14.89094744], [  3.50376244,  14.91446838], [  3.52332359,  14.93904676], [  3.5415716 ,  14.9646152 ], [  3.55845644,  14.99110363], [  3.57393186,  15.01843944], [  3.58795541,  15.04654771], [  3.60048868,  15.07535139], [  3.6114973 ,  15.10477154], [  3.62454262,  15.14822593], [  5.15502339,  21.5       ], [  3.41315761,  21.5       ]])
+x = data[:,0]
+y = data[:,1]
+print(x)
+curves = win.plot(x=x, y=y, pen='r')
+curves2 = win.plot(x=[-100,100,100,-100,-100], y=[-100,-100,100,100,-100], pen='r')
+brushes = [0.5, (100, 100, 255), 0.5]
+
+fills = FillItem(curves, curves2, brushes[1])
+# for f in fills:
+win.addItem(fills)
+
+# global mx, mn, curves, gauss, x
+# a = 5 / abs(np.random.normal(loc=1, scale=0.2))
+# y1 = data[:,0]
+# y2 =  np.abs(a*gauss + np.random.normal(size=len(x)))
+
+# s = 0.01
+# mn = np.where(y1<mn, y1, mn) * (1-s) + y1 * s
+# mx = np.where(y2>mx, y2, mx) * (1-s) + y2 * s
+# curves[0].setData(x, mn)
+# curves[1].setData(x, y1)
+# curves[2].setData(x, y2)
+# curves[3].setData(x, mx)
 
 
-class Runner(QtCore.QObject):
 
-    new_data = QtCore.pyqtSignal(object)
-
-    def __init__(self, start_signal, stopMeasEvent, timer=None, parent=None):
-        super(Runner, self).__init__(parent)
-        self.stopMeasEvent = stopMeasEvent
-        self.queue = Queue()
-        self.timer = timer
-        start_signal.connect(self.run)
-        print('initRunner')
-
-    def run(self):
-        print('runner run')
-        self.stopMeasEvent.clear()
-        self.p = ni_Worker(self.queue, self.stopMeasEvent, timer=self.timer)
-        self.p.start()
-        self.get()
-
-    def get(self):
-        # print('inget')
-        if self.stopMeasEvent.is_set():
-            self.p.join()
-            print('Measurement Process ended')
-        else:
-            msg = self.queue.get()
-            # msg = str(np.random.random())
-            self.new_data.emit(msg)
-            QtCore.QTimer.singleShot(0, self.get)
-
-class ni_Worker(mp.Process):
-    def __init__(self, resultQueue, stopMeasEvent, timer=None):
-        super(ni_Worker, self).__init__()
-        print('init worker')
-        if timer is None:
-            timer = QTime.currentTime()
-            timer.start()
-        self.timer = timer
-
-        self.resultQueue = resultQueue
-        self.stopMeasEvent = stopMeasEvent
-        print("initializing DAQ-process")
-
-        self.nChannels = 2
-        self.data = np.zeros(self.nChannels+1)
-
-        # app = QtGui.QApplication(sys.argv)
-        # window = subWindow()
-        # self.show()
-        # sys.exit(app.exec_())
-
-    def run(self):
-        print('worker run')
-        while not self.stopMeasEvent.is_set():
-            time.sleep(0.04)
-            self.data[0] = self.timer.elapsed()/1000.0
-            self.data[1:] = np.random.rand(self.nChannels)
-            # print('xx', self.data)
-            self.resultQueue.put(self.data)
-        return
-
-
-# class subWindow(QtGui.QMainWindow):
-#     sig_measure = pyqtSignal(int)
-#     def __init__(self, parent=None):
-#         super(subWindow, self).__init__(parent)
-
-class MainWindow(QtGui.QMainWindow):
-    sig_measure = pyqtSignal(int)
-    def __init__(self, parent=None):
-        super(MainWindow, self).__init__(parent)
-
-        self.stopMeasEvent = mp.Event()
-        self.ni_runner_thread = QtCore.QThread()
-        self.ni_runner = Runner(start_signal=self.ni_runner_thread.started, stopMeasEvent=self.stopMeasEvent)
-        self.ni_runner.new_data.connect(self.handle_msg)
-        self.ni_runner.moveToThread(self.ni_runner_thread)
-        self.sig_measure.connect(self.ni_runner_thread.start)
-        self.ni_runner_thread.start()
-        # self.sig_measure.emit(500)
-
-    def handle_msg(self, msg):
-        print(msg)
-
-
+## Start Qt event loop unless running in interactive mode or using pyside.
 if __name__ == '__main__':
-    freeze_support()
-
-    app = QtGui.QApplication(sys.argv)
-    window = MainWindow()
-    sys.exit(app.exec_())
-
-
-
-
-
-
-
-
-
-
-# class MyApp(Process):
-
-#    def __init__(self):
-#         self.queue = Queue(1)
-#         super(MyApp, self).__init__()
-#         app = QtGui.QApplication([])
-#         print('xx')
-#         window = MainWindow()
-#         window.show()
-
-#    def run(self):
-#         return_value = str(np.random.random())
-#         self.queue.put(return_value)
-#         # while True:
-#         #     time.sleep(1)
-#         # sys.exit(app.exec_())
-
-
-# if __name__ == '__main__':
-#     freeze_support()
-#     app1 = MyApp()
-#     app1.start()
-#     # app1.join()
-#     print("App 1 returned: " + app1.queue.get())
-
-#     app2 = MyApp()
-#     app2.start()
-#     # app2.join()
-#     print("App 2 returned: " + app2.queue.get())
-
-#     app3 = MyApp()
-#     app3.start()
-#     # app3.join()
-#     print("App 3 returned: " + app3.queue.get())
-
-#     # app = QtGui.QApplication(sys.argv)
-#     # window = MainWindow()
-#     # # window.show()
-
+    import sys
+    if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
+        QtGui.QApplication.instance().exec_()

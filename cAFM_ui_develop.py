@@ -227,6 +227,7 @@ class MainWindow(QtGui.QMainWindow):
         self.tabSketchBox.addWidget(self.plotFrame)
 
         self.tabWidget = QtGui.QTabWidget()
+        self.tabWidget.setMovable(True)
         self.tabWidget.setDocumentMode(True)
 
         self.tabSketching = QtGui.QWidget()
@@ -240,11 +241,21 @@ class MainWindow(QtGui.QMainWindow):
 
         self.tabWidget.addTab(self.tabSketching, 'Sketching')
         self.tabWidget.addTab(self.tabLogging, 'Logging')
-        self.tabWidget.addTab(self.tabSketchData, 'Sketch Data')
         self.tabWidget.addTab(self.tabParseScript, 'DXF Script')
         self.tabWidget.addTab(self.tabSketchScript, 'Sketch Script')
+        self.tabWidget.addTab(self.tabSketchData, 'Sketch Data')
+        self.tabWidget.tabBar().setTabTextColor(2, pg.QtGui.QColor('#FF0000'))
 
+            # if type(item) == QtGui.QLayoutItem:
+            #     doSomeStuff(item.layout())
         self.splitter.addWidget(self.tabWidget)
+
+        # stylesheet = """
+        #             QTabBar::tab:selected {background: gray;}
+        #             QTabBar::tab:tabSketchData {background: red;}
+        #             QTabWidget>QWidget>QWidget{background: gray;}
+        #             """
+        # self.tabWidget.setStyleSheet(stylesheet)
 
 
         self.splitter.setSizes([500,1000])
@@ -404,7 +415,7 @@ class MainWindow(QtGui.QMainWindow):
         shandler.setFormatter(formatter)
         self.slog.addHandler(shandler)
 
-    def log(self, column, value):
+    def log(self, *args):
         tdelta = self.timer.elapsed()/1000.0
 
         line = {'time': tdelta}.__repr__()
@@ -415,14 +426,15 @@ class MainWindow(QtGui.QMainWindow):
             line += ', '
         line = line[:-2]
         self.slog.info(line)
+        log.debug(line)
 
 
     def init_sketching(self):
         self.inFile = ''
         self.sketchFile = ''
-        self.freerate = 4.0
-        self.tip_gain = 1.0
-        self.tip_offset = 0
+        self.freerate = 7.0
+        # self.tip_gain = 1.0
+        # self.tip_offset = 0
 
         self.afminfo = {}
 
@@ -679,7 +691,7 @@ class MainWindow(QtGui.QMainWindow):
             self.sketching = False
             self.afmReady()
             self.afmReady()
-            self.log({'sketch': 'ready'})
+            self.log({'status': 'ready'})
             log.info( "STATUS: READY" )
             self.statusBar().showMessage(line)
             self.measure_save()
@@ -688,26 +700,25 @@ class MainWindow(QtGui.QMainWindow):
             self.sketching = False
             self.afmReady()
             log.info( "STATUS: ABORT" )
-            log.info( "STATUS: READY" )
-            self.log({'sketch': 'abort'})
+            self.log({'status': 'abort'})
             self.statusBar().showMessage(line)
             self.measure_save()
         elif line.startswith('Parsing Script...'):
             self.afmReady()
-            self.log({'sketch': 'busy'})
+            self.log({'status': 'busy'})
             self.status_state = 'Sketching'
         elif line.startswith('# entity'):
-            line = line.split()
+            sline = line.split()
             # [2] is the type, polyline etc...
-            self.status_entity = line[3]
+            self.status_entity = sline[3]
 
-            self.log({'sketch': 'entity'}, {'ID': line[3]}, {'type': line[2]}, {'data': line})
-            log.info('STATUS: entity '+line[3])
+            self.log({'entity': sline[3]}, {'type': sline[2]}, {'data': line})
+            log.info('STATUS: entity '+sline[3])
             # print(line)
         elif line.startswith('# copy'):
             line = line.split( )
             self.status_copy = int(line[2])
-            self.log({'sketch': 'copy'}, {'copy': self.status_copy})
+            self.log({'copy': self.status_copy})
             log.info( 'STATUS: copy %d' %self.status_copy )
             self.afmPoints.clear()
 
@@ -715,7 +726,7 @@ class MainWindow(QtGui.QMainWindow):
             self.statusBar().showMessage(line)
             line = line.split( )
             self.status_pause = float(line[1])
-            self.log({'sketch': 'pause'}, {'pause': self.status_pause})
+            self.log({'pause': self.status_pause})
 
             log.info( 'STATUS: pause %f' %self.status_pause )
         elif line.startswith('SketchScript'):
@@ -762,8 +773,6 @@ class MainWindow(QtGui.QMainWindow):
 
     def prepareItem(self, child):
         child.sketchData = ''
-        if child.checkState == 0:
-            return
         self.s_comment(child, 'start', child.name)
         self.s_comment(child, 'entity', *child.data() )
 
@@ -1100,9 +1109,12 @@ class MainWindow(QtGui.QMainWindow):
             for entity in modelspace:
                 # print (entity)
                 if entity.dxftype() == 'POLYLINE':
-                    data = np.array(list(entity.points()))[:,:2]
+                    plist = list(entity.points())
+                    plist.append(plist[0])
+                    data = np.array(plist)[:,:2]
                     design_pltlist.append(data)
                 if entity.dxftype() == 'LINE':
+                    print(type(entity.points))
                     data = np.array(entity.points)[:,:2]
                     design_pltlist.append(data)
                 else:
@@ -1466,6 +1478,7 @@ class MainWindow(QtGui.QMainWindow):
         stopMeasureAction     = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/photo_deny.png'), 'Stop Measure', self)
         unloadStageAction     = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/arrow_up_red.png'), 'Unload stage', self)
         loadStageAction       = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/arrow_down.png'), 'Load stage', self)
+        reconnectAction       = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/arrow_refresh.png'), 'Reconnect to AFM', self)
         sketchAction          = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_accept.png'), 'Sketch Now', self)
         abortSketchAction     = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_deny.png'), 'Abort Lithography', self)
         sketchFolderAction    = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/folder_edit.png'), 'Sketch Folder', self)
@@ -1500,6 +1513,7 @@ class MainWindow(QtGui.QMainWindow):
         QtCore.QObject.connect(loadStageAction,        QtCore.SIGNAL('triggered()'), self.stageLoad )
         QtCore.QObject.connect(unloadStageAction,      QtCore.SIGNAL('triggered()'), self.stageUnload )
 
+        QtCore.QObject.connect(reconnectAction,        QtCore.SIGNAL('triggered()'), self.reconnectNow )
         QtCore.QObject.connect(sketchAction,           QtCore.SIGNAL('triggered()'), self.sketchNow )
         QtCore.QObject.connect(abortSketchAction,      QtCore.SIGNAL('triggered()'), self.abortNow )
         QtCore.QObject.connect(sketchFolderAction,     QtCore.SIGNAL('triggered()'), self.pickSketchImageDirectory )
@@ -1519,6 +1533,7 @@ class MainWindow(QtGui.QMainWindow):
 
         plttoolbar = self.addToolBar('Sketching')
         plttoolbar.setIconSize(iconSize)
+        plttoolbar.addAction(reconnectAction)
         plttoolbar.addAction(sketchAction)
         plttoolbar.addAction(abortSketchAction)
         plttoolbar.addSeparator()
@@ -1549,6 +1564,9 @@ class MainWindow(QtGui.QMainWindow):
         afmToolbar.addAction(frame_upAction)
 
 
+    def reconnectNow(self):
+        log.info('Reconnect Socket')
+        self.SocketThread.connectSocket()
 
     def doCapture(self):
         self.SocketThread.send_message('Capture')

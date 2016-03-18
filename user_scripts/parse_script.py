@@ -25,7 +25,9 @@ for cpy in range(multiples):
             continue
         self.sketchAdd(sItem(layer))
 
-        for child in layer.childItems:
+        for child in layer.childItems:
+            if layer.checkState == 0:
+                continue
             # changing values here that require recalculation wont have an effect,
             # call item.calcTime() if you need to
 
