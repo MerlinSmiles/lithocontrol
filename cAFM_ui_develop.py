@@ -71,7 +71,6 @@ else:
     from source.ni_measurement_demo import *
 from source.socketworker import *
 from source.buffer import *
-from source.DataStore import *
 
 # from source.treeclass import *
 from source.treeclass3 import *
@@ -311,8 +310,6 @@ class MainWindow(QtGui.QMainWindow):
 
         self.selectedPI = []
 
-        # self.log('log', 'init')
-
         # sleep(2)
         log.debug("INIT: GUI")
         self.splash.showMessage("Showing GUI",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
@@ -372,7 +369,6 @@ class MainWindow(QtGui.QMainWindow):
         self.pltDesign()
         self.savicar()
 
-        # self.log('sketch', 'end')
         # self.tree_splitter.setGeometry(500, 100)
         # self.tree_splitter.setStretchFactor(0,1)
 
@@ -395,43 +391,31 @@ class MainWindow(QtGui.QMainWindow):
 
         if not os.path.exists(self.storeFolder):
             os.makedirs(self.storeFolder)
-        log_cols = ['dir','sketch','time','copy','ID','vtip','r','x','y', 'pause', 'layer','entity']
-        fname = self.storeFolder+c_time +'_log-sketch.h5'
-        self.log_store = DataStore(filename=fname,columns=log_cols)
-
-        # self.log_store.data[['dir','sketch','ID','layer','entity']] = self.log_store.data[['dir','sketch','ID','layer','entity']].astype(object)
-        # dtype = { column_that_is_bad : 'object' }
+        fname = self.storeFolder+c_time + '_log-sketch.log'
+        self.init_log(fname)
 
         log.debug('New stores: %s'%fname)
 
-
+    def init_log(self, filename):
+        formatter = logging.Formatter('%(message)s')
+        self.slog = logging.getLogger('status_logger')
+        self.slog.setLevel('INFO')
+        shandler = logging.FileHandler(filename)
+        shandler.setFormatter(formatter)
+        self.slog.addHandler(shandler)
 
     def log(self, column, value):
-        # return
         tdelta = self.timer.elapsed()/1000.0
 
-        if type(column) not in [list,tuple]:
-            column = [column]
-        if type(value) not in [list,tuple]:
-            value = [value]
+        line = {'time': tdelta}.__repr__()
+        line += ', '
+        for i in args:
+            # line += str(i)
+            line += i.__repr__()
+            line += ', '
+        line = line[:-2]
+        self.slog.info(line)
 
-        values=[[tdelta],value]
-        values=[item for sublist in values for item in sublist]
-
-        columns=[['time'],column]
-        columns=[item for sublist in columns for item in sublist]
-
-        self.log_store.append([str(c) for c in values],columns)
-        # s = ''
-        # for i, data in enumerate(column):
-        #     s+=str(data)
-        #     s+=': '
-        #     s+=str(value[i])
-        #     s+=', '
-
-        # log.debug('LOG: '+s[:-2])
-
-        # print('P LOG:\t' + str(column) + '\t' + str(value))
 
     def init_sketching(self):
         self.inFile = ''
@@ -639,7 +623,7 @@ class MainWindow(QtGui.QMainWindow):
         elif line.startswith('vtip'):
             line = line.split( )
             self.status_vtip = float(line[1])
-            self.log(['sketch','vtip'],['vtip', self.status_vtip])
+            self.log({'vtip': self.status_vtip})
             log.debug('STATUS: vtip %f' %self.status_vtip )
             # self.statusBar().showMessage(line)
         elif line.startswith('xyAbs'):
@@ -651,9 +635,8 @@ class MainWindow(QtGui.QMainWindow):
             y = float(line[2])
             r = float(line[3])
             self.status_position = [x, y, r]
-            self.log(['sketch','x','y','r'], ['xyAbs', x, y, r])
+            self.log({'xyAbs': self.status_position})
             xo, yo = self.transformData([x,y], direction = -1)
-            # log.debug('STATUS: points: %f %f %f'% (xo,yo,r))
             self.afmPoints.append([xo,yo,r])
         elif line.startswith('# sketching'):
             # print(line)
@@ -671,7 +654,7 @@ class MainWindow(QtGui.QMainWindow):
         elif line.startswith('# start'):
             line = line.split( )
             self.status_entity = line[2]
-            self.log(['sketch','ID'],['start', str(line[2])])
+            self.log({'sketch': 'start'}, {'ID': line[2]})
             self.afmPoints.clear()
             log.info('STATUS: started '+line[2])
             # self.statusBar().showMessage(line)
@@ -688,13 +671,15 @@ class MainWindow(QtGui.QMainWindow):
 
             self.afmNow.clear()
             self.afmPoints.clear()
-            self.log(['sketch','ID'],['end', str(line[2])])
+            self.log({'sketch': 'end'}, {'ID': line[2]})
             log.info('STATUS: finished '+line[2])
             # self.statusBar().showMessage(line)
         elif line.startswith('Ready'):
             self.status_state = 'Ready'
             self.sketching = False
             self.afmReady()
+            self.afmReady()
+            self.log({'sketch': 'ready'})
             log.info( "STATUS: READY" )
             self.statusBar().showMessage(line)
             self.measure_save()
@@ -704,23 +689,25 @@ class MainWindow(QtGui.QMainWindow):
             self.afmReady()
             log.info( "STATUS: ABORT" )
             log.info( "STATUS: READY" )
+            self.log({'sketch': 'abort'})
             self.statusBar().showMessage(line)
             self.measure_save()
         elif line.startswith('Parsing Script...'):
+            self.afmReady()
+            self.log({'sketch': 'busy'})
             self.status_state = 'Sketching'
         elif line.startswith('# entity'):
             line = line.split()
             # [2] is the type, polyline etc...
             self.status_entity = line[3]
 
-            self.log(['sketch','ID'],['entity', str(line[3])])
+            self.log({'sketch': 'entity'}, {'ID': line[3]}, {'type': line[2]}, {'data': line})
             log.info('STATUS: entity '+line[3])
-            # self.log(['sketch','layer'],['entity', line])
             # print(line)
         elif line.startswith('# copy'):
             line = line.split( )
             self.status_copy = int(line[2])
-            self.log(['sketch','copy'],['copy', self.status_copy])
+            self.log({'sketch': 'copy'}, {'copy': self.status_copy})
             log.info( 'STATUS: copy %d' %self.status_copy )
             self.afmPoints.clear()
 
@@ -728,7 +715,8 @@ class MainWindow(QtGui.QMainWindow):
             self.statusBar().showMessage(line)
             line = line.split( )
             self.status_pause = float(line[1])
-            self.log(['sketch','pause'],['pause', self.status_pause])
+            self.log({'sketch': 'pause'}, {'pause': self.status_pause})
+
             log.info( 'STATUS: pause %f' %self.status_pause )
         elif line.startswith('SketchScript'):
             pass
@@ -880,7 +868,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.saveSketch()
 
-        self.log(['sketch','dir'], ['subfolder', str(self.sketchSubFolder)])
+        self.log({'dir': str(self.sketchSubFolder)})
         transmit = 'SketchScript %i \n' % len(self.sketchFile)
 
         log.info('STATUS: subfolder %s'%str(self.sketchSubFolder))
@@ -1658,7 +1646,7 @@ class MainWindow(QtGui.QMainWindow):
         self.offset_dy_spin.valueChanged.connect(self.reoffset)
 
     def measure_save(self):
-        self.log_store.save_data()
+        return
 
     def savicar(self):
         # log.debug('SAVING')
