@@ -724,6 +724,8 @@ class TreeItem(object):
                 if self.fillAngle != value:
                     self.fillAngle = value
                     recalc = True
+                    if index is None:
+                        index = self.index(column)
             elif colname == 'Name':
                 value = str(value)
                 if self.name != value:
@@ -743,6 +745,8 @@ class TreeItem(object):
                     if self.fillStep != value:
                         self.fillStep = value
                         recalc = True
+                        if index is None:
+                            index = self.index(column)
                 else:
                     value = self.fillStep
             elif colname == 'Order':
@@ -771,6 +775,8 @@ class TreeItem(object):
                     recalc = True
                     col = self.model.col('Time')
                     self.model.emit(QtCore.SIGNAL('dataChanged(QModelIndex,QModelIndex)'), self.index(col), self.index(col+1))
+                    if index is None:
+                        index = self.index(column)
             elif colname == 'Show':
                 if value == True:
                     value = 2
@@ -819,6 +825,8 @@ class TreeItem(object):
         # if (index != None) and (recalc):
         #     self.model.emit(QtCore.SIGNAL('recalc(QModelIndex,QModelIndex)'), index,index)
         #     self.model.emit(QtCore.SIGNAL('recalc(QModelIndex.QModelIndex)'), self.index(), self.index())
+
+
 
         if (index != None) and (replot):
             self.model.emit(QtCore.SIGNAL('replot(QModelIndex,QModelIndex)'), index,index)
@@ -1161,13 +1169,15 @@ class TreeModel(QtCore.QAbstractItemModel):
             self.layoutAboutToBeChanged.emit()
             item = self.getItem(index)
 
-            item.setCheckState(value)
-
             cc = item.childCount()
             if cc > 0:
+                if item.checkState == 1:
+                    value = 0
                 for i in range(cc):
                     chindex =  self.createIndex(i, 0, item.child(i))
                     self.setData(chindex,value,role)
+
+            item.setCheckState(value)
 
             item = self.getItem(index.parent())
             cc = item.childCount()

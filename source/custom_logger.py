@@ -22,7 +22,7 @@ def getLogger(name='root', loglevel='INFO', handler=None):
 
     logger.addHandler(QtHandler())
     # logger.addHandler(MyHandler())
-    logger.addHandler(consoleHandler(sys.stdout))
+    # logger.addHandler(consoleHandler(sys.stdout))
 
     if logger.name == 'root':
       logger.warning('Running: %s %s',

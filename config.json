@@ -39,7 +39,7 @@
   },
   "storage": {
     "storeFolder": "F:/lithography/sketches/",
-    "def_dxf_file": "F:/lithography/DesignFiles/current.dxf",
+    "def_dxf_file": "F:/lithography/DesignFiles/empty.dxf",
     "afmImageFolder": "D:/afmImages/"
   },
   "demo_storage": {

@@ -26,13 +26,15 @@ for cpy in range(multiples):
         self.sketchAdd(sItem(layer))
 
         for child in layer.childItems:
-            if layer.checkState == 0:
-                continue
+            if child.checkState == 0:
+                continue
+            item = sItem(child)
+            
             # changing values here that require recalculation wont have an effect,
             # call item.calcTime() if you need to
 
-            # print(child.childItems)
-            item = sItem(child)
+            # print(child.childItems)
+            # print(item.name)
             # item.is_closed
             # item.fillAngle
             # item.fillStep

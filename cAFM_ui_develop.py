@@ -53,7 +53,7 @@ with open('config.json', 'r') as f:
 #     config['storage'] = config['demo_storage']
 # print(config['storage'])
 
-def_dxf_file = 'F:/lithography/DesignFiles/current.dxf'
+# def_dxf_file = 'F:/lithography/DesignFiles/empty.dxf'
 def_dxf_file = config['storage']['def_dxf_file']
 
 import os
@@ -459,7 +459,7 @@ class MainWindow(QtGui.QMainWindow):
         self.AFMthread = AFMWorker()
         log.debug("INIT: SocketWorker")
         self.splash.showMessage("Initialize SocketWorker",alignment=QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
-        self.SocketThread = SocketWorker(host = 'nanoman', port = 12345, demo=False)
+        self.SocketThread = SocketWorker(host = '172.20.3.2', port = 12345, demo=False)
 
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("finished()"), self.updateAFM)
         QtCore.QObject.connect(self.AFMthread, QtCore.SIGNAL("terminated()"), self.updateAFM)
@@ -730,6 +730,7 @@ class MainWindow(QtGui.QMainWindow):
 
             log.info( 'STATUS: pause %f' %self.status_pause )
         elif line.startswith('SketchScript'):
+            log.info( 'STATUS: SketchScript')
             pass
         else:
             if line != '':
@@ -1479,6 +1480,7 @@ class MainWindow(QtGui.QMainWindow):
         unloadStageAction     = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/arrow_up_red.png'), 'Unload stage', self)
         loadStageAction       = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/arrow_down.png'), 'Load stage', self)
         reconnectAction       = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/arrow_refresh.png'), 'Reconnect to AFM', self)
+        reconnectAction.setEnabled(False)
         sketchAction          = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_accept.png'), 'Sketch Now', self)
         abortSketchAction     = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/bullet_deny.png'), 'Abort Lithography', self)
         sketchFolderAction    = QtGui.QAction(QtGui.QIcon('icons/Hand Drawn Web Icon Set/folder_edit.png'), 'Sketch Folder', self)

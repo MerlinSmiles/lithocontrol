@@ -28,7 +28,7 @@ class DataStore(object):
         # print(df)
         try:
             self.data_store.append('data',df,append=True, ignore_index=True)
-            print('fine')
+            # print('fine')
         except:
             print(dict(df.dtypes))
             print(dict(self.data_store['data'].dtypes))
