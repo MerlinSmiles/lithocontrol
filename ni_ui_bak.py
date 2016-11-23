@@ -390,6 +390,17 @@ class MainWindow(QtGui.QMainWindow):
 
         self.log_store = DataStore(filename=logname, columns=['time', 'log'])
 
+        try:
+            del self.ni_store._data
+            del self.ni_store
+        except:
+            pass
+        try:
+            del self.dht_store._data
+            del self.dht_store
+        except:
+            pass
+
         self.ni_store_columns = ['time', 'current','r2p','r4p']
         self.ni_store = Buffer(3600000, cols=self.ni_store_columns, filename=nifile)
         self.ni_stepper = 1000

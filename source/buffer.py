@@ -3,10 +3,10 @@ import pandas as pd
 
 
 class Buffer():
-    def __init__(self, length, cols=['data'], filename=''):
+    def __init__(self, length, cols=[], filename=''):
         self.filename = filename
         self.length = length
-        self.cols = cols
+        self.cols = ['data'] if cols ==[] else cols
         self._num_cols = len(self.cols)
         self._data = np.empty((self.length, self._num_cols), dtype='f')
         self.size = 0
